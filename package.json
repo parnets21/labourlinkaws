@@ -1,7 +1,7 @@
 {
   "name": "jobbox",
   "version": "1.0.0",
-  "description": "",
+  "description": "Job Portal Backend for Patheya IBH Private Limited",
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -20,13 +20,20 @@
     "dotenv": "^16.0.0",
     "express": "^4.18.2",
     "fcm-node": "^1.6.1",
+    "jsonwebtoken": "^9.0.0",
     "moment": "^2.29.4",
     "mongodb": "^6.11.0",
-    "mongoose": "^6.2.10",
+    "mongoose": "^6.13.8",
     "morgan": "^1.10.0",
     "multer": "^1.4.4",
+    "node-geocoder": "^4.4.1",
     "nodemailer": "^6.8.0",
     "nodemon": "^2.0.15",
-    "path": "^0.12.7"
+    "path": "^0.12.7",
+    "pdf-lib": "^1.17.1",
+    "socket.io": "^4.6.1",
+    "stripe": "^12.0.0",
+    "twilio": "^4.11.0",
+    "whatsapp-web.js": "^1.19.4"
   }
 }

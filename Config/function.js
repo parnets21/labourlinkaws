@@ -44,12 +44,9 @@ const isValid = function(value) {
   if(typeof (value) == 'number' && (value).toString().trim().length == 0){return false}
   return true
 }
-
-const isValidString = function(value){
-    if(!/^[A-Za-z ]+$/.test(value)) {return false}
-    if(value.length<3){return false}
-    if(value.length >25){return false}
-    else return true
+function isValidString(str) {
+  console.log("Validating name:", str);
+  return /^[A-Za-z\s]{3,25}$/.test(str);
 }
 
 const validUrl = (value) => {

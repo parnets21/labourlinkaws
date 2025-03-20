@@ -1,4 +1,6 @@
 const moment = require("moment");
+const mongoose = require("mongoose");
+
 const jobModel = require("../../Model/Employers/company");
 const applyModel = require("../../Model/Employers/apply");
 const selectModel = require("../../Model/Employers/selected");
@@ -6,166 +8,207 @@ const userModel = require("../../Model/User/user");
 const send = require("../../EmailSender/send");
 const sent = require("../../EmailSender/send");
 const {isValid,isValidEmail,phonenumber,validUrl}=require("../../Config/function")
+const CompanyType = require("../../Model/Admin/jobmanagment/CompanyType");
+const Industry = require("../../Model/Admin/jobmanagment/industrymanagment");
+const Department=require("../../Model/Admin/Department")
+const JobRole= require("../../Model/Admin/jobmanagment/JobRole") 
+const WorkMode= require("../../Model/Admin/jobmanagment/WorkMode") 
+const Location= require("../../Model/Admin/comapnaylocation") 
+const Salary= require("../../Model/Admin/jobmanagment/Salary") 
+const Education= require("../../Model/Admin/jobmanagment/education") 
+const ExperienceLevel= require("../../Model/Admin/jobmanagment/ExperienceLevel")
+const Skill = require("../../Model/Admin/jobmanagment/Skill");
 class company {
-  async register(req, res) {
-    try {
+  
+//   async register(req, res) {
+//     try {
+//         console.log("📢 Register API Called");
+//         console.log("📝 Request Body:", req.body); // Log incoming request data
+
+//         const {
+//             CompanyName, jobtitle, averageIncentive, openings, address, email, skill, benefits,
+//             reason, experience, interview, category, typeofqualification, description,
+//             typeofjob, typeofwork, typeofeducation, education, experiencerequired,
+//             gendertype, jobProfile, minSalary, maxSalary, period, location, time,
+//             whatsapp, adminId, employerId, salarytype, interviewername
+//         } = req.body;
+//         console.log("📥 Received Request Body:", req.body);
+
+
+
+//         let obj = {
+//             CompanyName, jobtitle, averageIncentive, openings, address, email, reason,
+//             experience, interview, period, description, typeofjob, typeofwork, 
+//             typeofeducation, education, experiencerequired, gendertype, jobProfile, 
+//             minSalary, maxSalary, skill, benefits, category, typeofqualification, 
+//             location, time, whatsapp, adminId, employerId, salarytype, interviewername 
+//         };
+//         // Save the job in DB
+        
+//         const newJob = await jobModel.create(req.body);
+//         console.log("✅ New Job Saved:", newJob); // Log saved job details
+
+//         let msg =
+//             `This is a new ${CompanyName} company registered post by email id is ${email}
+//             Job profile is ${jobProfile} or salary ${minSalary}-${maxSalary}/${period},
+//             location is ${location} and website Link.
+//             <h3>Thank you <br>UNIVI INDIA Team</h3>`;
+
+//         sent.sendMail("Admin", "amitparnets@gmail.com", msg);
+//         console.log("📧 Email Sent Successfully");
+
+//         return res.status(200).json({ success: "Successfully registered" });
+
+//     } catch (err) {
+//         console.error("❌ Error in Register:", err); // Log error
+//         return res.status(500).json({ success: false, message: "Internal Server Error" });
+//     }
+// }
+
+
+async register(req, res) {
+  try {
+      console.log("📢 Register API Called");
+      console.log("📝 Request Body:", req.body); // Log incoming request data
+
       const {
-           companyName,
-     averageIncentive,
-    openings,
-    address,
-    night,
-    fee,
-    email,
-   skill,benefits,
-reason,
-    english,
-    experience,
-    interview,
-    category,
-    typeofqualification,
-    description,
-    typeofjob,
-     typeofwork,
-     typeofeducation,
-     education,
-    experiencerequired,
-    gendertype,
-     jobProfile,
-     minSalary,
-     maxSalary,
-      period,
-     location,
-     time,
-     whatsapp,
-    adminId,
-    employerId,
-   
-   
-    salarytype,
-   
-    interviewername
-       
+          companyName, jobtitle, averageIncentive, openings, address, email, skill, benefits,
+          reason, experience, interview, category, typeofqualification, description,
+          typeofjob, typeofwork, typeofeducation, education, experiencerequired,
+          gendertype, jobProfile, minSalary, maxSalary, period, location, time,
+          whatsapp, adminId, employerId, salarytype, interviewername,
+          // Added new fields below
+          companywebsite, companymobile, companyindustry, companytype,  department,
+          companyaddress, requirements, responsibilities, workSchedule, locationDetails,
+          preferredQualifications, additionalNotes
       } = req.body;
-      
+      console.log("📥 Received Request Body:", req.body);
+
       let obj = {
-       companyName,
-     averageIncentive,
-    openings,
-    address,
-    night,
-    fee,
-    email,
-  reason,
-    english,
-    experience,
-    interview, 
-    period,
-    description,
-    typeofjob,
-     typeofwork,
-     typeofeducation,
-     education,
-    experiencerequired,
-    gendertype,
-     jobProfile,
-     minSalary,
-     maxSalary,
-    skill,benefits,
-    category,
-    typeofqualification,
-     location,
-     time,
-     whatsapp,
-    adminId,
-    employerId,
-    salarytype,
-    interviewername 
+          companyName, jobtitle, averageIncentive, openings, address, email, reason,
+          experience, interview, period, description, typeofjob, typeofwork, 
+          typeofeducation, education, experiencerequired, gendertype, jobProfile, 
+          minSalary, maxSalary, skill, benefits, category, typeofqualification, 
+          location, time, whatsapp, adminId, employerId, salarytype, interviewername,
+          // Added new fields below
+          companywebsite, companymobile, companyindustry, companytype, department,
+          companyaddress, requirements, responsibilities, workSchedule, locationDetails,
+          preferredQualifications, additionalNotes
       };
 
-    //  if(!isValid(companyName)) return res.status(400).json({error:"Please enter company Name!"})
-    //   if(!isValid(jobProfile)) return res.status(400).json({error:"Please enter Job Title!"})
-    //   if(!isValid(typeofjob)) return res.status(400).json({error:"Please select type of job!"})
-    //   if(!isValid(openings)) return res.status(400).json({error:"Please enter No of Openings!"})
-    //     if(!isValid(typeofwork)) return res.status(400).json({error:"Please enter type of work!"})
-    // if(!isValid(contact)) return res.status(400).json({error:"Please enter contact number!"})
-    //   // if(!phonenumber(contact)) return res.status(400).json({error:"Invalid contact number!"})
-    //   if(!isValid(skill)) return res.status(400).json({error:"Please enter skills!"})
-    
-    //  
-     
-    //   if(webSiteLink){
-    //     if(!validUrl(webSiteLink)) return res.status(400).json({error:"Invalid website Url!"})
-    //   }
-    //   
-    //   if(!isValid(email)) return res.status(400).json({error:"Please enter email!"})
-    //   if(!isValidEmail(email)) return res.status(400).json({error:"Invalid email!"})
-    //   if(!isValid(CEO)) return res.status(400).json({error:"Please enter company CEO name!"});
-    //   if(!isValid(jobProfile)) return res.status(400).json({error:"Please enter Job profile!"})
-    //   if(!isValid(minSalary)) return res.status(400).json({error:"Please enter minmum salary!"})
-    //   if(!isValid(maxSalary)) return res.status(400).json({error:"Please enter maximum salary!"})
-    //   if(!isValid(salaryType)) return res.status(400).json({error:"Please select salary type!"})
-      
-    
-    //   if(!isValid(jobStatus)) return res.status(400).json({error:"Please select job status!"})
-    //   if(!isValid(experience)) return res.status(400).json({error:"Please select experience!"})
-    //   if(!isValid(position)) return res.status(400).json({error:"Please select job position!"})
-    //   if(facebook){
-    //     if(!validUrl(facebook)) return res.status(400).json({error:"Invalid facebook link!"})
-    //   }
-    //   if(instragram){
-    //     if(!validUrl(instragram)) return res.status(400).json({error:"Invalid instagram link!"})
-    //   }
-    //   if(twiter){
-    //     if(!validUrl(twiter)) return res.status(400).json({error:"Invalid twitter link!"})
-    //   }
-    //   if(linkedin){
-    //     if(!validUrl(linkedin)) return res.status(400).json({error:"Invalid linkedin link!"})
-    //   }
-    //   if(!isValid(description)) return res.status(400).json({error:"Please enter discription!"});
-    //   if(description.length<=90) return res.status(400).json({error:"Discription minmum 90th words!"})
+      // Save the job in DB
+      const newJob = await jobModel.create(obj); // Updated to use `obj` instead of `req.body`
+      console.log("✅ New Job Saved:", newJob); // Log saved job details
 
-      await jobModel.create(obj);
       let msg =
-        "This is a new " +
-        companyName +
-        " company registered post by email id is " +
-        email +
-       
-        " Job profile is " +
-        jobProfile +
-        " or salary " +
-        minSalary +
-        "-" +
-        maxSalary +
-        "/"
-        period +
-        
-     
-        ", location is " +
-        location +
-        " and website Link " +
-        "."+"<h3>Thank you <br>UNIVI INDIA Team</h3>";
+          `This is a new ${companyName} company registered post by email id is ${email}
+          Job profile is ${jobProfile} or salary ${minSalary}-${maxSalary}/${period},
+          location is ${location} and website Link.
+          <h3>Thank you <br>UNIVI INDIA Team</h3>`;
+
       sent.sendMail("Admin", "amitparnets@gmail.com", msg);
+      console.log("📧 Email Sent Successfully");
+
       return res.status(200).json({ success: "Successfully registered" });
-    } catch (err) {
-      console.log(err);
-    }
+
+  } catch (err) {
+      console.error("❌ Error in Register:", err); // Log error
+      return res.status(500).json({ success: false, message: "Internal Server Error" });
   }
+}
+
+
+
+            // async register(req, res) {
+            //   try {
+            //       console.log("📢 Register API Called");
+            //       console.log("📝 Request Body:", req.body); // Log incoming request data
+
+            //       const {
+            //           companyName, jobtitle, averageIncentive, openings, address, email, skill, benefits,
+            //           reason, experience, interview, category, typeofqualification, description,
+            //           typeofjob, typeofwork, typeofeducation, education, experiencerequired,
+            //           gendertype, jobProfile, minSalary, maxSalary, period, location, time,
+            //           whatsapp, adminId, employerId, salarytype, interviewername
+            //       } = req.body;
+
+            //       console.log("📥 Received Request Body:", req.body);
+            //       console.log("📥 Received Skills:", req.body[0].skill);
+
+
+            //       // Ensure skill is always an array
+            //       // if (!Array.isArray(skill)) {
+            //       //     if (typeof skill === "string") {
+            //       //         skill = skill.split(",").map(s => s.trim()); // Convert string to array
+            //       //     } else {
+            //       //         skill = [];
+            //       //     }
+            //       // }
+            //       const newSkills = req.body[0].skill
+
+            //       console.log("🛠 Processed newSkills Data:", newSkills); // Log skills before saving
+
+            //       let obj = {
+            //           companyName, jobtitle, averageIncentive, openings, address, email, reason,
+            //           experience, interview, period, description, typeofjob, typeofwork, 
+            //           typeofeducation, education, experiencerequired, gendertype, jobProfile, 
+            //           minSalary, maxSalary, skill : newSkills, benefits, category, typeofqualification, 
+            //           location, time, whatsapp, adminId, employerId, salarytype, interviewername 
+            //       };
+
+            //       // Save the job in DB
+            //       const newJob = await jobModel.create(obj);
+            //       console.log("✅ New Job Saved:", newJob); // Log saved job details
+
+            //       let msg =
+            //           `This is a new ${companyName} company registered post by email id is ${email}
+            //           Job profile is ${jobProfile} or salary ${minSalary}-${maxSalary}/${period},
+            //           location is ${location} and website Link.
+            //           <h3>Thank you <br>UNIVI INDIA Team</h3>`;
+
+            //       sent.sendMail("Admin", "amitparnets@gmail.com", msg);
+            //       console.log("📧 Email Sent Successfully");
+
+            //       return res.status(200).json({ success: "Successfully registered" });
+
+            //   } catch (err) {
+            //       console.error("❌ Error in Register:", err); // Log error
+            //       return res.status(500).json({ success: false, message: "Internal Server Error" });
+            //   }
+            // }
+
+
+  async registeredjobbyId(req, res){
+    try {
+      const { jobId } = req.params;
+  
+      // Find job by ID and populate employer details
+      const job = await jobModel.findById(jobId).populate("employer", "name email company");
+  
+      if (!job) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+  
+      res.status(200).json(job);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching job details", error });
+    }
+  };
+
   async editJob(req, res) {
     try {
       const {
-         companyName,
+        CompanyName,
          jobId,
      averageIncentive,
     openings,
     address,
+    jobtitle,
     night,
     fee,
     email,
     skill,benefits,
    reason,
-    english,
     experience,
     category,
     typeofqualification,
@@ -191,8 +234,8 @@ reason,
     interviewername 
       } = req.body;
       let obj = {};
-      if (companyName) {
-        obj["companyName"] = companyName;
+      if (CompanyName) {
+        obj["companyName"] = CompanyName;
       }
       if (averageIncentive) {
         obj["averageIncentive"] = averageIncentive;
@@ -222,9 +265,6 @@ reason,
       }
       if (reason) {
         obj["reason"] = reason;
-      }
-      if (english) {
-        obj["english"] = english;
       }
       
       if (minSalary) {
@@ -380,16 +420,26 @@ reason,
             console.log(err);
         }
     }
+     
+
   async getAllJobs(req, res) {
     try {
-      let findData = await jobModel.find({ isVerify: true }).sort({ _id: -1 }).populate("employerId");
-      if (findData.length <= 0)
-        return res.status(400).json({ success: "Data not found" });
-      return res.status(200).json({ success: findData });
+        // Fetch all jobs (remove isVerify condition)
+        let findData = await jobModel.find().sort({ _id: -1 }).populate("employerId");
+
+
+        if (findData.length === 0) {
+            return res.status(400).json({ success: false, message: "No jobs found" });
+        }
+
+        // console.log("findData" , findData)
+        return res.status(200).json({ success: true, data: findData });
     } catch (err) {
-      console.log(err);
+        console.error("Error fetching jobs:", err);
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
-  }
+}
+
   async getUnvarifiedList(req, res) {
     try {
       let findData = await jobModel.find({ isVerify: false }).sort({ _id: -1 }).populate("employerId");
@@ -409,6 +459,9 @@ reason,
       console.log(error);
     }
   }
+
+ 
+  
   async getJobByfilter(req, res) {
     try {
       const {
@@ -416,7 +469,7 @@ reason,
         city,
         state,
         pincode,
-        companyName,
+        CompanyName,
         CEO,
         jobProfile,
         skill,
@@ -424,15 +477,15 @@ reason,
         location,
         jobStatus,
         jobType,
-        category,
+        jobtitle,
         subcategory,
         maxSalary,
         minSalary,
         closeDate,
       } = req.body;
       let obj = {};
-      if (companyName) {
-        obj["companyName"] = companyName;
+      if (CompanyName) {
+        obj["companyName"] = CompanyName;
       }
       if (closeDate) {
         obj["closeDate"] = closeDate;
@@ -569,6 +622,7 @@ reason,
   async getJobById(req, res) {
     try {
       let jobId = req.params.jobId;
+      console.log(jobId,"this is jobid")
       let data = await jobModel.findById(jobId);
       if (!data) return res.status(400).json({ success: "data not found" });
       return res.status(200).json({ success: data });
@@ -577,20 +631,40 @@ reason,
     }
   }
 
+
+  
   async getApplyList(req, res) {
     try {
-      let companyId = req.params.companyId;
+      const{companyId}=req.params
+      console.log(req.params,"adcdcjns")
+      if (!mongoose.Types.ObjectId.isValid(companyId)) {
+          return res.status(400).json({ success: false, message: "Invalid companyId format" });
+      }
+  
+      console.log("Received companyId:", companyId, "Type:", typeof companyId);
+  
       let findData = await applyModel
-        .find({ companyId: companyId })
-        .sort({ _id: -1 })
-        .populate("userId");
-      if (findData.length <= 0)
-        return res.status(400).json({ success: "Data not found" });
-      return res.status(200).json({ success: findData });
-    } catch (err) {
-      console.log(err);
-    }
+          .find({ companyId: companyId }) // Ensure conversion
+          .sort({ _id: -1 })
+          .populate("userId");
+  
+      console.log("Query Result:", findData)
+  
+      if (!findData || findData.length === 0) {
+          return res.status(400).json({ success: false, message: "Data not found" });
+      }
+  
+      return res.status(200).json({ success: true, data: findData });
+  } catch (err) {
+      console.error("Server Error:", err);
+      return res.status(500).json({ success: false, message: "Internal Server Error" });
   }
+  
+}
+
+
+
+
 
   async addShortList(req, res) {
     try {
@@ -615,7 +689,7 @@ reason,
         data.userId.name,
         data.userId.email,
         "This " +
-          data.companyId.companyName +
+          data.companyId.CompanyName +
           " company shortlisting you position " +
           data.companyId.jobProfile +
           ", and email is " +
@@ -627,9 +701,12 @@ reason,
       console.log(err);
     }
   }
+
+
 async addSelect(req, res) {
     try {
       const { userId, companyId } = req.body;
+      console.log(companyId,"hellooooo")
       let data = await applyModel
         .findOne({ userId: userId, companyId: companyId })
         .populate("userId")
@@ -651,7 +728,7 @@ console.log("check",data)
         data.userId.name,
         data.userId.email,
         "This " +
-          data.companyId.companyName +
+          data.companyId.CompanyName +
           " company Selected you for a position " +
           data.companyId.jobProfile +
           ", and email is " +
@@ -677,20 +754,36 @@ console.log("check",data)
       console.log(err);
     }
   }
+
   async getShortlistingData(req, res) {
     try {
-      let companyId = req.params.companyId;
-      let hash = await applyModel
-        .find({ companyId: companyId, state: "shortlisted" })
-        .populate("userId");
+        const { companyId } = req.params;
+        console.log(companyId,"llllll")
 
-      if (hash.length <= 0)
-        return res.status(400).json({ success: "Data not found" });
-      return res.status(200).json({ success: hash });
+        // Validate companyId
+        if (!mongoose.Types.ObjectId.isValid(companyId)) {
+            return res.status(400).json({ success: false, message: "Invalid companyId format" });
+        }
+
+        console.log("Received companyId:", companyId, "Type:", typeof companyId);
+
+        // Fetch shortlisting data (Use `status: "Shortlisted"` instead of `state`)
+        const shortlistingData = await applyModel
+            .find({ companyId: new mongoose.Types.ObjectId(companyId), status: "Shortlisted" })
+            .populate("userId");
+
+        // Handle case where no data is found
+        if (!shortlistingData.length) {
+            return res.status(404).json({ success: false, message: "No shortlisted data found" });
+        }
+
+        return res.status(200).json({ success: true, data: shortlistingData });
+
     } catch (err) {
-      console.log(err);
+        console.error("Server Error:", err);
+        return res.status(500).json({ success: false, message: "Internal Server Error" });
     }
-  }
+}
 
   async AllAplliedDetals(req, res) {
     try {
@@ -699,6 +792,7 @@ console.log("check",data)
         .sort({ _id: -1 })
         .populate("userId")
         .populate("companyId");
+
       return res.status(200).json({ success: data });
     } catch (error) {
       console.log(error);
@@ -707,6 +801,7 @@ console.log("check",data)
   async rejectApply(req, res) {
     try {
       const { userId, companyId } = req.body;
+      console.log(companyId,"lililili")
       let data = await applyModel
         .findOne({ userId: userId, companyId: companyId })
         .populate("userId")
@@ -718,7 +813,7 @@ console.log("check",data)
         data.userId.name,
         data.userId.email,
         "This " +
-          data.companyId.companyName +
+          data.companyId.CompanyName +
           " company rejected you for position " +
           data.companyId.jobProfile +
           ", thanks for showing your interest."+"<h3>Thank you <br>UNIVI INDIA Team</h3>"
@@ -729,6 +824,50 @@ console.log("check",data)
       console.log(err);
     }
   }
+
+
+
+
+
+  async getRejectedApplications(req, res) {
+    try {
+        const { companyId } = req.params; // Get companyId from URL params
+        console.log("Received companyId:", companyId); // Debugging
+
+        // Check if companyId is provided
+        if (!companyId) {
+            return res.status(400).json({ error: "companyId is required" });
+        }
+
+        // Validate companyId format
+        if (!mongoose.Types.ObjectId.isValid(companyId)) {
+            return res.status(400).json({ error: "Invalid companyId format" });
+        }
+
+        // Find all rejected applications for the given company
+        let rejectedApplications = await applyModel
+            .find({ companyId: companyId, status: "Rejected" })
+            .populate("userId") // Populate user details
+            .populate("companyId"); // Populate company details
+            console.log(rejectedApplications,"jijkijikji")
+
+        if (!rejectedApplications || rejectedApplications.length === 0) {
+          console.log("rejectedApplications.length : " , rejectedApplications.length)
+            return res.status(404).json({ error: "No rejected applications found" });
+        }
+
+        return res.status(200).json({ success: true, data: rejectedApplications });
+    } catch (err) {
+        console.error("Error in getRejectedApplications:", err);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+}
+
+
+
+
+
+
   async deleteApply(req,res){
     try {
       let applyId=req.params.applyId;
@@ -774,7 +913,7 @@ console.log("check",data)
           verify.employerId.name,
           verify.email,
           "This " +
-            verify.companyName +
+            verify.CompanyName +
             " company is successfully approved post for position " +
             verify.jobProfile +
             "<h3>Thank you <br>UNIVI INDIA Team</h3>"
@@ -790,7 +929,7 @@ console.log("check",data)
         "Employees",
         am,
         "This " +
-          verify.companyName +
+          verify.CompanyName +
           " company is new post for position " +
           verify.jobProfile +
           "<h3>Thank you <br>UNIVI INDIA Team</h3>"
@@ -821,46 +960,1129 @@ console.log("check",data)
           verify.employerId.name,
           verify.email,
           "This " +
-            verify.companyName +
+            verify.CompanyName +
             " company is not approved post for position " +
             verify.jobProfile +
             "<h3>Thank you <br>UNIVI INDIA Team</h3>"
         );
       }
-      // let user = await userModel.find({
-      //   $or: [
-      //     { "interest.int": verify.category },
-      //     { "interest.int1": verify.category },
-      //   ],
-      // });
-      // let am = user.map((i) => {
-      //   return i.email;
-      // });
-      // sent.sendMail(
-      //   "....",
-      //   am,
-      //   "This " +
-      //     verify.companyName +
-      //     " company is new post for position " +
-      //     verify.jobProfile +
-      //     ", by team Job box."
-      // );
       return res.status(200).json({ success: "Successfully block!" });
     } catch (err) {
       console.log(err);
     }
   }
 
-  async getIntrestJob(req,res){
+  async getPopularJobs(req, res) {
     try {
-      let { int,int1}=req.body;
-     console.log(int,int1)
-      let data =await jobModel.find({$or:[{jobProfile:int},{jobProfile:int1}]})
-      return res.status(200).json({success:data})
+      const jobs = await jobModel.aggregate([
+        { $match: { isDelete: false, isVerify: true, isBlock: false } },
+        { 
+          $lookup: { 
+            from: "applies", localField: "_id", foreignField: "companyId", as: "applications" 
+          } 
+        },
+        { $addFields: { applicationCount: { $size: "$applications" } } },
+        { $sort: { applicationCount: -1 } },
+        { $limit: 10 },
+        { 
+          $lookup: { 
+            from: "employers", localField: "employerId", foreignField: "_id", as: "employer" 
+          } 
+        },
+        { $unwind: "$employer" },
+        {
+          $project: {
+            _id: 1,
+            jobtitle: "$title", // Ensure job title is included
+            location: 1,
+            minSalary: 1, // Ensure min salary is included
+            maxSalary: 1, // Ensure max salary is included
+            typeofwork: "$type", // Ensure job type is included
+            applicationCount: 1,
+            employer: 1,
+            "companyName": "$employer.companyName", // Ensure company name is included
+          }
+        }
+        
+      ]);
+  
+      return res.status(200).json(jobs.length ? { success: true, data: jobs } : { error: "No jobs found" });
     } catch (error) {
-      console.log(error);
+      res.status(500).json({ error: "Internal server error" });
     }
   }
+  
+  
 
-}
+  async getSuggestedJobs(req, res) {
+    console.log("Getting Suggested Jobs...");
+    try {
+      const { userId } = req.params;
+      console.log(userId,"jajs")
+  
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ message: "Invalid user ID format" });
+      }
+     
+  
+      // Fetch user with skills
+      const user = await userModel.findById(userId)
+      console.log(user,"User from DB:")
+      if (!user) return res.status(404).json({ message: "User not found" });
+      console.log(user,"yusdna")
+      if (!user.skills || user.skills.length === 0) {
+        return res.status(400).json({ message: "User has no skills listed" });
+      }
+  
+      // Extract skill names (since skills are stored as an array of strings)
+      const userSkills = user.skills; // No need for `.map(s => s.skill)`
+  
+      // Fetch jobs matching skills and sort by highest salary
+      const jobs = await jobModel
+        .find({ skill: { $in: userSkills } }) // Match jobs where any skill matches
+        .sort({ "preferredSalary.min": -1 }) // Sort by highest min salary
+        .limit(10);
+  
+      if (jobs.length === 0) {
+        return res.status(404).json({ message: "No matching jobs found" });
+      }
+  
+      return res.status(200).json({ getSuggestedJobs: jobs });
+    } catch (error) {
+      console.error("Error in getSuggestedJobs:", error);
+      return res.status(500).json({ message: "Server error", details: error.message });
+    }
+  }
+  
+
+      async getRecommendedJobs(req, res) {
+        try {
+            const { userId } = req.params;
+
+            if (!mongoose.Types.ObjectId.isValid(userId)) {
+                return res.status(400).json({ message: "Invalid user ID format" });
+            }
+
+            // Fetch user
+            const user = await userModel.findById(userId);
+            if (!user) return res.status(404).json({ message: "User not found" });
+            console.log("User : " , user)
+            if (!user.skills || user.skills.length === 0) {
+                return res.status(400).json({ message: "User has no skills listed" });
+            }
+
+            // Extract skill names from objects
+            const userSkills = user.skills.map(s => s.skill);
+
+          
+
+            // Fetch jobs matching user skills
+            const jobs = await jobModel.find({
+                skills: { $in: userSkills } // Query jobs where at least one skill matches
+            });
+
+       
+
+            return res.json({ recommendedJobs: jobs });
+        } catch (error) {
+            console.error("Error in getRecommendedJobs:", error);
+            return res.status(500).json({ error: "Something went wrong", details: error.message });
+        }
+       }
+      async getHighestPayingJob (req, res){
+        try {
+          // Find the highest-paying job (no filtering by role)
+          const highestPayingJob = await jobModel.find().sort({ salary: -1 }).limit(15);;
+
+          if (!highestPayingJob) {
+            return res.status(404).json({ message: "No jobs found" });
+          }
+
+          res.status(200).json(highestPayingJob);
+        } catch (error) {
+          console.error("Error in getHighestPayingJob:", error);
+          res.status(500).json({ message: "Server error", details: error.message });
+        }
+      };
+      
+      // Function to extract job roles from user experiences
+      async searchJobsByUserRole(req, res) {
+        try {
+          const { userId } = req.params;
+          console.log("Received userId:", userId);
+      
+          // Validate userId format before conversion
+          if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ success: false, message: "Invalid userId format" });
+          }
+      
+          const objectId = new mongoose.Types.ObjectId(userId);
+      
+          // Find user and their role
+          const user = await userModel.findById(objectId);
+          console.log("User found:", user);
+      
+          if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+          }
+      
+          // Extract user's role
+          const userRole = user.role;
+          console.log("User Role:", userRole);
+      
+          // Find jobs matching the user's role
+          const jobs = await jobModel.find({ role: userRole });
+          console.log("Jobs found:", jobs);
+      
+          if (!jobs.length) {
+            return res.status(404).json({ success: false, message: "No jobs found for this role" });
+          }
+      
+          // Return jobs data
+          res.json({ success: true, data: jobs });
+      
+        } catch (error) {
+          console.error("Error searching jobs:", error);
+          res.status(500).json({ success: false, message: "Internal Server Error" });
+        }
+      }
+      
+      
+
+      // POST Controllers
+
+
+      async addCompanyType(req, res) {
+        try {
+            const { type } = req.body;
+            if (!type) {
+                return res.status(400).json({ error: "Company type is required" });
+            }
+    
+            // Check if a deleted type already exists
+            let existingType = await CompanyType.findOne({ type }).lean();
+    
+            if (existingType) {
+                // If the type exists but was previously deleted, just reactivate it
+                const updatedType = await CompanyType.findOneAndUpdate(
+                    { type },
+                    { action: true, updatedAt: new Date() }, // Reactivating and updating timestamp
+                    { new: true }
+                );
+                return res.status(200).json({ success: true, data: updatedType });
+            }
+    
+            // Fetch last typeId and generate a new one
+            const lastRecord = await CompanyType.findOne().sort({ typeId: -1 }).lean();
+            let newIdNumber = 1;
+            if (lastRecord?.typeId) {
+                const match = lastRecord.typeId.match(/\d+/);
+                newIdNumber = match ? parseInt(match[0], 10) + 1 : 1;
+            }
+            const newTypeId = `CT${String(newIdNumber).padStart(3, "0")}`;
+    
+            // Create new company type
+            const newCompanyType = await CompanyType.create({
+                type,
+                typeId: newTypeId, 
+                action: true,
+            });
+    
+            return res.status(201).json({
+                success: true,
+                data: newCompanyType
+            });
+        } catch (error) {
+            console.error("Error adding company type:", error);
+            return res.status(500).json({
+                error: "Internal server error",
+                details: error.message
+            });
+        }
+    }
+    
+
+    
+
+      // async addIndustry(req, res) {
+      //   try {
+      //     const { industryName } = req.body;
+      //     if (!industryName) {
+      //       return res.status(400).json({ error: "Industry name is required" });
+      //     }
+
+      //     const newIndustry = await Industry.create({ 
+      //       industryName, 
+      //       action: true 
+      //     });
+
+      //     return res.status(201).json({
+      //       success: true,
+      //       data: newIndustry
+      //     });
+      //   } catch (error) {
+      //     console.error("Error adding industry:", error);
+      //     return res.status(500).json({ error: "Internal server error" });
+      //   }
+      // }
+      
+      async addIndustry (req, res){
+        try {
+          const { id, industryName } = req.body;
+      
+          if (!industryName) {
+            return res.status(400).json({ error: "Industry name is required" });
+          }
+      
+          if (id) {
+            // Update existing industry
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+              return res.status(400).json({
+                error: "Invalid industry ID format",
+                details: "The provided ID is not a valid MongoDB ObjectId"
+              });
+            }
+      
+            // Check if the new industry name already exists (excluding the current record)
+            const existingIndustry = await Industry.findOne({
+              industryName: industryName,
+              _id: { $ne: id }
+            });
+      
+            if (existingIndustry) {
+              return res.status(400).json({ error: "Industry name already exists" });
+            }
+      
+            const updatedIndustry = await Industry.findByIdAndUpdate(
+              id,
+              {
+                industryName,
+                updatedAt: new Date()
+              },
+              {
+                new: true,
+                runValidators: true
+              }
+            );
+      
+            if (!updatedIndustry) {
+              return res.status(404).json({ error: "Industry not found" });
+            }
+      
+            return res.status(200).json({
+              success: true,
+              data: updatedIndustry
+            });
+          } else {
+            // Add new industry
+            const newIndustry = new Industry({ industryName });
+            await newIndustry.save();
+            return res.status(201).json({
+              success: true,
+              data: newIndustry
+            });
+          }
+        } catch (error) {
+          console.error("Error saving industry:", error);
+          return res.status(500).json({
+            error: "Internal server error",
+            details: error.message
+          });
+        }
+      };
+
+
+      async addDepartment(req, res) {
+        try {
+            const { departmentName } = req.body;
+            if (!departmentName) {
+                return res.status(400).json({ error: "Department name is required" });
+            }
+    
+            // Check if department already exists
+            const existingDepartment = await Department.findOne({ departmentName });
+            if (existingDepartment) {
+                return res.status(400).json({ error: "Department already exists" });
+            }
+    
+            // Fetch last departmentId and generate a new one
+            const lastRecord = await Department.findOne().sort({ departmentId: -1 }).lean();
+            let newIdNumber = 1;
+            if (lastRecord?.departmentId) {
+                const match = lastRecord.departmentId.match(/\d+/); // Extract numeric part
+                newIdNumber = match ? parseInt(match[0], 10) + 1 : 1;
+            }
+            const newDepartmentId = `D${String(newIdNumber).padStart(3, "0")}`;
+    
+            // Create new department
+            const newDepartment = await Department.create({
+                departmentName,
+                departmentId: newDepartmentId,  // ✅ Explicitly set departmentId
+                action: true,
+            });
+    
+            return res.status(201).json({
+                success: true,
+                data: newDepartment
+            });
+        } catch (error) {
+            console.error("Error adding department:", error);
+            return res.status(500).json({
+                error: "Internal server error",
+                details: error.message
+            });
+        }
+    }
+    
+
+      async addJobRole(req, res) {
+        try {
+          const { jobRole } = req.body;
+          if (!jobRole) {
+            return res.status(400).json({ error: "Job role is required" });
+          }
+
+          const newJobRole = await JobRole.create({ 
+            jobRole, 
+            action: true 
+          });
+
+          return res.status(201).json({
+            success: true,
+            data: newJobRole
+          });
+        } catch (error) {
+          console.error("Error adding job role:", error);
+          return res.status(500).json({ error: "Internal server error" });
+        }
+      }
+
+      async  addJobRole (req, res)  {
+        try {
+          const { id, jobRole } = req.body;
+      
+          if (!jobRole) {
+            return res.status(400).json({ error: 'Job role is required' });
+          }
+      
+          if (id) {
+            // Update existing job role
+            const updatedRole = await JobRole.findByIdAndUpdate(
+              id,
+              { jobRole },
+              { new: true }
+            );
+            if (!updatedRole) {
+              return res.status(404).json({ error: 'Job role not found' });
+            }
+            return res.status(200).json({ success: true, data: updatedRole });
+          } else {
+            // Add new job role
+            const newRole = new JobRole({ jobRole });
+            await newRole.save();
+            return res.status(201).json({ success: true, data: newRole });
+          }
+        } catch (error) {
+          console.error('Error saving job role:', error);
+          return res.status(500).json({ error: 'Internal server error' });
+        }
+      };
+
+      async addWorkMode(req, res) {
+        try {
+            const { workMode } = req.body;
+            if (!workMode) {
+                return res.status(400).json({ error: "Work mode is required" });
+            }
+    
+            // Check if a deleted work mode already exists
+            let existingMode = await WorkMode.findOne({ workMode }).lean();
+    
+            if (existingMode) {
+                // If the work mode exists but was previously deleted, reactivate it
+                const updatedMode = await WorkMode.findOneAndUpdate(
+                    { workMode },
+                    { action: true, updatedAt: new Date() }, // Reactivate it
+                    { new: true }
+                );
+                return res.status(200).json({ success: true, data: updatedMode });
+            }
+    
+            // Create new work mode if it does not exist
+            const newWorkMode = await WorkMode.create({ 
+                workMode, 
+                action: true 
+            });
+    
+            return res.status(201).json({
+                success: true,
+                data: newWorkMode
+            });
+        } catch (error) {
+            console.error("Error adding work mode:", error);
+            return res.status(500).json({ error: "Internal server error" });
+        }
+    }
+    
+
+      async addEducation(req, res) {
+        const education = new Education({
+          qualification: req.body.qualification,
+        });
+      
+        try {
+          const newEducation = await education.save();
+          res.status(201).json(newEducation);
+        } catch (error) {
+          res.status(400).json({ message: error.message });
+        }
+      }
+
+      async addSkill(req, res) {
+        try {
+          console.log("Received body:", req.body); // Debugging step ✅
+          
+          const { skillName } = req.body;
+      
+          if (!skillName) {
+            return res.status(400).json({ error: "Skill name is required" });
+          }
+      
+          // ✅ Check if skill already exists
+          const existingSkill = await Skill.findOne({ skillName: { $regex: new RegExp(`^${skillName}$`, "i") } });
+          if (existingSkill) {
+            return res.status(400).json({ error: "Skill already exists" });
+          }
+      
+          // ✅ Fetch last skillId correctly
+          const lastRecord = await Skill.find().sort({ createdAt: -1 }).limit(1).lean();
+          let newIdNumber = 1;
+          if (lastRecord.length > 0 && lastRecord[0].skillId) {
+            const match = lastRecord[0].skillId.match(/\d+/);
+            newIdNumber = match ? parseInt(match[0], 10) + 1 : 1;
+          }
+          const newSkillId = `SK${String(newIdNumber).padStart(3, "0")}`;
+      
+          // ✅ Create new skill
+          const newSkill = await Skill.create({
+            skillName,
+            skillId: newSkillId,
+            action: true,
+          });
+      
+          return res.status(201).json({
+            success: true,
+            data: newSkill,
+          });
+        } catch (error) {
+          console.error("Error adding skill:", error);
+          return res.status(500).json({
+            error: "Internal server error",
+            details: error.message,
+          });
+        }
+      }
+      
+    
+
+
+      // GET Controllers
+      async getCompanyTypes(req, res) {
+        try {
+            const companyTypes = await CompanyType.find({ action: true })
+                .select('_id type typeId')  // ✅ Add typeId
+                .sort({ type: 1 });
+    
+            return res.status(200).json({
+                success: true,
+                count: companyTypes.length,
+                data: companyTypes
+            });
+        } catch (error) {
+            console.error("Error fetching company types:", error);
+            return res.status(500).json({
+                error: "Internal server error",
+                details: error.message
+            });
+        }
+    }
+    
+
+      // async getIndustries(req, res) {
+      //   try {
+      //     const industries = await Industry.find({ action: true })
+      //       .select('industryName -_id')
+      //       .sort({ industryName: 1 });
+          
+      //     return res.status(200).json({
+      //       success: true,
+      //       data: industries.map(ind => ind.industryName)
+      //     });
+      //   } catch (error) {
+      //     console.error("Error fetching industries:", error);
+      //     return res.status(500).json({ error: "Internal server error" });
+      //   }
+      // }
+      async getIndustries  (req, res)  {
+        try {
+          const industries = await Industry.find({}); // Fetch all industries from the database
+          res.status(200).json({
+            success: true,
+            data: industries, // Ensure the data is returned in the correct format
+          });
+        } catch (error) {
+          console.error("Error fetching industries:", error);
+          res.status(500).json({
+            error: "Internal server error",
+            details: error.message,
+          });
+        }
+      };
+
+      async getDepartments(req, res) {
+        try {
+            const departments = await Department.find({ action: true })
+                .select('_id departmentName departmentId')  // ✅ Include departmentId
+                .sort({ departmentName: 1 });
+    
+            return res.status(200).json({
+                success: true,
+                count: departments.length,  // ✅ Add count like getCompanyTypes
+                data: departments
+            });
+        } catch (error) {
+            console.error("Error fetching departments:", error);
+            return res.status(500).json({
+                error: "Internal server error",
+                details: error.message
+            });
+        }
+    }
+    
+
+    async getJobRoles  (req, res)  {
+      try {
+        const roles = await JobRole.find({});
+        console.log(roles,"sdsd")
+        return res.status(200).json({ success: true, data: roles });
+      } catch (error) {
+        console.error('Error fetching job roles:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
+    };
+
+    async getWorkModes(req, res) {
+      try {
+          const workModes = await WorkMode.find({ action: true })
+              .select('_id workMode') // Include _id and workMode
+              .sort({ workMode: 1 });
+  
+          return res.status(200).json({
+              success: true,
+              count: workModes.length, // Add count
+              data: workModes, // Return full objects
+          });
+      } catch (error) {
+          console.error("Error fetching work modes:", error);
+          return res.status(500).json({ error: "Internal server error" });
+      }
+  }
+  
+
+      async getEducations(req, res) {
+        try {
+          const educations = await Education.find();
+          res.json(educations);
+        } catch (error) {
+          res.status(500).json({ message: error.message });
+        }
+      };
+      
+
+      async getSkills(req, res) {
+        try {
+          const skills = await Skill.find({ action: true })
+            .select('_id skillName') // Select only necessary fields
+            .sort({ skillName: 1 }); // Sort by skillName
+      
+          return res.status(200).json({
+            success: true,
+            count: skills.length,
+            data: skills
+          });
+        } catch (error) {
+          console.error("Error fetching skills:", error);
+          return res.status(500).json({
+            error: "Internal server error",
+            details: error.message
+          });
+        }
+      }
+
+
+      // Edit functions
+      async editCompanyType(req, res) {
+        try {
+          const { id } = req.params;
+          const { type, action } = req.body;
+
+          // Validate ObjectId
+          if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ 
+              error: "Invalid ID format",
+              details: "The provided ID is not a valid MongoDB ObjectId"
+            });
+          }
+
+          if (!type) {
+            return res.status(400).json({ error: "Company type is required" });
+          }
+
+          // Check if new type already exists (excluding current record)
+          const existingType = await CompanyType.findOne({ 
+            type: type, 
+            _id: { $ne: id } 
+          });
+          
+          if (existingType) {
+            return res.status(400).json({ error: "Company type already exists" });
+          }
+
+          const updatedType = await CompanyType.findByIdAndUpdate(
+            id,
+            { 
+              type, 
+              action: action !== undefined ? action : true,
+              updatedAt: new Date()
+            },
+            { 
+              new: true,
+              runValidators: true 
+            }
+          );
+
+          if (!updatedType) {
+            return res.status(404).json({ error: "Company type not found" });
+          }
+
+          return res.status(200).json({
+            success: true,
+            data: updatedType
+          });
+        } catch (error) {
+          console.error("Error updating company type:", error);
+          return res.status(500).json({ 
+            error: "Internal server error",
+            details: error.message 
+          });
+        }
+      }
+
+      async editIndustry  (req, res) {
+        try {
+          const { id } = req.params;
+          const { industryName } = req.body;
+      
+          // Validate ObjectId
+          if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+              error: "Invalid industry ID format",
+              details: "The provided ID is not a valid MongoDB ObjectId"
+            });
+          }
+      
+          if (!industryName) {
+            return res.status(400).json({ error: "Industry name is required" });
+          }
+      
+          // Check if the new industry name already exists (excluding the current record)
+          const existingIndustry = await Industry.findOne({
+            industryName: industryName,
+            _id: { $ne: id }
+          });
+      
+          if (existingIndustry) {
+            return res.status(400).json({ error: "Industry name already exists" });
+          }
+      
+          const updatedIndustry = await Industry.findByIdAndUpdate(
+            id,
+            {
+              industryName,
+              updatedAt: new Date()
+            },
+            {
+              new: true,
+              runValidators: true
+            }
+          );
+      
+          if (!updatedIndustry) {
+            return res.status(404).json({ error: "Industry not found" });
+          }
+      
+          return res.status(200).json({
+            success: true,
+            data: updatedIndustry
+          });
+        } catch (error) {
+          console.error("Error updating industry:", error);
+          return res.status(500).json({
+            error: "Internal server error",
+            details: error.message
+          });
+        }
+      };
+      
+
+      async editDepartment(req, res) {
+        try {
+            const { id } = req.params;
+            const { departmentName, action } = req.body;
+    
+            // Validate ObjectId
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+                return res.status(400).json({
+                    error: "Invalid department ID format",
+                    details: "The provided ID is not a valid MongoDB ObjectId"
+                });
+            }
+    
+            if (!departmentName) {
+                return res.status(400).json({ error: "Department name is required" });
+            }
+    
+            // Check if the new department name already exists (excluding the current record)
+            const existingDepartment = await Department.findOne({
+                departmentName: departmentName,
+                _id: { $ne: id }
+            });
+    
+            if (existingDepartment) {
+                return res.status(400).json({ error: "Department name already exists" });
+            }
+    
+            const updatedDepartment = await Department.findByIdAndUpdate(
+                id,
+                {
+                    departmentName,
+                    action: action !== undefined ? action : true,
+                    updatedAt: new Date()
+                },
+                {
+                    new: true,
+                    runValidators: true
+                }
+            );
+    
+            if (!updatedDepartment) {
+                return res.status(404).json({ error: "Department not found" });
+            }
+    
+            return res.status(200).json({
+                success: true,
+                data: updatedDepartment
+            });
+        } catch (error) {
+            console.error("Error updating department:", error);
+            return res.status(500).json({
+                error: "Internal server error",
+                details: error.message
+            });
+        }
+    }
+    
+
+      async editJobRole(req, res) {
+        try {
+          const { id } = req.params;
+          const { jobRole, action } = req.body;
+
+          if (!jobRole) {
+            return res.status(400).json({ error: "Job role is required" });
+          }
+
+          const updatedJobRole = await JobRole.findByIdAndUpdate(
+            id,
+            { jobRole, action },
+            { new: true }
+          );
+
+          if (!updatedJobRole) {
+            return res.status(404).json({ error: "Job role not found" });
+          }
+
+          return res.status(200).json({
+            success: true,
+            data: updatedJobRole
+          });
+        } catch (error) {
+          console.error("Error updating job role:", error);
+          return res.status(500).json({ error: "Internal server error" });
+        }
+      }
+
+      async editWorkMode(req, res) {
+        try {
+          const { id } = req.params;
+          const { workMode, action } = req.body;
+
+          if (!workMode) {
+            return res.status(400).json({ error: "Work mode is required" });
+          }
+
+          const updatedWorkMode = await WorkMode.findByIdAndUpdate(
+            id,
+            { workMode, action },
+            { new: true }
+          );
+
+          if (!updatedWorkMode) {
+            return res.status(404).json({ error: "Work mode not found" });
+          }
+
+          return res.status(200).json({
+            success: true,
+            data: updatedWorkMode
+          });
+        } catch (error) {
+          console.error("Error updating work mode:", error);
+          return res.status(500).json({ error: "Internal server error" });
+        }
+      }
+
+      async editEducation(req, res) {
+        try {
+          const education = await Education.findByIdAndUpdate(req.params.id, req.body, { new: true });
+          res.json(education);
+        } catch (error) {
+          res.status(400).json({ message: error.message });
+        }
+      };
+      
+      async editSkill(req, res) {
+        try {
+            const { id } = req.params;
+            const { skillName, action } = req.body;
+    
+            // Validate ObjectId
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+                return res.status(400).json({
+                    error: "Invalid skill ID format",
+                    details: "The provided ID is not a valid MongoDB ObjectId"
+                });
+            }
+    
+            if (!skillName) {
+                return res.status(400).json({ error: "Skill name is required" });
+            }
+    
+            // Check if skill name already exists (excluding the current record)
+            const existingSkill = await Skill.findOne({
+                skillName,
+                _id: { $ne: id }
+            });
+    
+            if (existingSkill) {
+                return res.status(400).json({ error: "Skill name already exists" });
+            }
+    
+            const updatedSkill = await Skill.findByIdAndUpdate(
+                id,
+                {
+                    skillName,
+                    action: action !== undefined ? action : true,
+                    updatedAt: new Date()
+                },
+                {
+                    new: true,
+                    runValidators: true
+                }
+            );
+    
+            if (!updatedSkill) {
+                return res.status(404).json({ error: "Skill not found" });
+            }
+    
+            return res.status(200).json({
+                success: true,
+                data: updatedSkill
+            });
+        } catch (error) {
+            console.error("Error updating skill:", error);
+            return res.status(500).json({
+                error: "Internal server error",
+                details: error.message
+            });
+        }
+    }
+    
+
+
+      // Delete functions
+      async deleteCompanyType(req, res) {
+        try {
+          const { id } = req.params;
+
+          // Validate ObjectId
+          if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ 
+              error: "Invalid ID format",
+              details: "The provided ID is not a valid MongoDB ObjectId"
+            });
+          }
+
+          const deletedType = await CompanyType.findById(id);
+          
+          if (!deletedType) {
+            return res.status(404).json({ error: "Company type not found" });
+          }
+
+          // Check if this company type is being used anywhere
+          // Add your business logic here to check references
+
+          await CompanyType.findByIdAndDelete(id);
+
+          return res.status(200).json({
+            success: true,
+            message: "Company type deleted successfully",
+            data: deletedType
+          });
+        } catch (error) {
+          console.error("Error deleting company type:", error);
+          return res.status(500).json({ 
+            error: "Internal server error",
+            details: error.message 
+          });
+        }
+      }
+
+      async deleteIndustry(req, res) {
+        try {
+          const { id } = req.params;
+          const deletedIndustry = await Industry.findByIdAndDelete(id);
+
+          if (!deletedIndustry) {
+            return res.status(404).json({ error: "Industry not found" });
+          }
+
+          return res.status(200).json({
+            success: true,
+            message: "Industry deleted successfully"
+          });
+        } catch (error) {
+          console.error("Error deleting industry:", error);
+          return res.status(500).json({ error: "Internal server error" });
+        }
+      }
+
+      async deleteDepartment(req, res) {
+          try {
+              const { id } = req.params;
+      
+              // Validate if the id is a valid ObjectId
+              if (!mongoose.Types.ObjectId.isValid(id)) {
+                  return res.status(400).json({ error: "Invalid department ID" });
+              }
+      
+              const deletedDepartment = await Department.findByIdAndDelete(id);
+      
+              if (!deletedDepartment) {
+                  return res.status(404).json({ error: "Department not found" });
+              }
+      
+              return res.status(200).json({
+                  success: true,
+                  message: "Department deleted successfully"
+              });
+          } catch (error) {
+              console.error("Error deleting department:", error);
+              return res.status(500).json({ error: "Internal server error" });
+          }
+      }
+      
+      async deleteJobRole  (req, res) {
+        try {
+          const { id } = req.params;
+          const deletedRole = await JobRole.findByIdAndDelete(id);
+          if (!deletedRole) {
+            return res.status(404).json({ error: 'Job role not found' });
+          }
+          return res.status(200).json({ success: true, data: deletedRole });
+        } catch (error) {
+          console.error('Error deleting job role:', error);
+          return res.status(500).json({ error: 'Internal server error' });
+        }
+      };
+
+      async deleteWorkMode(req, res) {
+        try {
+            const { id } = req.params;  // Capture modeId from URL
+            console.log("Received delete request for modeId:", id);
+    
+            // Find and delete using modeId, not _id
+            const deletedWorkMode = await WorkMode.findOneAndDelete({ modeId: id });
+    
+            if (!deletedWorkMode) {
+                return res.status(404).json({ error: "Work mode not found" });
+            }
+    
+            return res.status(200).json({
+                success: true,
+                message: "Work mode deleted successfully",
+            });
+        } catch (error) {
+            console.error("Error deleting work mode:", error);
+            return res.status(500).json({ error: "Internal server error" });
+        }
+    }
+    
+    
+    
+
+      async deleteEducation(req, res) {
+        try {
+          await Education.findByIdAndDelete(req.params.id);
+          res.json({ message: 'Education deleted successfully' });
+        } catch (error) {
+          res.status(500).json({ message: error.message });
+        }
+      }
+
+      async deleteSkill(req, res) {
+        try {
+            const { id } = req.params;
+    
+            // Validate ObjectId
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+                return res.status(400).json({
+                    error: "Invalid skill ID format",
+                    details: "The provided ID is not a valid MongoDB ObjectId"
+                });
+            }
+    
+            const deletedSkill = await Skill.findByIdAndDelete(id);
+    
+            if (!deletedSkill) {
+                return res.status(404).json({ error: "Skill not found" });
+            }
+    
+            return res.status(200).json({
+                success: true,
+                message: "Skill deleted successfully"
+            });
+        } catch (error) {
+            console.error("Error deleting skill:", error);
+            return res.status(500).json({
+                error: "Internal server error",
+                details: error.message
+            });
+        }
+    }
+    
+
+    }
+
+
+
 module.exports = new company();

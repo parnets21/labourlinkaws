@@ -1,164 +1,62 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Schema.Types.ObjectId;
-const jobShema = new Schema(
-  {
-  
-    companyName: {
-      type: String,
-    },
-     averageIncentive: {
-      type: String,
-    },
-    openings: {
-      type: String,
-    },
-    address: {
-      type: String,
-  
-    },
-    companyaddress: {
-      type: String,
-  
-    },
-    companymobile : {
-        type: String, 
-    },
-    companyindustry:{
-                type: String,
-    },
-    companywebsite : {
-          type: String,
-    },
-    
-    skill:{type: String},
-      benefits:{type: String},
-    //  skillSet:[{
-    //         skill:{type: String},
-    //         level:{type:String}
-    //     }],
-    //     benefitsSet:[{
-    //         benefits:{type: String},
-    //         level:{type:String}
-    //     }],
-        
-    night: {
-      type: String,
-     
-    },
-    fee: { type: String },
-    email: {
-      type: String,
-    },
-    english: {
-      type: String,
-    },
-    experience: {
-      type: String,
-    },
-    interview: {
-      type: String,
-    },
-    
-    description: {
-      type: String,
-    },
-    typeofjob: {
-      type: String,
-    },
-    period: {
-      type: String,
-    },
-     typeofwork: {
-      type: String,
-    },
-     typeofeducation: {
-      type: String,
-    },
-     education: {
-      type: String,
-    },
-    experiencerequired: {
-        type: String,
-    },
-    gendertype: {
-        type: String,
-    },
-     jobProfile: {
-        type: String,
-    },
-     minSalary: {
-        type: Number,
-    },
-     maxSalary: {
-        type: Number,
-    },
-     typeofqualification:{
-        type: String, 
-     },
-     category :{
-          type: String,
-     },
-    
-     location: {
-        type: String,
-    },
-    reason:{
-        type: String,
-    },
-     time: {
-        type: String,
-    },
-     whatsapp: {
-        type: String,
-    },
-    adminId: {
-      type: ObjectId,
-      ref: "admin",
-    },
-    employerId: {
-      type: ObjectId,
-      ref: "employer",
-    },
-     jobId: {
-      type: ObjectId,
-      
-    },
-   
-    salarytype: {
-      type: String,
-    },
-   
-    interviewername: { type: String },
-   isPrime: {
-      type: Boolean,
-      default: false,
-    },
 
-    status: {
-      type: String,
-      default: "Pending",
-    },
-    reasion: {
-      type: String,
-    },
+const jobSchema = new Schema(
+  {
+    companyName: String,
+    companywebsite: String,
+    companymobile: String,
+    companyindustry: String,
+    companytype: String,
+    department: String,
+    companyaddress: String,
+    address: String,
+    jobtitle: String,
+    jobProfile: String,
+    description: String,
+    openings: { type: Number, default: 1 }, // Changed from String to Number
+    location: String,
+    minSalary: Number,
+    maxSalary: Number,
+    salarytype: String,
+    averageIncentive: String,
+    benefits: String,
+    requirements: String,
+    responsibilities: String,
+    workSchedule: String,
+    locationDetails: String,
+    preferredQualifications: String,
+    additionalNotes: String,
+    skill: [{ type: String, required: true }],
+    email: String,
+    english: String,
+    experience: String,
+    interview: String,
+    typeofjob: String,
+    jobRoles: String,
+    period: String,
+    typeofwork: String,
+    typeofeducation: String,
+    education: String,
+    experiencerequired: { type: Number, default: 0 },
+    gendertype: String,
+    typeofqualification: String,
+    category: String,
+    reason: String, // Fixed typo
+    time: String,
+    whatsapp: String,
+    adminId: { type: ObjectId, ref: "admin" },
+    employerId: { type: ObjectId, ref: "employer" },
+    jobId: ObjectId,
+    interviewername: String,
+    isPrime: { type: Boolean, default: false },
+    isDelete: { type: Boolean, default: false }, // Added missing fields
+    isVerify: { type: Boolean, default: false },
+    isBlock: { type: Boolean, default: false },
     
-    isDelete: {
-      type: Boolean,
-      default: false,
-    },
-    
-   
-    isVerify: {
-      type: Boolean,
-      default: false,
-    },
-    isBlock:{
-      type:Boolean,
-      default:false
-    }
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model("job", jobShema);
+module.exports = mongoose.model("job", jobSchema);

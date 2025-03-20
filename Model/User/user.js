@@ -3,94 +3,85 @@ const Schema = mongoose.Schema;
 
 const userSchema = new Schema(
   {
-    mobile: {
-      type: Number,
-    },
-    profile: {
-      type: String,
-    },
-    backgroundImage: {
-      type: String,
-    },
-    age: {
-      type: String,
-    },
-    name: {
-      type: String,
-    },
-    userName: {
-      type: String,
-    },
+    profile: { type: String }, // Profile logo
+    fullName: { type: String },
     email: {
       type: String,
+      // required: true,
+      // unique: true,
+      // match: [/^[\w.-]+@[a-zA-Z\d.-]+\.[a-zA-Z]{2,}$/, "Invalid email format"],
     },
-    password: {
-      type: String,
-    },
-    skill: { type: String },
-    interest: {
-      int: { type: String, lowercase: true },
-      int1: { type: String, lowercase: true },
-      int2: { type: String, lowercase: true },
-      int3: { type: String, lowercase: true },
-    },
-    gender: {
-      type: String,
-    },
-    resume: {
-      type: String,
-    },
-address: {
-      type: String,
-    },
-    education: [
-      {
-        Institue: { type: String },
-        Course: { type: String },
-        field: { type: String },
-        starting: { type: Number },
-        passOut: { type: Number },
+    phone: { type: Number },
+    location: { type: String },
+    password: { type: String },
+    confirmPassword: { type: String },
+
+    //admin 
+    jobRole: { type: String },
+    companyType: { type: String },
+    department: { type: String },
+    workMode: { type: String },
+    
+
+    // ✅ Work Experience Section
+    workExperience: { type: Boolean }, // Yes/No
+    // Total years of experience
+
+    // ✅ Nested Schema for Experience (only if workExperience = true)
+    experiences: {
+      years: { type: Number },
+      jobTitle: { type: String } ,
+      jobRoles: [{ type: String }],
+      companyName: { type: String },
+      industry: [{ type: String }],
+      salary: { type: Number },
+      // startDate: { type: Date },
+      startDate: { 
+        month: { type: String }, 
+        year: { type: String } 
       },
-    ],
-    skillSet: [
-      {
-        skill: { type: String, uppercase: true },
-        Experience: { type: Number },
-      },
-    ],
-    workAndExperience: [
-      {
-        Company: { type: String },
-        Period: { type: String },
-        Skill: { type: String },
-        Experience: { type: String },
-      },
-    ],
+       
+      endDate: { type: Date },
+        // skillSet: [{ type: String, uppercase: true }],
+    },
+    
+
+    jobType: { type: String },
+    resume: { type: String },
+    address: { type: String },
+
+    education:[ {
+      institute: String,
+      course: String,
+      field: String,
+      starting: Number, // Will store dates as YYYYMM
+      passOut: Number, // Will store dates as YYYYMM
+      grade: String
+
+   
+    }],
     bio: { type: String },
     country: { type: String },
     street: { type: String },
     city: { type: String },
     state: { type: String },
     pincode: { type: Number },
-    industry:{
-      type:Array
+    online: { type: String, default: "Offline" },
+    isDelete: { type: Boolean, default: false },
+    isBlock: { type: Boolean, default: false },
+    appliedOn: { type: Date, default: Date.now },
+
+    skills: [{
+        type: String, required: true   
+    }],
+    // experience: { type: Number, default: 0 },
+    preferredLocation: { type: String },
+    preferredSalary: {
+      min: { type: Number, default: 0 },
+      max: { type: Number, default: 0 },
     },
-    reasion: {
-      type: String,
-    },
-    online: {
-      type: String,
-      default: "Ofline",
-    },
-    isDelete: {
-      type: Boolean,
-      default: false,
-    },
-     isBlock: {
-      type: Boolean,
-      default: false,
-    },
-  },  { timestamps: true }
+  },
+  { timestamps: true }
 );
 
 module.exports = mongoose.model("user", userSchema);

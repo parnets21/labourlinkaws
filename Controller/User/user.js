@@ -7,85 +7,115 @@ const nodemailer=require('nodemailer')
 const saltRounds = 10;
 const {isValid, isValidEmail, phonenumber, isValidString}=require("../../Config/function")
 const resumeModel=require("../../Model/User/resume");
-
+const Interview=require("../../Model/User/interviewscedule")
+const MatchingProfile=require("../../Model/User/matchingprofile")
+const mongoose = require('mongoose');
 
 class user {
-  async register(req, res) {
-    try {
-      const {
-        mobile,
-        skill,
-        age,
-        name,
-        userName,
-        email,
-        password,
-        address,
-        street,
-        city,
-        state,
-        int,
-        int1,
-        int2,
-        pincode,
-        gender,
-        country,
-        industry,
-        bio,
-      } = req.body;
-      let interest = { int, int1, int2 };
-      let encryptedPassword = bcrypt.hash(password, 10).then((hash) => {
-        return hash;
-      });
-      
-      let pwd = await encryptedPassword;
-      if(!isValidString(name)) return res.status(400).json({error:"Name should be alphabets minimum size 3-25!"})
-          if(password.length<8) return res.status(400).json({error:"Password should be minimum 8 characters!"})
-        // if(!industry) return res.status(400).json({error:"Please enter category!"});
-      if(!isValidEmail(email)) return res.status(400).json({error:"Invalid email id!"})
-      if(!phonenumber(mobile)) return res.status(400).json({error:"Invalid mobile number!"});
+    async register(req, res) {
+      try {
+        const {
+          profile,
+          fullName,
+          email,
+          phone,
+          location,
+          password,
+          confirmPassword,
+          experience,
+          workExperience,
+          jobType,
+          resume,
+          address,
+          education,
+          bio,
+          country,
+          street,
+          city,
+          state,
+          pincode,
+          skills,
+          jobRole,
+          companyType,
+          department,
+          workMode,
+          preferredSalary
+        } = req.body;
   
-    //   let userN = await userModel.findOne({ userName: userName ,isDelete:false});
+        console.log("Incoming request body:", req.body);
+        // ✅ Check if user already exists
+        let userExists = await userModel.findOne({ email, isDelete: false });
+        if (userExists) return res.status(400).json({ error: "Email already exists!" });
+  
+        // Parse education if it's a string
+        let parsedEducation = education;
+        if (typeof education === 'string') {
+          parsedEducation = JSON.parse(education);
+        }
+  
+  
+        userExists = await userModel.findOne({ phone, isDelete: false });
+        if (userExists) return res.status(400).json({ error: "Phone number already exists!" });
+  
+        // ✅ Encrypt password
+        const encryptedPassword = await bcrypt.hash(password, 10);
+        // Create user object
+        const userData = {
+          profile,
+          fullName,
+          email,
+          phone,
+          location,
+          password: encryptedPassword,
+          confirmPassword: encryptedPassword,
+          workExperience: experience ? true : false,
+          experiences: experience,
+          jobRole,
+          companyType,
+          department,
+          workMode,
+          jobType,
+          resume,
+          address,
+          education,
+          bio,
+          country,
+          street,
+          city,
+          state,
+          pincode,
+          skills ,
+          preferredSalary: preferredSalary || { min: 0, max: 0 },
+          appliedOn: new Date(),
+          online: "Offline",
+          isBlock: false,
+          isDelete: false
+        };
+        // Create new user
+        const newUser = await userModel.create(userData);
+        console.log("User created successfully:", newUser._id);
+        console.log("User created successfully yuppp:", userData);
 
-    //   if (userN)
-    //     return res.status(400).json({ error: "try to different user name" });
-
-      let check = await userModel.findOne({ mobile: mobile ,isDelete:false});
-
-      if (check)
-        return res
-          .status(400)
-          .json({ error: "Mobile number is already exist" });
-      let check2 = await userModel.findOne({ email: email ,isDelete:false});
-      if (check2)
-        return res.status(400).json({ error: "Email Id is already exist" });
-
-      await userModel.create({
-        mobile,
-        skill,
-        userName,
-        street,
-        city,
-        state,
-        address,
-        pincode,
-        password: pwd,
-        age,
-        name,
-        interest: interest,
-        email,
-        gender,
-        country,
-        bio,
-        industry
-      });
-      let ab = send.sendMail(name, email,` welcome to UNIVI INDIA<h3>Thank you <br>UNIVI INDIA Team</h3>`);
-      console.log(ab);
-      return res.status(200).json({ success: "Successfully registered" });
-    } catch (err) {
-      console.log(err);
+  
+        // Send welcome email
+        await send.sendMail(fullName, email, `Welcome to UNIVI INDIA!<h3>Thank you!<br>UNIVI INDIA Team</h3>`);
+  
+        return res.status(200).json({ 
+          success: "Successfully registered!",
+          userId: newUser._id 
+        });
+  
+      } catch (err) {
+        console.error("Error in register function:", err);
+        if (err.name === 'ValidationError') {
+          return res.status(400).json({ 
+            error: "Validation error", 
+            details: Object.values(err.errors).map(e => e.message)
+          });
+        }
+        return res.status(500).json({ error: "Internal server error!" });
+      }
     }
-  }
   async editProfile(req, res) {
     try {
       const {
@@ -238,6 +268,79 @@ class user {
       console.log(err);
     }
   }
+
+// In userController.js
+    // In userController.js
+    async updateProfile(req, res) {
+      try {
+        const { userId } = req.params;
+        const updateData = req.body;
+
+        console.log('Received userId:', userId);
+        console.log('Received updateData:', updateData);
+
+        // Basic validation
+        if (!userId || userId === 'null' || userId === 'undefined') {
+          return res.status(400).json({
+            success: false,
+            error: "User ID is required"
+          });
+        }
+
+        // Validate MongoDB ObjectId
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+          return res.status(400).json({
+            success: false,
+            error: "Invalid user ID format"
+          });
+        }
+
+        // Validate update data
+        if (!updateData || Object.keys(updateData).length === 0) {
+          return res.status(400).json({
+            success: false,
+            error: "Update data is required"
+          });
+        }
+
+        // Find user first
+        const user = await userModel.findById(userId);
+        if (!user) {
+          return res.status(404).json({
+            success: false,
+            error: "User not found"
+          });
+        }
+
+        // Update user
+        const updatedUser = await userModel.findByIdAndUpdate(
+          userId,
+          { $set: updateData },
+          { 
+            new: true,
+            runValidators: true,
+            context: 'query'
+          }
+        );
+
+        return res.status(200).json({
+          success: true,
+          message: "Profile updated successfully",
+          data: updatedUser
+        });
+
+      } catch (err) {
+        console.error("Error in updateProfile:", err);
+        return res.status(500).json({
+          success: false,
+          error: "Internal server error",
+          message: err.message
+        });
+      }
+    }
+
+
+
   async AddSkill(req, res) {
     try {
       const { skill, userId, Experience } = req.body;
@@ -274,6 +377,7 @@ class user {
       console.log(err);
     }
   }
+
   async AddEducation(req, res) {
     try {
       const { Institue, userId, field, starting, passOut, Course, Location } =
@@ -297,6 +401,7 @@ class user {
       console.log(err);
     }
   }
+  
   async removeEducation(req, res) {
     try {
       let removeId = req.params.removeId;
@@ -364,6 +469,7 @@ class user {
   async login(req, res) {
     try {
       const { email, password } = req.body;
+      console.log(req.body,"saldjna")
       if(!isValid(email)) return res.status(400).json({error:"Please enter your email!"})
       if(!isValid(password)) return res.status(400).json({error:"Please enter your password!"})
       let hash
@@ -446,19 +552,138 @@ async login1(req, res) {
   }
   async applyNow(req, res) {
     try {
-      const { companyId, userId } = req.body;
-      let check = await applyModel.findOne({
-        companyId: companyId,
-        userId: userId,
-      });
-      if (check) return res.status(400).json({ error: "You are already applied!" });
-      await applyModel.create({ companyId, userId });
+        console.log("Received application data:", req.body);
+        
+        const {
+            applicant,
+            job,
+            status,
+            documents,
+            interviews,
+            notes,
+            applicationFee,
+            title,
+            company,
+            location,
+            type,
+            requirements,
+            description,
+            companyInfo
+        } = req.body;
 
-      return res.status(200).json({ success: "Successfully applied" });
+        // Validate required fields
+        if (!applicant || !job) {
+            return res.status(400).json({ 
+                error: "Missing required fields",
+                details: {
+                    applicant: !applicant ? "Applicant ID is required" : null,
+                    job: !job ? "Job ID is required" : null
+                }
+            });
+        }
+
+        // Validate ObjectIds
+        if (!mongoose.Types.ObjectId.isValid(applicant)) {
+            return res.status(400).json({ 
+                error: "Invalid applicant ID format"
+            });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(job)) {
+            return res.status(400).json({ 
+                error: "Invalid job ID format"
+            });
+        }
+
+        // Check if already applied
+        const existingApplication = await applyModel.findOne({
+            companyId: job,
+            userId: applicant,
+            isDelete: false
+        });
+
+        if (existingApplication) {
+            return res.status(400).json({ 
+                error: "You have already applied for this job",
+                applicationDetails: existingApplication 
+            });
+        }
+
+        // Create application object with additional data
+        const applicationData = {
+            companyId: job,
+            userId: applicant,
+            jobTitle: title,
+            companyName: company,
+            status: status ,
+            documents: documents || [],
+            notes: notes || [],
+            appliedDate: new Date(),
+            jobDetails: {
+                location: location || '',
+                type: type || '',
+                requirements: Array.isArray(requirements) ? requirements : 
+                            (requirements ? requirements.split(',').map(r => r.trim()) : []),
+                description: description || '',
+                companyInfo: {
+                    name: company,
+                    industry: companyInfo?.industry || '',
+                    website: companyInfo?.website || '',
+                    address: companyInfo?.address || '',
+                    mobile: companyInfo?.mobile || ''
+                }
+            },
+            applicationFee: applicationFee || {
+                amount: 0,
+                currency: 'INR',
+                status: 'pending'
+            }
+        };
+
+        console.log("Creating application with data:", applicationData);
+
+        // Create new application
+        const newApplication = await applyModel.create(applicationData);
+
+        // Send notification email to the applicant
+        const user = await userModel.findById(applicant);
+        if (user && user.email) {
+            await send.sendMail(
+                user.fullName || 'Applicant',
+                user.email,
+                `Thank you for applying to ${title} at ${company}!
+                <br><br>
+                Your application has been received and is being reviewed.
+                <br><br>
+                Job Details:
+                <br>
+                Position: ${title}
+                <br>
+                Location: ${location}
+                <br>
+                Type: ${type}
+                <br><br>
+                <h3>Thank you!<br>UNIVI INDIA Team</h3>`
+            );
+        }
+
+        return res.status(200).json({ 
+            success: true,
+            message: "Successfully applied",
+            application: newApplication
+        });
+
     } catch (err) {
-      console.log(err);
+        console.error("Apply Now Error:", err);
+        if (err.code === 11000) {
+            return res.status(400).json({ error: "You have already applied for this job" });
+        }
+        return res.status(500).json({ 
+            error: "Internal server error",
+            details: err.message
+        });
     }
-  }
+}
 
   async getApplyCompanyList(req, res) {
     try {
@@ -475,6 +700,69 @@ async login1(req, res) {
     }
   }
 
+  async getAllApplyCompanyList(req, res) {
+    try {
+      // let userId = req.params.userId;
+   
+      let data = await applyModel
+        .find()
+        .sort({ _id: -1 })
+        .populate("companyId")
+        .populate("userId");
+   
+      return res.status(200).json({ success: data });
+    } catch (err) {
+      console.log(err);
+    }
+  }
+  async getlistofinterviewscedule(req, res) {
+    try {
+      // Find all interviews where the status is "Scheduled"
+      let scheduledInterviews = await Interview.find({}).sort({ dateTime: 1 }).populate("candidate");
+  
+      if (scheduledInterviews.length === 0) {
+        return res.status(404).json({ message: "No scheduled interviews found" });
+      }
+  
+      return res.status(200).json({ success: true, interviews: scheduledInterviews });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({ error: "Something went wrong", details: error.message });
+    }
+  }
+  
+
+  async  scheduleInterview(req, res) {
+      try {
+           const { candidate, position, dateTime, type, interviewer, status } = req.body;
+
+    // Validate required fields
+    if (!candidate || !position || !dateTime || !interviewer) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+
+    // Create a new interview
+    const newInterview = new Interview({
+      candidate,
+      position,
+      dateTime,
+      
+      type: type || "Online", // Default to "Online" if not provided
+      interviewer,
+      status: status || "Scheduled" // Default status to "Scheduled"
+    });
+
+    // Save to database
+    await newInterview.save();
+
+    return res.status(201).json({ success: true, interview: newInterview });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ error: "Something went wrong", details: error.message });
+  }
+}
+
+
   async rejectApply(req, res) {
     try {
       let userId = req.params.userId;
@@ -488,16 +776,48 @@ async login1(req, res) {
     } catch (err) {}
   }
 
+
   async getUserById(req, res) {
     try {
-      let userId = req.params.userId;
-      let data = await userModel.findById(userId);
-      if (!data) return res.status(400).json({ success: "Data not found" });
-      return res.status(200).json({ success: data });
-    } catch (err) {
-      console.log(err);
+      const userId = req.params.userId;
+      console.log(userId, "Fetching user");
+  
+      // Validate ObjectId
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+  
+      // Fetch user and populate references
+      const user = await userModel.findById(userId)
+        .populate({
+          path: "jobRole",
+          select: "name" // Adjust fields as per your schema
+        })
+        .populate({
+          path: "companyType",
+          select: "type" 
+        })
+        .populate({
+          path: "department",
+          select: "name"
+        })
+        .populate({
+          path: "workMode",
+          select: "mode"
+        })
+        .populate("experiences.jobRoles experiences.industry education");
+  
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+  
+      res.status(200).json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Server error" });
     }
   }
+  
 
 //forget password 
 
@@ -605,6 +925,7 @@ async makEverifyUnverify(req,res){
       console.log(error);
   }
 }
+
  async makeBlockUnBlock(req,res){
         try {
             const {userId,reasion,isBlock}=req.body;
@@ -628,6 +949,9 @@ async makEverifyUnverify(req,res){
         }
     }
 
+    //matching card 
+
+  // Update user's matching profile
 }
 
 module.exports = new user();

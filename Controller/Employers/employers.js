@@ -1,6 +1,9 @@
+const mongoose = require("mongoose");  // ✅ Import mongoose
+
 
 const employerModel = require('../../Model/Employers/employers');
-const callModel = require('../../Model/Employers/callinterview');
+const jobModel = require("../../Model/Employers/company");
+const callModel = require('../../Model/Employers/scheduleinterview');
 const userModel = require('../../Model/User/user');
 const bcrypt = require('bcryptjs');
 const send = require("../../EmailSender/send");
@@ -9,42 +12,156 @@ const nodemailer=require('nodemailer');
 const applyModel = require("../../Model/Employers/apply");
 const companyModel=require("../../Model/Employers/company");
 const saltRounds = 10;
+
+
 const {isValidEmail,phonenumber,isValidString,validUrl, isValid}=require("../../Config/function")
 class Employers {
-    async registerEmployer(req, res) {
+    async  registerEmployer(req, res) {
         try {
-            const { mobile, age, name, userName, email, password, street, city, state, pincode, gender,address } = req.body
-              if(!isValidString(name)) return res.status(400).json({success:"Name should be alphabets minimum size 3-25!"})
-            if(!isValidEmail(email)) return res.status(400).json({success:"Invalid email!"});
-             if(password.length<8) return res.status(400).json({error:"Password should be minimum 8 characters!"})
-            if(!phonenumber(mobile)) return res.status(400).json({error:"Invalid phone number!"})
-          
-            let encryptedPassword = bcrypt
-                .hash(password, saltRounds)
-                .then((hash) => {
-                    return hash;
-                });
-            let pwd = await encryptedPassword;
-
-            // let check3 = await employerModel.findOne({ userName: userName,isDelete:false });
-            // if (check3) return res.status(400).json({ success: "try to different user name" });
-
-            let check = await employerModel.findOne({ mobile: mobile,isDelete:false });
-
-            if (check) return res.status(400).json({ error: "Mobile number is already exist" });
-            let check2 = await employerModel.findOne({ email: email,isDelete:false });
-            if (check2) return res.status(400).json({ error: "Email Id is already exist" })
-
-            await employerModel.create({ mobile, userName, street, city, state, pincode, password: pwd, age, name, email, gender })
-            send.sendMail(name, email,` Welcome to UNIVI INDIA 
-            <h3>Thank you <br>UNIVI INDIA Team</h3>
-            ` );
-
-            return res.status(200).json({ success: "Successfully registered" })
+            const {
+                mobile, age, name, userName, email, password, gender, 
+                street, city, state, pincode, country, address, 
+                hiring, MyCompany, CompanyName, companyWebsite, 
+                numberOfemp, industry, CompanyInd, CompanydocType, GstNum ,searchCount
+            } = req.body;
+    
+            // Validations
+            if (!isValidString(name)) return res.status(400).json({ error: "Name should be alphabets, 3-25 characters!" });
+            if (!isValidEmail(email)) return res.status(400).json({ error: "Invalid email!" });
+            if (password.length < 8) return res.status(400).json({ error: "Password should be at least 8 characters!" });
+            if (!phonenumber(mobile)) return res.status(400).json({ error: "Invalid phone number!" });
+    
+            // Check if mobile or email already exists
+            let existingMobile = await employerModel.findOne({ mobile, isDelete: false });
+            if (existingMobile) return res.status(400).json({ error: "Mobile number already exists!" });
+            
+            let existingEmail = await employerModel.findOne({ email, isDelete: false });
+            if (existingEmail) return res.status(400).json({ error: "Email ID already exists!" });
+            
+            // Encrypt password
+            const hashedPassword = await bcrypt.hash(password, saltRounds);
+    
+            // Create employer
+            await employerModel.create({
+                mobile, userName, age, name, email, password: hashedPassword, gender,
+                street, city, state, pincode, country, address,
+                hiring, MyCompany, CompanyName, companyWebsite,
+                numberOfemp, industry, CompanyInd, CompanydocType, GstNum ,searchCount
+            });
+    
+            // Send welcome email
+            send.sendMail(name, email, `Welcome to UNIVI INDIA <h3>Thank you <br>UNIVI INDIA Team</h3>`);
+    
+            return res.status(200).json({ success: "Successfully registered!" });
         } catch (err) {
-            console.log(err);
+            console.error(err);
+            return res.status(500).json({ error: "Internal server error", message: err.message });
         }
     }
+
+
+// Get Employer Profile by ID
+
+
+async getEmployerProfile(req, res) {
+    try {
+        console.log("Request Params:", req.params); // Debugging Log
+        let { employerId } = req.params; // Changed from 'id' to 'employerId' to match route parameter
+
+        if (!employerId) {
+            return res.status(400).json({ message: "Employer ID is required" });
+        }
+
+        employerId = employerId.trim();  // Remove spaces from ID
+
+        if (!mongoose.Types.ObjectId.isValid(employerId)) {
+            return res.status(400).json({ message: "Invalid Employer ID format" });
+        }
+
+        const employer = await employerModel.findById(employerId);
+
+        if (!employer) {
+            return res.status(404).json({ message: "Employer not found" });
+        }
+
+        return res.status(200).json({ success: true, data: employer });
+    } catch (error) {
+        console.error("Error fetching employer profile:", error);
+        return res.status(500).json({ message: "Internal server error", error: error.message });
+    }
+}
+
+
+
+// Get jobs by employer ID
+// Get jobs by employer ID
+// async getJobsByEmployer(req, res) {
+//     try {
+//         const { employerId } = req.params;
+//         console.log(employerId, "this is employer ID");
+
+//         // Validate employerId
+//         if (!employerId) {
+//             return res.status(400).json({ error: "Employer ID is required" });
+//         }
+
+//         // Try fetching a sample job to check employerId type
+//         const sampleJob = await jobModel.findOne();
+//         const employerIdType = typeof sampleJob?.employerId;
+
+//         // Determine the correct query format based on employerId type
+//         const query = employerIdType === "string"
+//             ? { employerId: employerId }
+//             : { employerId: new mongoose.Types.ObjectId(employerId) };
+
+//         // Fetch jobs
+//         const jobs = await jobModel.find(query);
+
+//         console.log(jobs);
+
+//         if (jobs.length === 0) {
+//             return res.status(404).json({ message: "No jobs found for this employer" });
+//         }
+
+//         return res.status(200).json({
+//             success: true,
+//             count: jobs.length,
+//             data: jobs,
+//         });
+//     } catch (error) {
+//         console.error("Error fetching jobs by employer:", error);
+//         return res.status(500).json({ error: "Internal server error", details: error.message });
+//     }
+// }
+
+async getJobsByEmployer(req, res) {
+    try {
+      const { employerId } = req.params;
+      console.log(employerId, "this is employer ID");
+  
+      // Validate employerId
+      if (!mongoose.Types.ObjectId.isValid(employerId)) {
+        return res.status(400).json({ error: "Invalid employer ID" });
+      }
+  
+      // Find jobs where employerId matches
+      const jobs = await jobModel.find({ employerId }); // No need to cast employerId again
+  
+      return res.status(200).json({
+        success: true,
+        employerId,
+        jobCount: jobs.length, // Corrected count
+        jobs, // Fixed undefined issue
+      });
+    } catch (error) {
+      console.error("Error fetching jobs:", error);
+      return res.status(500).json({ error: "Internal server error", details: error.message });
+    }
+  };
+  
+  
+
+ 
     async editProfile(req, res) {
         try {
 
@@ -233,14 +350,50 @@ class Employers {
 
     async getAllProfile(req, res) {
         try {
-
             let findData = await employerModel.find().sort({ _id: -1 });
+            console.log("Success Response:", { success: "Data not found" }); // Logging response before sending
+
             if (findData.length <= 0) return res.status(400).json({ success: "Data not found" });
             return res.status(200).json({ success: findData })
         } catch (err) {
             console.log(err);
         }
     }
+
+    async toggleEmployerApproval (req, res){
+    try {
+        const { employerId } = req.params;
+
+        if (!employerId) {
+            return res.status(400).json({ success: false, message: "Employer ID is required" });
+        }
+
+        const employer = await employerModel.findById(employerId);
+
+        if (!employer) {
+            return res.status(404).json({ success: false, message: "Employer not found" });
+        }
+
+        // Toggle Approval Status
+        employer.isApproved = !employer.isApproved;
+        employer.status = employer.isApproved ? "Approved" : "Pending"; 
+        
+        await employer.save();
+
+        return res.status(200).json({
+            success: true,
+            message: `Employer ${employer.isApproved ? "Approved" : "Unapproved"} successfully`,
+            data: employer
+        });
+    } catch (err) {
+        console.error("Error updating employer approval status:", err);
+        return res.status(500).json({ success: false, message: "Server error" });
+    }
+}
+
+
+
+
     async login(req, res) {
         try {
             const { email, password } = req.body;
@@ -290,44 +443,87 @@ class Employers {
             console.log(err);
         }
     }
-
-  async callinterview(req,res){
+    async  callinterview(req, res) {
         try {
-            const {userId,schedule,status,employerId,name,email,companyId}=req.body;
-            let obj ={userId,schedule,status,employerId}
-             
-             let check1=await callModel.findOne({userId:userId,employerId:employerId,companyId:companyId})
-            if(!check1){
-            let data=await callModel.create({employerId:employerId,userId:userId,schedule:schedule,name:name,email:email,companyId:companyId})
-            console.log(data,"data")
-        
+          const { userId, schedule, status, employerId, name,meetingPassword, meetingLink, email, companyId, platform, interviewNotes, duration } = req.body;
           
-            if(!data) return res.status(400).json({error:"Something went wong!"});
-           
-                send.sendMail(name,email, `Your Shortlisted for an interview and the schedule is ${schedule},
-                <h3>Thank you <br>UNIVI INDIA Team</h3>
-                `);
-             return res.status(200).json({success:"Successfully send notice"});
-            }else{
-                return res.status(200).json({success:"Already sent!"})
-            }
-         
-        } catch (error) {
-            console.log(error);
-        }
-    }
-       async getcallinterview(req,res){
-        try{
-             
-            let employerId=req.params.employerId;
-            console.log(employerId);
-            let data=await callModel.find({employerId:employerId}).sort({_id:-1});
-            if(data.length<=0) return res.status(400).json({success:"Data not found"});
-            return res.status(200).json({success:data})
-        }catch(err){
+        //   if (!userId || !schedule || !employerId || !name || !email || !companyId) {
+        //     return res.status(400).json({ error: "Missing required fields" });
+        //   }
 
+         
+        const companyObjectId = new mongoose.Types.ObjectId(companyId);
+
+      
+          // Check if the interview call already exists
+          let existingCall = await callModel.findOne({ userId, employerId, companyObjectId });
+          
+          if (existingCall) {
+            return res.status(200).json({ success: "Interview call already scheduled!" });
+          }
+      
+          // Create a new interview call
+          let newCall = await callModel.create({
+            employerId,
+            userId,
+            schedule,
+            status: status || "Scheduled", // Default status
+            name,
+            email,
+            companyId:companyObjectId,
+            platform,
+            meetingPassword,
+            meetingLink,
+            interviewNotes,
+            duration,
+          });
+      
+          if (!newCall) {
+            return res.status(500).json({ error: "Failed to schedule interview call" });
+          }
+      
+          console.log(newCall, "Interview Call Created");
+      
+          // Send email notification
+          await send.sendMail(
+            name,
+            email,
+            `You are shortlisted for an interview. The schedule is ${schedule}.<br>
+            <strong>Platform:</strong> ${platform || "Not Specified"}<br>
+            <strong>Duration:</strong> ${duration ? duration + " minutes" : "Not Specified"}<br><br>
+            <h3>Thank you,<br>UNIVI INDIA Team</h3>`
+          );
+      
+          return res.status(201).json({ success: "Interview scheduled successfully" });
+      
+        } catch (error) {
+          console.error("Error scheduling interview:", error);
+          return res.status(500).json({ message: "Internal Server Error" , error:error.message });
         }
-    }
+      }
+    
+      async  getcallinterview(req, res) {
+        try {
+          const { employerId } = req.params;
+      
+          if (!employerId) {
+            return res.status(400).json({ error: "Employer ID is required" });
+          }
+      
+          let interviewCalls = await callModel.find({ employerId }).sort({ _id: -1 });
+      
+          if (!interviewCalls.length) {
+            return res.status(404).json({ error: "No interview calls found" });
+          }
+      
+          return res.status(200).json({ success: true, data: interviewCalls });
+      
+        } catch (error) {
+          console.error("Error fetching interview calls:", error);
+          return res.status(500).json({ error: "Internal Server Error" });
+        }
+      }
+      
     
    async getUserByFilter(req, res) {
         try {
@@ -543,6 +739,54 @@ async postmail(req, res){
         console.log(error);
     }
   }
+
+
+  async checkApprovalStatus  (req, res) {
+    const { userId } = req.params; // Extract userId from the request parameters
+  
+    try {
+      // Find the user by their ID
+      const user = await userModel.findById(userId);
+  
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found',
+        });
+      }
+  
+      // Check if the user is approved
+      if (user.isApproved) {
+        return res.status(200).json({
+          success: true,
+          isApproved: true,
+          userData: {
+            _id: user._id,
+            email: user.email,
+            isApproved: user.isApproved,
+            // Include other necessary user data
+          },
+          message: 'User is approved',
+        });
+      } else {
+        return res.status(200).json({
+          success: true,
+          isApproved: false,
+          message: 'User is not yet approved',
+        });
+      }
+    } catch (error) {
+      console.error('Error checking approval status:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  };
+  
+
+
+
 }
 
 module.exports = new Employers()

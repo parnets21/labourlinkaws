@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const jobController=require("../../Controller/Employers/company")
+const jobController = require("../../Controller/Employers/company");
 const multer = require("multer");
 
 var storage = multer.diskStorage({
@@ -14,40 +14,88 @@ var storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-router.post("/registerCompany",upload.any(), jobController.register);
-router.put("/editJob",upload.any(),jobController.editJob);
-//get all job withiut filter
-router.get("/getAllJobs",jobController.getAllJobs);
-router.get("/getUnvarifiedList",jobController.getUnvarifiedList);
+// Existing job routes
+router.post("/registerCompany", upload.any(), jobController.register);
+router.get("/GetregisterCompany/:jobId", jobController.registeredjobbyId );
+router.put("/editJob", upload.any(), jobController.editJob);
+router.get("/getAllJobs", jobController.getAllJobs);
 router.post("/AddSkillJ", jobController.AddSkillJ);
-router.delete('/removeSkillJ/:employerId/:removeId',jobController.removeSkillJ);
+router.delete('/removeSkillJ/:employerId/:removeId', jobController.removeSkillJ);
 router.post("/AddBenefits", jobController.AddBenefits);
-router.delete('/removeBenefits/:employerId/:removeId',jobController.removeBenefits);
-//get particular job details
-router.get("/getJobById/:jobId",jobController.getJobById);
-// get all job details by filter
-router.post("/getJobByfilter",jobController.getJobByfilter);
-// get job  today of thy day 
-router.post("/getJobOfTheDay",jobController.jobOftheDay);
-//delete job
-router.delete("/deleteJob/:jobId",jobController.deleteJob);
+router.delete('/removeBenefits/:employerId/:removeId', jobController.removeBenefits);
+router.get("/getJobById/:jobId", jobController.getJobById);
+router.post("/getJobByfilter", jobController.getJobByfilter);
+router.post("/getJobOfTheDay", jobController.jobOftheDay);
+router.delete("/deleteJob/:jobId", jobController.deleteJob);
 
-// apply Api;
-router.get("/getApplyList/:companyId",jobController.getApplyList);
-router.post("/addShortList",jobController.addShortList);
-router.post("/addSelect",jobController.addSelect);
-router.get("/getSelectData/:companyId",jobController.getSelectData);
-router.get("/getShortlistingData/:companyId",jobController.getShortlistingData);
-router.post("/rejectApply",jobController.rejectApply);
+// Apply API routes
+router.post("/addSelect", jobController.addSelect);
+router.get("/getSelectData/:companyId", jobController.getSelectData);
 
-//get unverify company
-router.get("/unVerify",jobController.isVerify);
-router.post("/makeVerifyUnverifyAdmin",jobController.makEverifyUnverify)
-//make verify company
-router.put('/makeVerify/:companyId',jobController.makeVerify)
-router.put("/makeUnVerify/:companyId",jobController.makeUnVerify)
-router.post("/makeBlockUnBlockCompany",jobController.makeBlockUnBlock)
-router.get("/AllAplliedDetals",jobController.AllAplliedDetals)
-router.get("/getJobByEmployerId/:employerId",jobController.getJobByEmployerId)
-router.delete("/deleteApply/:applyId",jobController.deleteApply)
+
+
+router.get("/getApplyList/:companyId", jobController.getApplyList);
+router.post("/addShortList", jobController.addShortList);
+router.get("/getShortlistingData/:companyId", jobController.getShortlistingData);
+router.post("/rejectApply", jobController.rejectApply);
+router.get("/getrejected/:companyId", jobController.getRejectedApplications);
+
+
+// Job discovery routes
+router.get('/popular', jobController.getPopularJobs);
+router.get("/recommend/:userId", jobController.getRecommendedJobs);
+router.get("/highest-paying-job/:userId", jobController.getHighestPayingJob);
+router.get('/suggested-jobs/:userId', jobController.getSuggestedJobs);
+router.get("/jobby-role/:userId", jobController.searchJobsByUserRole);
+
+// Verification and management routes
+router.get("/unVerify", jobController.isVerify);
+router.post("/makeVerifyUnverifyAdmin", jobController.makEverifyUnverify);
+router.put('/makeVerify/:companyId', jobController.makeVerify);
+router.put("/makeUnVerify/:companyId", jobController.makeUnVerify);
+router.post("/makeBlockUnBlockCompany", jobController.makeBlockUnBlock);
+router.get("/AllAplliedDetals", jobController.AllAplliedDetals);
+router.get("/getJobByEmployerId/:employerId", jobController.getJobByEmployerId);
+router.delete("/deleteApply/:applyId", jobController.deleteApply);
+
+// Job Management Routes - POST endpoints
+router.post("/add-company-type", jobController.addCompanyType); //done x
+router.post("/add-industry", jobController.addIndustry);
+router.post("/add-department", jobController.addDepartment);
+router.post("/add-job-role", jobController.addJobRole);
+router.post("/add-work-mode", jobController.addWorkMode);
+router.post("/add-education", jobController.addEducation);
+router.post("/add-skill", jobController.addSkill);
+// router.post("/add-experience-level", jobController.addExperienceLevel);
+
+// Job Management Routes - GET endpoints
+router.get("/company-types", jobController.getCompanyTypes);
+router.get("/industries", jobController.getIndustries);
+router.get("/departments", jobController.getDepartments);
+router.get("/job-roles", jobController.getJobRoles);
+router.get("/work-modes", jobController.getWorkModes);
+router.get("/educations", jobController.getEducations);
+router.get("/skills", jobController.getSkills);
+
+//get api http://localhost:8500/api/user/skills
+
+// Job Management Routes - PUT (Edit) endpoints
+router.put("/edit-company-type/:id", jobController.editCompanyType);
+router.put("/edit-industry/:id", jobController.editIndustry);
+router.put("/edit-department/:id", jobController.editDepartment);
+router.put("/edit-job-role/:id", jobController.editJobRole);
+router.put("/edit-work-mode/:id", jobController.editWorkMode);
+router.put("/edit-education/:id", jobController.editEducation);
+router.put("/edit-skill/:id", jobController.editSkill);
+
+
+// Job Management Routes - DELETE endpoints
+router.delete("/delete-company-type/:id", jobController.deleteCompanyType);
+router.delete("/delete-industry/:id", jobController.deleteIndustry);
+router.delete("/delete-department/:id", jobController.deleteDepartment);
+router.delete("/delete-job-role/:id", jobController.deleteJobRole);
+router.delete("/delete-work-mode/:id", jobController.deleteWorkMode);
+router.delete("/delete-education/:id", jobController.deleteEducation);
+router.delete("/delete-skill/:id", jobController.deleteSkill);
+
 module.exports = router;

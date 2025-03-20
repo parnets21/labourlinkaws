@@ -1,5 +1,5 @@
 
-const notificationModel=require("../../Model/Admin/notification");
+const notificationModel=require("../../Model/Admin/comapnaylocation");
 class notification{
    
   async addnotification(req,res){

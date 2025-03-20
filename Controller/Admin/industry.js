@@ -1,4 +1,4 @@
-const industryModel = require("../../Model/Admin/industry");
+const industryModel = require("../../Model/Admin/jobmanagment/industrymanagment");
 
 
 class industry {

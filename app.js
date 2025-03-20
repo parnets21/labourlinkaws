@@ -9,30 +9,18 @@ const path = require('path')
 var cookieParser = require("cookie-parser");
 //Db Connection
 app.use(cookieParser());
-// mongoose.set('strictQuery', false);
-// // mongoose
-// //   .connect(process.env.DB, {
-// //     useNewUrlParser: true,
-// //     useUnifiedTopology: true,
-// //   })
-// //   .then(() => console.log("Database Connected........."))
-// //   .catch((err) => console.log("Database Not Connected !!!"));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-
+mongoose.set('strictQuery', false);
 mongoose
-  // .connect("mongodb://localhost:27017/univ_db", {
-    .connect(process.env.DB, {
+  .connect(process.env.DB, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-    // useCreateIndex: true,
-    // useFindAndModify: false,
   })
-  .then(() =>
-    console.log("Database Connected.........")
-  )
+  .then(() => console.log("Database Connected........."))
   .catch((err) => console.log("Database Not Connected !!!"));
-  
-  
+
 //import route
 const user = require("./Routes/User/user");
 const job = require("./Routes/Employers/company");
@@ -56,10 +44,10 @@ app.use(morgan("dev"));
 app.use(cors());
 // app.use(express.static("Public"));
 app.use(express.static(path.join(__dirname, 'Public')));
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-//create route
+//create route,
 app.use("/api/user", user);
 app.use("/api/user", otp);
 app.use("/api/user", job);
@@ -77,14 +65,6 @@ app.use("/api/user", chat);
 app.use("/api/user", resume);
 app.use("/api/admin",subadmin);
 
-
-app.use(express.static(path.join(__dirname, 'build'))); // Change 'build' to your frontend folder if needed
-
-// Redirect all requests to the index.html file
-
-app.get("*", (req, res) => {
-  return  res.sendFile(path.join(__dirname, 'build', 'index.html'));
-});
 const employerController=require("./Controller/Employers/employers");
 const employeeController=require("./Controller/User/user");
 setInterval(()=>{
