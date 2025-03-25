@@ -7,7 +7,7 @@ const callSchema = new Schema(
       schedule: { type: Date, required: true },
       status: { type: String, required: true },
       employerId: { type: String, required: true },
-      name: { type: String, required: true },
+      // name: { type: String, required: true },
       meetingPassword: { type: String, required: true },
       meetingLink: { type: String, required: true },
       email: { type: String, required: true },

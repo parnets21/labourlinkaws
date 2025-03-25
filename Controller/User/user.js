@@ -553,121 +553,55 @@ async login1(req, res) {
   async applyNow(req, res) {
     try {
         console.log("Received application data:", req.body);
-        
-        const {
-            applicant,
-            job,
-            status,
-            documents,
-            interviews,
-            notes,
-            applicationFee,
-            title,
-            company,
-            location,
-            type,
-            requirements,
-            description,
-            companyInfo
-        } = req.body;
 
-        // Validate required fields
-        if (!applicant || !job) {
-            return res.status(400).json({ 
-                error: "Missing required fields",
-                details: {
-                    applicant: !applicant ? "Applicant ID is required" : null,
-                    job: !job ? "Job ID is required" : null
-                }
-            });
-        }
+        let { applicant, job, status, title, company, location, type, requirements, description, companyInfo } = req.body;
 
-        // Validate ObjectIds
-        if (!mongoose.Types.ObjectId.isValid(applicant)) {
-            return res.status(400).json({ 
-                error: "Invalid applicant ID format"
-            });
+        // Parse `applicant` if it's a JSON string
+  
+
+        const applicantId = applicant // Extract actual user ID
+        console.log(applicantId,"asljhadsalskmasmas")
+
+        if (!mongoose.Types.ObjectId.isValid(applicantId)) {
+            return res.status(400).json({ error: "Invalid applicant ID format" });
         }
 
         if (!mongoose.Types.ObjectId.isValid(job)) {
-            return res.status(400).json({ 
-                error: "Invalid job ID format"
-            });
+            return res.status(400).json({ error: "Invalid job ID format" });
         }
 
         // Check if already applied
         const existingApplication = await applyModel.findOne({
             companyId: job,
-            userId: applicant,
+            userId: applicantId,
             isDelete: false
         });
+        console.log(existingApplication ,"hbhbhbh")
 
         if (existingApplication) {
-            return res.status(400).json({ 
-                error: "You have already applied for this job",
-                applicationDetails: existingApplication 
-            });
+            return res.status(400).json({alert: "You have already applied for this job" });
         }
+        console.log(existingApplication,"ththhtthth")
 
-        // Create application object with additional data
-        const applicationData = {
+        // Create application
+        const newApplication = await applyModel.create({
             companyId: job,
-            userId: applicant,
+            userId: applicantId,
             jobTitle: title,
             companyName: company,
-            status: status ,
-            documents: documents || [],
-            notes: notes || [],
-            appliedDate: new Date(),
+            status: status || "Applied",
+            appliedOn: new Date(),
             jobDetails: {
-                location: location || '',
-                type: type || '',
-                requirements: Array.isArray(requirements) ? requirements : 
-                            (requirements ? requirements.split(',').map(r => r.trim()) : []),
-                description: description || '',
-                companyInfo: {
-                    name: company,
-                    industry: companyInfo?.industry || '',
-                    website: companyInfo?.website || '',
-                    address: companyInfo?.address || '',
-                    mobile: companyInfo?.mobile || ''
-                }
-            },
-            applicationFee: applicationFee || {
-                amount: 0,
-                currency: 'INR',
-                status: 'pending'
+                location,
+                type,
+                requirements: Array.isArray(requirements) ? requirements : [],
+                description,
+                companyInfo
             }
-        };
+        });
+        console.log(newApplication ,"hbhaef,mabdmancbamjcbamhcvasbhbh")
 
-        console.log("Creating application with data:", applicationData);
-
-        // Create new application
-        const newApplication = await applyModel.create(applicationData);
-
-        // Send notification email to the applicant
-        const user = await userModel.findById(applicant);
-        if (user && user.email) {
-            await send.sendMail(
-                user.fullName || 'Applicant',
-                user.email,
-                `Thank you for applying to ${title} at ${company}!
-                <br><br>
-                Your application has been received and is being reviewed.
-                <br><br>
-                Job Details:
-                <br>
-                Position: ${title}
-                <br>
-                Location: ${location}
-                <br>
-                Type: ${type}
-                <br><br>
-                <h3>Thank you!<br>UNIVI INDIA Team</h3>`
-            );
-        }
-
-        return res.status(200).json({ 
+        return res.status(200).json({
             success: true,
             message: "Successfully applied",
             application: newApplication
@@ -675,24 +609,21 @@ async login1(req, res) {
 
     } catch (err) {
         console.error("Apply Now Error:", err);
-        if (err.code === 11000) {
-            return res.status(400).json({ error: "You have already applied for this job" });
-        }
-        return res.status(500).json({ 
-            error: "Internal server error",
-            details: err.message
-        });
+        return res.status(500).json({ error: "Internal server error", details: err.message });
     }
 }
+
 
   async getApplyCompanyList(req, res) {
     try {
       let userId = req.params.userId;
-   
+      
       let data = await applyModel
-        .find({ userId: userId })
-        .sort({ _id: -1 })
-        .populate("companyId");
+      .find({ userId: userId })
+      .sort({ _id: -1 })
+      .populate("companyId");
+      console.log(data)
+      console.log(userId,"thisis dsinsd")
    
       return res.status(200).json({ success: data });
     } catch (err) {

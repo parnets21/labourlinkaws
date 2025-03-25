@@ -636,9 +636,11 @@ async register(req, res) {
   async getApplyList(req, res) {
     try {
       const{companyId}=req.params
-      console.log(req.params,"adcdcjns")
+      const companyObjectId = new mongoose.Types.ObjectId(companyId);
+
+      console.log(companyObjectId,"adcdcjhbhbjns")
       if (!mongoose.Types.ObjectId.isValid(companyId)) {
-          return res.status(400).json({ success: false, message: "Invalid companyId format" });
+        return res.status(400).json({ success: false, message: "Invalid companyId format" });
       }
   
       console.log("Received companyId:", companyId, "Type:", typeof companyId);
@@ -666,94 +668,215 @@ async register(req, res) {
 
 
 
-  async addShortList(req, res) {
-    try {
-      const { userId, companyId } = req.body;
-      let data = await applyModel
-        .findOne({ userId: userId, companyId: companyId })
-        .populate("userId")
-        .populate("companyId");
+async addShortList(req, res) {
+  try {
+    const { userId, companyId } = req.body;
+    console.log("Received request with the rdfjk:", userId, companyId);
 
-      if (data.status == "Shortlisted") {
-        return res.status(400).json({ success: "already shortlisted" });
-      }
+    let data = await applyModel
+    .findOne({ userId: mongoose.Types.ObjectId(userId), companyId: mongoose.Types.ObjectId(companyId) })
+    .populate("userId")
+      .populate("companyId");
+      console.log("Query result:", data);  
 
-      let update = await applyModel.findOneAndUpdate(
-        { userId: userId, companyId: companyId },
-        { $set: { status: "Shortlisted" } },
-        { new: true }
-      );
-      if (!update)
-        return res.status(400).json({ success: "Something went worng" });
+    // ✅ Check if data exists before accessing properties
+    if (!data) {
+      return res.status(404).json({ error: "Application record not found" });
+    }
+
+    if (data.status === "Shortlisted") {
+      return res.status(400).json({ message: "Already shortlisted" });
+    }
+
+    let update = await applyModel.findOneAndUpdate(
+      { userId: userId, companyId: companyId },
+      { $set: { status: "Shortlisted" } },
+      { new: true }
+    );
+
+    console.log(update, "Updated document");
+
+    if (!update) {
+      return res.status(400).json({ success: false, message: "Something went wrong" });
+    }
+
+    // ✅ Check if userId and companyId exist before sending an email
+    if (data.userId && data.companyId) {
       sent.sendMail(
         data.userId.name,
         data.userId.email,
-        "This " +
-          data.companyId.CompanyName +
-          " company shortlisting you position " +
-          data.companyId.jobProfile +
-          ", and email is " +
-          data.companyId.email +
-          "."+"<h3>Thank you <br>UNIVI INDIA Team</h3>"
+        `This ${data.companyId.CompanyName} company shortlisted you for the position ${data.companyId.jobProfile}. Email: ${data.companyId.email}.<h3>Thank you <br>UNIVI INDIA Team</h3>`
       );
-      return res.status(200).json({ success: "Successfully shortlisted" });
-    } catch (err) {
-      console.log(err);
+    } else {
+      console.log("Missing user or company data, email not sent.");
     }
+
+    return res.status(200).json({ success: true, message: "Successfully shortlisted" });
+  } catch (err) {
+    console.error("Error in addShortList:", err);
+    return res.status(500).json({ success: false, error: "Internal server error" });
   }
+}
 
 
-async addSelect(req, res) {
+
+// async addSelect(req, res) {
+//     try {
+//       const { userId, companyId } = req.body;
+//       let data = await applyModel
+//         .findOne({ userId: userId, companyId: companyId })
+//         .populate("userId")
+//         .populate("companyId");
+
+// console.log("check",data)
+// // Check if data exists
+//       if (!data) {
+//         return res.status(404).json({ error: "No application found" });
+//       }
+//             if (data.status == "Selected") {
+//         return res.status(400).json({ error: "already selected" });
+//       }
+
+//       try {
+//         console.log("hiii")
+//         let update = await applyModel.findOneAndUpdate(
+//           { userId: new mongoose.Types.ObjectId(userId), companyId: new mongoose.Types.ObjectId(companyId) },
+//           { $set: { status: "Selected" } },
+//           { new: true }
+//         );
+//         console.log(update,"this is an update ")
+      
+//         if (!update) {
+//           console.log("No matching document found");
+//         } else {
+//           console.log("Update successful:", update);
+//         }
+//       } catch (error) {
+//         console.error("Error updating document:", error);
+//       }
+//       console.log(update,"update")
+//       if (!update)
+//         return res.status(400).json({ success: "Something went worng" });
+//       sent.sendMail(
+//         data.userId.name,
+//         data.userId.email,
+//         "This " +
+//           data.companyId.CompanyName +
+//           " company Selected you for a position " +
+//           data.companyId.jobProfile +
+//           ", and email is " +
+//           data.companyId.email +
+//           "."+"<h3>Thank you <br>UNIVI INDIA Team</h3>"
+//       );
+//       return res.status(200).json({ success: "Successfully Selected" });
+//     } catch (err) {
+//       console.log(err);
+//     }
+//   }
+
+
+
+async  addSelect(req, res) {
     try {
-      const { userId, companyId } = req.body;
-      console.log(companyId,"hellooooo")
-      let data = await applyModel
-        .findOne({ userId: userId, companyId: companyId })
-        .populate("userId")
-        .populate("companyId");
+        const { userId, companyId } = req.body;
 
-console.log("check",data)
-      if (data.status == "Selected") {
-        return res.status(400).json({ error: "already selected" });
-      }
+        console.log("Received request:", { userId, companyId });
 
-      let update = await applyModel.findOneAndUpdate(
-        { userId: userId, companyId: companyId },
-        { $set: { status: "Selected" } },
-        { new: true }
-      );
-      if (!update)
-        return res.status(400).json({ success: "Something went worng" });
-      sent.sendMail(
-        data.userId.name,
-        data.userId.email,
-        "This " +
-          data.companyId.CompanyName +
-          " company Selected you for a position " +
-          data.companyId.jobProfile +
-          ", and email is " +
-          data.companyId.email +
-          "."+"<h3>Thank you <br>UNIVI INDIA Team</h3>"
-      );
-      return res.status(200).json({ success: "Successfully Selected" });
+        // Validate input
+        if (!userId || !companyId) {
+            return res.status(400).json({ error: "User ID and Company ID are required" });
+        }
+
+        // Fetch the application
+        let data = await applyModel
+            .findOne({ userId: userId, companyId: companyId })
+            .populate("userId")
+            .populate("companyId")
+            .lean(); // Lean improves performance by returning a plain object
+
+        console.log("Fetched data:", data);
+
+        // Check if application exists
+        if (!data) {
+            console.log("No application found");
+            return res.status(404).json({ error: "No application found" });
+        }
+
+        console.log("Current Status:", data.status, typeof data.status);
+
+        // Ensure `data.status` is not null/undefined before checking
+        if (data.status && data.status === "Selected") {
+            console.log("Already selected condition met! Returning error...");
+            return res.status(400).json({ error: "Already selected" });
+        }
+
+        // Update application status
+        let update;
+        try {
+            console.log("Updating application status...");
+
+            update = await applyModel.findOneAndUpdate(
+                { userId: new mongoose.Types.ObjectId(userId), companyId: new mongoose.Types.ObjectId(companyId) },
+                { $set: { status: "Selected" } },
+                { new: true }
+            );
+
+            if (!update) {
+                console.log("No matching document found for update");
+                return res.status(400).json({ error: "Something went wrong" });
+            }
+
+            console.log("Update successful:", update);
+        } catch (error) {
+            console.error("Error updating document:", error);
+            return res.status(500).json({ error: "Database update failed" });
+        }
+
+        // Send email only if update is successful
+        try {
+            await sent.sendMail(
+                data.userId.fullName, // Changed `name` to `fullName`
+                data.userId.email,
+                `This ${data.companyId.companyName} company selected you for a position ${data.companyId.jobProfile}, and email is ${data.companyId.email}.
+                <h3>Thank you <br>UNIVI INDIA Team</h3>`
+            );
+            console.log("Email sent successfully");
+        } catch (emailError) {
+            console.error("Error sending email:", emailError);
+        }
+
+        return res.status(200).json({ success: "Successfully Selected" });
+
     } catch (err) {
-      console.log(err);
+        console.error("Unexpected error:", err);
+        return res.status(500).json({ error: "Internal server error" });
     }
-  }
-    async getSelectData(req, res) {
+}
+
+
+  async getSelectData(req, res) {
     try {
-      let companyId = req.params.companyId;
-      let hash = await selectModel
-        .find({ companyId: companyId, state: "Selected" })
+        // let companyId = new mongoose.Types.ObjectId(req.params.companyId); // Convert to ObjectId
+        let companyId = req.params.companyId
+        console.log(companyId,"this is company id")
+        const hash = await applyModel 
+        .find({ companyId, status: "Selected" })  // ✅ Correct field name
         .populate("userId");
+    
 
-      if (hash.length <= 0)
-        return res.status(400).json({ success: "Data not found" });
-      return res.status(200).json({ success: hash });
+        console.log(hash, "this is hash");
+
+        // if (hash.length <= 0) {
+        //     return res.status(400).json({ success: false, message: "Data not found" });
+        // }
+        
+        return res.status(200).json({ success: true, data: hash });
     } catch (err) {
-      console.log(err);
+        console.log(err);
+        return res.status(500).json({ success: false, message: "Internal Server Error" });
     }
-  }
+}
+
 
   async getShortlistingData(req, res) {
     try {

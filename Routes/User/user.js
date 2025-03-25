@@ -48,8 +48,8 @@ router.get("/getlistOfaplly", userController.getAllApplyCompanyList);
 router.get("/getlistofinterviewscedule", userController.getlistofinterviewscedule);
 router.post("/ADDlistofinterviewscedule", userController.scheduleInterview);
 
-router.get("/getlistOfaplly/:userId", userController.getApplyCompanyList);
-router.get("/getlistOfAccep/:userId", userController.getApplyCompanyList);
+router.get("/getlistOOfaplly/:userId", userController.getApplyCompanyList);
+// router.get("/getlistOfAccep/:userId", userController.getApplyCompanyList);
 router.get("/rejectApply/:userId", userController.rejectApply);
 router.post("/forgetPassword",userController.postmail);
 router.post("/makEverifyUnverifyEmployee",userController.makEverifyUnverify);

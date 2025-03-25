@@ -39,6 +39,7 @@ router.delete("/deleteParmanetEmployer/:userId",employerController.deleteParmane
 router.post("/makeBlockUnBlockEmployer",employerController.makeBlockUnBlock)
 router.post("/callinterview",employerController.callinterview)
 router.get("/getcallinterview/:employerId",employerController.getcallinterview);
+router.put('/updateInterviewStatus/:interviewId', employerController.updateInterviewStatus);
 router.post("/MakeIntrestedUser",employerController.MakeIntrestedUser);
 router.get("/getInterestedUser/:employerId",employerController.getInterestedUser);
 router.delete("/deleteIntrestById/:intrestId",employerController.deleteIntrestById);

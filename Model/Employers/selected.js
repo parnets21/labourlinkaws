@@ -14,7 +14,7 @@ const selectSchema = new Schema(
         
         status:{
             type:String,
-            default:"Selected"
+            default:"selected"
         },
         isSelected:{
              type:Boolean,

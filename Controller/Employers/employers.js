@@ -447,9 +447,9 @@ async getJobsByEmployer(req, res) {
         try {
           const { userId, schedule, status, employerId, name,meetingPassword, meetingLink, email, companyId, platform, interviewNotes, duration } = req.body;
           
-        //   if (!userId || !schedule || !employerId || !name || !email || !companyId) {
-        //     return res.status(400).json({ error: "Missing required fields" });
-        //   }
+          if (!userId || !schedule || !employerId || !name || !email || !companyId) {
+            return res.status(400).json({ error: "Missing required fields" });
+          }
 
          
         const companyObjectId = new mongoose.Types.ObjectId(companyId);
@@ -477,6 +477,9 @@ async getJobsByEmployer(req, res) {
             interviewNotes,
             duration,
           });
+          console.log(newCall,
+            "thisissssss"
+          )
       
           if (!newCall) {
             return res.status(500).json({ error: "Failed to schedule interview call" });
@@ -511,6 +514,7 @@ async getJobsByEmployer(req, res) {
           }
       
           let interviewCalls = await callModel.find({ employerId }).sort({ _id: -1 });
+          console.log(interviewCalls,"thiaodwihaidbasdhas")
       
           if (!interviewCalls.length) {
             return res.status(404).json({ error: "No interview calls found" });
@@ -523,6 +527,45 @@ async getJobsByEmployer(req, res) {
           return res.status(500).json({ error: "Internal Server Error" });
         }
       }
+
+
+
+      // Update interview status
+      async updateInterviewStatus  (req, res) {
+        try {
+            const { interviewId } = req.params;
+            console.log(interviewId,"this is an interview id ")
+            const { status } = req.body;
+        
+      // Find and update the interview status
+      const updatedInterview = await applyModel.findByIdAndUpdate(
+        interviewId,
+        { status: status },
+        { new: true }
+      );
+  
+      if (!updatedInterview) {
+        return res.status(404).json({
+          success: false,
+          message: 'Interview not found'
+        });
+      }
+  
+      res.status(200).json({
+        success: true,
+        message: 'Interview status updated successfully',
+        data: updatedInterview
+      });
+  
+    } catch (error) {
+      console.error('Error updating interview status:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to update interview status',
+        error: error.message
+      });
+    }
+  };
       
     
    async getUserByFilter(req, res) {
