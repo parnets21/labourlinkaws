@@ -30,7 +30,7 @@ router.delete("/deleteJob/:jobId", jobController.deleteJob);
 
 // Apply API routes
 router.post("/addSelect", jobController.addSelect);
-router.get("/getSelectData/:companyId", jobController.getSelectData);
+router.get("/getSelectDatas/:companyId", jobController.getSelectData);
 router.get("/getShortList", jobController.addShortList);
 
 
