@@ -3,33 +3,57 @@ const bcrypt = require('bcryptjs');
 const saltRounds = 10;
 
 class admin{
-    async register(req,res){
-        try{
-            const {mobile,name,userName,email,password,gender}=req.body;
+    // async register(req,res){
+    //     try{
+    //         const {mobile,name,userName,email,password,gender}=req.body;
           
-            let encryptedPassword = bcrypt.hash(password, saltRounds)
-            .then((hash) => {
-              return hash;
-            });
-            let pwd = await encryptedPassword;
+    //         let encryptedPassword = bcrypt.hash(password, saltRounds)
+    //         .then((hash) => {
+    //           return hash;
+    //         });
+    //         let pwd = await encryptedPassword;
 
-            let obj={mobile,name,userName,email,password:pwd,gender};
+    //         let obj={mobile,name,userName,email,password:pwd,gender};
 
-            if (req.files.length != 0) {
-                let arr = req.files
-                let i
-                for (i = 0; i < arr.length; i++) {
-                    if (arr[i].fieldname == "profile") {
-                        obj["profile"] = arr[i].filename
+    //         if (req.files.length != 0) {
+    //             let arr = req.files
+    //             let i
+    //             for (i = 0; i < arr.length; i++) {
+    //                 if (arr[i].fieldname == "profile") {
+    //                     obj["profile"] = arr[i].filename
+    //                 }
+    //             }}
+
+    //         await adminModel.create(obj)
+    //         return res.status(200).json({success:"Successfully register"})
+    //     }catch(err){
+    //         console.log(err);
+    //     }
+    // }
+    async register(req, res) {
+        try {
+            const { mobile, name, userName, email, password, gender } = req.body;
+    
+            let pwd = await bcrypt.hash(password, saltRounds);
+    
+            let obj = { mobile, name, userName, email, password: pwd, gender };
+    
+            if (req.files && req.files.length > 0) {
+                for (let file of req.files) {
+                    if (file.fieldname === "profile") {
+                        obj["profile"] = file.filename;
                     }
-                }}
-
-            await adminModel.create(obj)
-            return res.status(200).json({success:"Successfully register"})
-        }catch(err){
-            console.log(err);
+                }
+            }
+    
+            await adminModel.create(obj);
+            return res.status(200).json({ success: "Successfully registered" });
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ error: "Internal Server Error" });
         }
     }
+    
     async login(req,res){
         try{
             const {email,password}=req.body;
