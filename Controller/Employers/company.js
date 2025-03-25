@@ -866,9 +866,9 @@ async  addSelect(req, res) {
 
         console.log(hash, "this is hash");
 
-        // if (hash.length <= 0) {
-        //     return res.status(400).json({ success: false, message: "Data not found" });
-        // }
+        if (hash.length <= 0) {
+            return res.status(400).json({ success: false, message: "Data not found" });
+        }
         
         return res.status(200).json({ success: true, data: hash });
     } catch (err) {
