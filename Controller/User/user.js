@@ -457,7 +457,7 @@ class user {
   
           let obj = {};
           if (req.files) {
-              obj["profile"] = `user/${req.files[0].filename}`; 
+              obj["profile"] = `/${req.files[0].filename}`; 
           }
   
           // Update user details in the database by adminId

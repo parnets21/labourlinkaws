@@ -48,7 +48,7 @@ const jobSchema = new Schema(
     time: String,
     whatsapp: String,
     adminId: { type: ObjectId, ref: "admin" },
-    employerId: { type: ObjectId, ref: "employer" },
+    employerId: { type: ObjectId, ref: "Employer" },
     jobId: ObjectId,
     interviewername: String,
     isPrime: { type: Boolean, default: false },

@@ -429,8 +429,6 @@ async register(req, res) {
     try {
         // Fetch all jobs (remove isVerify condition)
         let findData = await jobModel.find().sort({ _id: -1 }).populate("employerId");
-
-
         if (findData.length === 0) {
             return res.status(400).json({ success: false, message: "No jobs found" });
         }
