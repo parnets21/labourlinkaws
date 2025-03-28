@@ -3,13 +3,13 @@ const router = express.Router();
 const jobController = require("../../Controller/Employers/company");
 const multer = require("multer");
 
-var storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "/home/univ/public_html/Public/company");
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "_" + file.originalname);
-  },
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, "Public/"); 
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + "_" + file.originalname); 
+    },
 });
 
 const upload = multer({ storage: storage });
@@ -19,6 +19,9 @@ router.post("/registerCompany", upload.any(), jobController.register);
 router.get("/GetregisterCompany/:jobId", jobController.registeredjobbyId );
 router.put("/editJob", upload.any(), jobController.editJob);
 router.get("/getAllJobs", jobController.getAllJobs);
+
+
+
 router.post("/AddSkillJ", jobController.AddSkillJ);
 router.delete('/removeSkillJ/:employerId/:removeId', jobController.removeSkillJ);
 router.post("/AddBenefits", jobController.AddBenefits);
@@ -34,9 +37,9 @@ router.get("/getSelectDatas/:companyId", jobController.getSelectData);
 router.get("/getShortList", jobController.addShortList);
 
 
-router.get("/getApplyList/:companyId", jobController.getApplyList);
+router.get("/getApplyList/:jobId", jobController.getApplyList);
 router.post("/addShortList", jobController.addShortList);
-router.get("/getShortlistingData/:companyId", jobController.getShortlistingData);
+router.get("/getShortlistingData/:jobId", jobController.getShortlistingData);
 router.post("/rejectApply", jobController.rejectApply);
 router.get("/getrejected/:companyId", jobController.getRejectedApplications);
 

@@ -30,6 +30,7 @@ const jobSchema = new Schema(
     additionalNotes: String,
     skill: [{ type: String, required: true }],
     email: String,
+    logo:String,
     english: String,
     experience: String,
     interview: String,

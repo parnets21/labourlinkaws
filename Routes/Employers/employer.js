@@ -3,18 +3,18 @@ const router = express.Router();
 const employerController=require("../../Controller/Employers/employers")
 const multer = require("multer");
 
-var storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "/home/univ/public_html/Public/employer");
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "_" + file.originalname);
-  },
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, "Public/"); 
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + "_" + file.originalname); // Generate unique filename
+    },
 });
 
 const upload = multer({ storage: storage });
-
 router.post("/registerEmployer", employerController.registerEmployer);
+router.put("/UpdateEmployerImg/:userId", upload.any(),employerController.UpdateEmployerImg);
 router.post("/loginEmployer", employerController.login);
 router.get("/employer/:employerId",employerController.getEmployerProfile);
 router.get("/Postedjobs/:employerId", employerController.getJobsByEmployer);

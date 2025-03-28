@@ -6,27 +6,29 @@ const messageController = require('../../Controller/User/messageController');
 
 const multer = require("multer");
 
-var storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "Public/user");
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "_" + file.originalname);
-  },
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, "Public/"); 
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + "_" + file.originalname); // Generate unique filename
+    },
 });
 
 const upload = multer({ storage: storage });
 
 router.post("/register", userController.register);
 router.post("/login", userController.login);
-router.put('/updateProfile/:userId', userController.updateProfile);
-router.put("/editProfile", upload.any(), userController.editProfile);
-router.post("/AddEducation", userController.AddEducation);
+router.put('/updateProfileImg/:userId',upload.any(), userController.updateProfileImg);
+router.put('/editUser/:id', userController.editUser);
+router.put('/updateResume/:userId',upload.any(), userController.updateResume);
+// router.put("/editProfile", upload.any(), userController.editProfile);
+router.post("/AddEducation", userController.addEducation);
 router.delete(
   "/removeEducation/:userId/:removeId",
   userController.removeEducation
 );
-router.post("/addsKill",userController.AddSkill)
+router.post("/addsKill",userController.addSkill)
 router.delete("/removeSkill/:userId/:removeId",userController.removeSkill)
 router.get("/getUserById/:userId", userController.getUserById);
 router.get("/getAllProfile", userController.getAllProfile);

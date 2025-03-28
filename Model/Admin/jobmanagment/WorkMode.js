@@ -1,7 +1,6 @@
 const mongoose = require("mongoose");
 
 const WorkModeSchema = new mongoose.Schema({
-  modeId: { type: String, unique: true }, // 001, 002, 003 format
   workMode: { type: String, required: true, unique: true },
   action: { type: String, required: false },
 });

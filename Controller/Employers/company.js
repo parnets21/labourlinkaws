@@ -83,7 +83,7 @@ async register(req, res) {
           preferredQualifications, additionalNotes
       } = req.body;
       console.log("📥 Received Request Body:", req.body);
-
+     
       let obj = {
           companyName, jobtitle, averageIncentive, openings, address, email, reason,
           experience, interview, period, description, typeofjob, typeofwork, 
@@ -95,7 +95,10 @@ async register(req, res) {
           companyaddress, requirements, responsibilities, workSchedule, locationDetails,
           preferredQualifications, additionalNotes
       };
-
+      if (req.files) {
+        obj["logo"] = `company/${req.files[0].filename}`; 
+        //frontend integration 
+    }
       // Save the job in DB
       const newJob = await jobModel.create(obj); // Updated to use `obj` instead of `req.body`
       console.log("✅ New Job Saved:", newJob); // Log saved job details
@@ -878,34 +881,49 @@ async  addSelect(req, res) {
 }
 
 
-  async getShortlistingData(req, res) {
-    try {
-        const { companyId } = req.params;
-        console.log(companyId,"llllll")
+async getShortlistingData(req, res) {
+  try {
+      const { jobId } = req.params;  // Changed from companyId to jobId to match route
+      console.log("Fetching shortlisted applications for jobId:", jobId);
 
-        // Validate companyId
-        if (!mongoose.Types.ObjectId.isValid(companyId)) {
-            return res.status(400).json({ success: false, message: "Invalid companyId format" });
-        }
+      if (!mongoose.Types.ObjectId.isValid(jobId)) {
+          return res.status(400).json({ 
+              success: false, 
+              message: "Invalid job ID format" 
+          });
+      }
 
-        console.log("Received companyId:", companyId, "Type:", typeof companyId);
+      // Match the case from your schema enum
+      const shortlistingData = await applyModel
+          .find({ 
+              companyId: new mongoose.Types.ObjectId(jobId), 
+              status: "Shortlisted",  // Matches the enum case in schema
+              isDelete: false  // Add this to exclude deleted applications
+          })
+          .populate("userId")
+          .sort({ appliedOn: -1 });  // Optional: sort by latest first
 
-        // Fetch shortlisting data (Use `status: "Shortlisted"` instead of `state`)
-        const shortlistingData = await applyModel
-            .find({ companyId: new mongoose.Types.ObjectId(companyId), status: "Shortlisted" })
-            .populate("userId");
+      if (!shortlistingData || shortlistingData.length === 0) {
+          return res.status(200).json({ 
+              success: true, 
+              data: [],
+              message: "No shortlisted applications found" 
+          });
+      }
 
-        // Handle case where no data is found
-        if (!shortlistingData.length) {
-            return res.status(404).json({ success: false, message: "No shortlisted data found" });
-        }
+      return res.status(200).json({ 
+          success: true, 
+          data: shortlistingData 
+      });
 
-        return res.status(200).json({ success: true, data: shortlistingData });
-
-    } catch (err) {
-        console.error("Server Error:", err);
-        return res.status(500).json({ success: false, message: "Internal Server Error" });
-    }
+  } catch (err) {
+      console.error("Error in getShortlistingData:", err);
+      return res.status(500).json({ 
+          success: false, 
+          message: "Internal Server Error",
+          error: err.message 
+      });
+  }
 }
 
   async AllAplliedDetals(req, res) {
@@ -2140,26 +2158,30 @@ async  addSelect(req, res) {
 
       async deleteWorkMode(req, res) {
         try {
-            const { id } = req.params;  // Capture modeId from URL
-            console.log("Received delete request for modeId:", id);
+            const { id } = req.params;  // Capture _id from URL
+            console.log("Received delete request for _id:", id);
     
-            // Find and delete using modeId, not _id
-            const deletedWorkMode = await WorkMode.findOneAndDelete({ modeId: id });
+            // Find and delete using _id
+            const deletedWorkMode = await WorkMode.findByIdAndDelete(id);
     
-            if (!deletedWorkMode) {
-                return res.status(404).json({ error: "Work mode not found" });
-            }
+            // if (!deletedWorkMode) {
+            //     return res.status(404).json({ error: "Work mode not found" });
+            // }
     
             return res.status(200).json({
                 success: true,
                 message: "Work mode deleted successfully",
+                deletedWorkMode // Optionally return the deleted item
             });
         } catch (error) {
             console.error("Error deleting work mode:", error);
+            // Check if error is due to invalid ObjectId
+            if (error.name === 'CastError') {
+                return res.status(400).json({ error: "Invalid work mode ID format" });
+            }
             return res.status(500).json({ error: "Internal server error" });
         }
     }
-    
     
     
 

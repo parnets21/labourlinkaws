@@ -116,308 +116,526 @@ class user {
         return res.status(500).json({ error: "Internal server error!" });
       }
     }
-  async editProfile(req, res) {
-    try {
-      const {
-        userId,
-        mobile,
-        skill,
-        age,
-        password,
-        cpassword,
-        userName,
-        name,
-        address,
-        skillSet,
-        email,
-        street,
-        city,
-        state,
-        pincode,
-        gender,
-        int,
-        int1,
-        int2,
-        country,
-        bio,
-        int3,
-        industry
-      } = req.body;
-      let obj = {};
-      if(industry){
-        obj["industry"]=industry;
-      }
-      if (mobile) {
-        if(!phonenumber(mobile)) return res.status(400).json({error:"Invalid mobile number!"});
-        let check = await userModel.findOne({ mobile: mobile,isDelete:false });
-        // if (check)
-        //   return res
-        //     .status(400)
-        //     .json({ error: "Mobile number is already exist" });
-        obj["mobile"] = mobile;
-      }
-      if (email) {
-        if(!isValidEmail(email)) return res.status(400).json({error:"Invalid email id!"})
-        let check2 = await userModel.findOne({ email: email,isDelete:false });
-        // if (check2)
-        //   return res.status(400).json({ error: "Email Id is already exist" });
-         obj["email"] = email;
-      }
-      if (name) {
-        if(!isValidString(name)) return res.status(400).json({error:"Name should be alphabets minmum size 3-25!"})
-        obj["name"] = name;
-      }
-      if (age) {
-        obj["age"] = age;
-      }
-      if (skill) {
-        obj["skill"] = skill;
-      }
-      if (gender) {
-        obj["gender"] = gender;
-      }
-      if (address) {
-        obj["address"] = address;
-      }
-      if (userName) {
-        let check3 = await userModel.findOne({ userName: userName,isDelete:false });
-        if (check3)
-          return res
-            .status(400)
-            .json({ error: "try to different user name" });
 
-        obj["userName"] = userName;
-      }
-      if (street) {
-        obj["street"] = street;
-      }
-      if (city) {
-        obj["city"] = city;
-      }
-      if (state) {
-        obj["state"] = state;
-      }
-      if (pincode) {
-        if (!/^[0-9]{6}$/.test(pincode)) return res.status(400).send({ error: "Invalid pin code" });
-        obj["pincode"] = pincode;
-      }
-
-      if (password) {
-
-        if(password!==cpassword) return res.status(400).json({error:"Confirm password dose not match!"})
-
-        // send.sendMail()
-        let encryptedPassword = bcrypt
-          .hash(password, saltRounds)
-          .then((hash) => {
-            return hash;
-          });
-        let pwd = await encryptedPassword;
-
-        obj["password"] = pwd;
-      }
-      if (int) {
-        obj["interest.int"] = int;
-      }
-      if (int1) {
-        obj["interest.int1"] = int1;
-      }
-      if (int2) {
-        obj["interest.int2"] = int2;
-      }
-      if (int3) {
-        obj["interest.int3"] = int3;
-      }
-      if (country) {
-        obj["country"] = country;
-      }
-      if (bio) {
-        obj["bio"] = bio;
-      }
-      if (skillSet) {
-        obj["skillSet"] = skillSet;
-      }
-
-      if (req.files.length != 0) {
-        let arr = req.files;
-        let i;
-        for (i = 0; i < arr.length; i++) {
-          if (arr[i].fieldname == "resume") {
-            obj["resume"] = arr[i].filename;
-          }
-          if (arr[i].fieldname == "profile") {
-            obj["profile"] = arr[i].filename;
-          }
-          if (arr[i].fieldname == "backgroundImage") {
-            obj["backgroundImage"] = arr[i].filename;
-          }
+    async  editUser(req, res) {
+        try {
+            const { id } = req.params; // Get user ID from params
+            const {
+                fullName,
+                email,
+                phone,
+                location,
+                experience,
+                jobType,
+                address,
+                education,
+                bio,
+                country,
+                street,
+                city,
+                state,
+                pincode,
+                skills,
+                jobRole,
+                companyType,
+                department,
+                workMode,
+                preferredSalary
+            } = req.body;
+    
+            console.log("Incoming request body:", req.body);
+    
+            // ✅ Check if user exists
+            let user = await userModel.findOne({ _id: id, isDelete: false });
+            if (!user) return res.status(404).json({ error: "User not found!" });
+    
+            // ✅ Check if email or phone is already used by another user
+            let existingUser = await userModel.findOne({ email, _id: { $ne: id }, isDelete: false });
+            if (existingUser) return res.status(400).json({ error: "Email already exists!" });
+    
+            existingUser = await userModel.findOne({ phone, _id: { $ne: id }, isDelete: false });
+            if (existingUser) return res.status(400).json({ error: "Phone number already exists!" });
+    
+            // Parse education & skills if they are strings (from Postman input)
+            let parsedEducation = typeof education === 'string' ? JSON.parse(education) : education;
+            let parsedSkills = typeof skills === 'string' ? JSON.parse(skills) : skills;
+            let parsedPreferredSalary = typeof preferredSalary === 'string' ? JSON.parse(preferredSalary) : preferredSalary;
+    
+            // ✅ Update user details (without password)
+            user.fullName = fullName || user.fullName;
+            user.email = email || user.email;
+            user.phone = phone || user.phone;
+            user.location = location || user.location;
+            user.workExperience = experience ? true : false;
+            user.experience = experience || user.experience;
+            user.jobRole = jobRole || user.jobRole;
+            user.companyType = companyType || user.companyType;
+            user.department = department || user.department;
+            user.workMode = workMode || user.workMode;
+            user.jobType = jobType || user.jobType;
+            user.address = address || user.address;
+            user.education = parsedEducation || user.education;
+            user.bio = bio || user.bio;
+            user.country = country || user.country;
+            user.street = street || user.street;
+            user.city = city || user.city;
+            user.state = state || user.state;
+            user.pincode = pincode || user.pincode;
+            user.skills = parsedSkills || user.skills;
+            user.preferredSalary = parsedPreferredSalary || user.preferredSalary;
+    
+            // ✅ Save updated user
+            await user.save();
+            console.log("User updated successfully:", user._id);
+    
+            return res.status(200).json({ 
+                success: "User updated successfully!",
+                userId: user._id 
+            });
+    
+        } catch (err) {
+            console.error("Error in editUser function:", err);
+            return res.status(500).json({ error: "Internal server error!" });
         }
-      }
-     
-      let updateUser = await userModel.findOneAndUpdate(
-        { _id: userId },
-        { $set: obj },
-        { new: true }
-      );
-      if (!updateUser)
-        return res.status(400).json({ error: "Something went worng" });
-      return res
-        .status(200)
-        .json({ success: "Successfully updated", success1: updateUser });
-    } catch (err) {
-      console.log(err);
+
     }
-  }
+    
+    
+  // async editProfile(req, res) {
+  //   try {
+  //     const {
+  //       userId,
+  //       mobile,
+  //       skill,
+  //       age,
+  //       password,
+  //       cpassword,
+  //       userName,
+  //       name,
+  //       address,
+  //       skillSet,
+  //       email,
+  //       street,
+  //       city,
+  //       state,
+  //       pincode,
+  //       gender,
+  //       int,
+  //       int1,
+  //       int2,
+  //       country,
+  //       bio,
+  //       int3,
+  //       industry
+  //     } = req.body;
+  //     let obj = {};
+  //     if(industry){
+  //       obj["industry"]=industry;
+  //     }
+  //     if (mobile) {
+  //       if(!phonenumber(mobile)) return res.status(400).json({error:"Invalid mobile number!"});
+  //       let check = await userModel.findOne({ mobile: mobile,isDelete:false });
+  //       obj["mobile"] = mobile;
+  //     }
+  //     if (email) {
+  //       if(!isValidEmail(email)) return res.status(400).json({error:"Invalid email id!"})
+  //       let check2 = await userModel.findOne({ email: email,isDelete:false });
+
+  //        obj["email"] = email;
+  //     }
+  //     if (name) {
+  //       if(!isValidString(name)) return res.status(400).json({error:"Name should be alphabets minmum size 3-25!"})
+  //       obj["name"] = name;
+  //     }
+  //     if (age) {
+  //       obj["age"] = age;
+  //     }
+  //     if (skill) {
+  //       obj["skill"] = skill;
+  //     }
+  //     if (gender) {
+  //       obj["gender"] = gender;
+  //     }
+  //     if (address) {
+  //       obj["address"] = address;
+  //     }
+  //     if (userName) {
+  //       let check3 = await userModel.findOne({ userName: userName,isDelete:false });
+  //       if (check3)
+  //         return res
+  //           .status(400)
+  //           .json({ error: "try to different user name" });
+
+  //       obj["userName"] = userName;
+  //     }
+  //     if (street) {
+  //       obj["street"] = street;
+  //     }
+  //     if (city) {
+  //       obj["city"] = city;
+  //     }
+  //     if (state) {
+  //       obj["state"] = state;
+  //     }
+  //     if (pincode) {
+  //       if (!/^[0-9]{6}$/.test(pincode)) return res.status(400).send({ error: "Invalid pin code" });
+  //       obj["pincode"] = pincode;
+  //     }
+
+  //     if (password) {
+
+  //       if(password!==cpassword) return res.status(400).json({error:"Confirm password dose not match!"})
+
+  //       send.sendMail()
+  //       let encryptedPassword = bcrypt
+  //         .hash(password, saltRounds)
+  //         .then((hash) => {
+  //           return hash;
+  //         });
+  //       let pwd = await encryptedPassword;
+
+  //       obj["password"] = pwd;
+  //     }
+  //     if (int) {
+  //       obj["interest.int"] = int;
+  //     }
+  //     if (int1) {
+  //       obj["interest.int1"] = int1;
+  //     }
+  //     if (int2) {
+  //       obj["interest.int2"] = int2;
+  //     }
+  //     if (int3) {
+  //       obj["interest.int3"] = int3;
+  //     }
+  //     if (country) {
+  //       obj["country"] = country;
+  //     }
+  //     if (bio) {
+  //       obj["bio"] = bio;
+  //     }
+  //     if (skillSet) {
+  //       obj["skillSet"] = skillSet;
+  //     }
+
+  //     if (req.files.length != 0) {
+  //       let arr = req.files;
+  //       let i;
+  //       for (i = 0; i < arr.length; i++) {
+  //         if (arr[i].fieldname == "resume") {
+  //           obj["resume"] = arr[i].filename;
+  //         }
+  //         if (arr[i].fieldname == "profile") {
+  //           obj["profile"] = arr[i].filename;
+  //         }
+  //         if (arr[i].fieldname == "backgroundImage") {
+  //           obj["backgroundImage"] = arr[i].filename;
+  //         }
+  //       }
+  //     }
+     
+  //     let updateUser = await userModel.findOneAndUpdate(
+  //       { _id: userId },
+  //       { $set: obj },
+  //       { new: true }
+  //     );
+  //     if (!updateUser)
+  //       return res.status(400).json({ error: "Something went worng" });
+  //     return res
+  //       .status(200)
+  //       .json({ success: "Successfully updated", success1: updateUser });
+  //   } catch (err) {
+  //     console.log(err);
+  //   }
+  // }
+
 
 // In userController.js
     // In userController.js
-    async updateProfile(req, res) {
+    // async updateProfile(req, res) {
+    //   try {
+    //     const { userId } = req.params;
+    //     const updateData = req.body;
+
+    //     console.log('Received userId:', userId);
+    //     console.log('Received updateData:', updateData);
+
+    //     // Basic validation
+    //     if (!userId || userId === 'null' || userId === 'undefined') {
+    //       return res.status(400).json({
+    //         success: false,
+    //         error: "User ID is required"
+    //       });
+    //     }
+
+    //     // Validate MongoDB ObjectId
+    //     if (!mongoose.Types.ObjectId.isValid(userId)) {
+    //       return res.status(400).json({
+    //         success: false,
+    //         error: "Invalid user ID format"
+    //       });
+    //     }
+
+    //     // Validate update data
+    //     if (!updateData || Object.keys(updateData).length === 0) {
+    //       return res.status(400).json({
+    //         success: false,
+    //         error: "Update data is required"
+    //       });
+    //     }
+
+    //     // Find user first
+    //     const user = await userModel.findById(userId);
+    //     if (!user) {
+    //       return res.status(404).json({
+    //         success: false,
+    //         error: "User not found"
+    //       });
+    //     }
+
+    //     // Update user
+    //     const updatedUser = await userModel.findByIdAndUpdate(
+    //       userId,
+    //       { $set: updateData },
+    //       { 
+    //         new: true,
+    //         runValidators: true,
+    //         context: 'query'
+    //       }
+    //     );
+
+    //     return res.status(200).json({
+    //       success: true,
+    //       message: "Profile updated successfully",
+    //       data: updatedUser
+    //     });
+
+    //   } catch (err) {
+    //     console.error("Error in updateProfile:", err);
+    //     return res.status(500).json({
+    //       success: false,
+    //       error: "Internal server error",
+    //       message: err.message
+    //     });
+    //   }
+    // }
+
+    // async updateProfileImg(req, res) {
+    //   try {
+    //     const { userId } = req.params;
+        
+    //     // Ensure updates object is defined
+    //     const updates = {};
+    
+    //     // Handle file upload if present
+    //     if (req.files?.profile) {
+    //       updates.profile = req.files.profile[0].path;
+    //     }
+    
+    //     // Check if there is an update to be made
+    //     if (Object.keys(updates).length === 0) {
+    //       return res.status(400).json({ success: false, message: "No file uploaded for update" });
+    //     }
+    
+    //     // Update user profile
+    //     const user = await userModel.findByIdAndUpdate(userId, { $set: updates }, { new: true });
+    
+    //     if (!user) {
+    //       return res.status(404).json({ success: false, message: "User not found" });
+    //     }
+    
+    //     res.status(200).json({ success: true, message: "Profile updated successfully", data: user });
+    
+    //   } catch (error) {
+    //     console.error("Update profile error:", error);
+    //     res.status(500).json({ success: false, message: "Failed to update profile", error: error.message });
+    //   }
+    // }
+    async updateProfileImg(req, res) {
       try {
-        const { userId } = req.params;
-        const updateData = req.body;
-
-        console.log('Received userId:', userId);
-        console.log('Received updateData:', updateData);
-
-        // Basic validation
-        if (!userId || userId === 'null' || userId === 'undefined') {
-          return res.status(400).json({
-            success: false,
-            error: "User ID is required"
-          });
-        }
-
-        // Validate MongoDB ObjectId
-        if (!mongoose.Types.ObjectId.isValid(userId)) {
-          return res.status(400).json({
-            success: false,
-            error: "Invalid user ID format"
-          });
-        }
-
-        // Validate update data
-        if (!updateData || Object.keys(updateData).length === 0) {
-          return res.status(400).json({
-            success: false,
-            error: "Update data is required"
-          });
-        }
-
-        // Find user first
-        const user = await userModel.findById(userId);
-        if (!user) {
-          return res.status(404).json({
-            success: false,
-            error: "User not found"
-          });
-        }
-
-        // Update user
-        const updatedUser = await userModel.findByIdAndUpdate(
-          userId,
-          { $set: updateData },
-          { 
-            new: true,
-            runValidators: true,
-            context: 'query'
+         const { userId } = req.params;
+  
+          let obj = {};
+          if (req.files) {
+              obj["profile"] = `user/${req.files[0].filename}`; 
           }
+  
+          // Update user details in the database by adminId
+          const updatedUser = await userModel.findOneAndUpdate(
+              { _id: userId },
+              { $set: obj },
+              { new: true } 
+          );
+  
+          if (!updatedUser) return res.status(400).json({ error: "User not found or update failed!" });
+  
+          return res.status(200).json({ success: "User updated successfully", data: updatedUser });
+      } catch (err) {
+          console.error("Error updating user:", err);
+          return res.status(500).json({ error: "Internal Server Error" });
+      }
+  }
+  async updateResume(req, res) {
+    try {
+       const { userId } = req.params;
+
+        let obj = {};
+        if (req.files) {
+            obj["resume"] = `user/${req.files[0].filename}`; 
+        }
+
+        // Update user details in the database by adminId
+        const updatedUser = await userModel.findOneAndUpdate(
+            { _id: userId },
+            { $set: obj },
+            { new: true } 
         );
 
-        return res.status(200).json({
-          success: true,
-          message: "Profile updated successfully",
-          data: updatedUser
-        });
+        if (!updatedUser) return res.status(400).json({ error: "User not found or update failed!" });
 
-      } catch (err) {
-        console.error("Error in updateProfile:", err);
-        return res.status(500).json({
-          success: false,
-          error: "Internal server error",
-          message: err.message
-        });
-      }
-    }
-
-
-
-  async AddSkill(req, res) {
-    try {
-      const { skill, userId, Experience } = req.body;
-      if(!isValid(skill)) return res.status(400).json({error:"Please enter skill!"});
-    //   if(!isValid(Experience)) return res.status(400).json({error:"Please enter experience!"})
-      let obj = { skill };
-
-      let add = await userModel.findOneAndUpdate(
-        { _id: userId },
-        { $push: { skillSet: obj } },
-        { new: true }
-      );
-      if (!add)
-        return res.status(400).json({ error: "Something went worng" });
-      return res.status(200).json({ success: "Successfully added" });
+        return res.status(200).json({ success: "User updated successfully", data: updatedUser });
     } catch (err) {
-      console.log(err);
+        console.error("Error updating user:", err);
+        return res.status(500).json({ error: "Internal Server Error" });
     }
-  }
+}
 
-  async removeSkill(req, res) {
+
+  // async AddSkill(req, res) {
+  //   try {
+  //     const { skills, userId } = req.body;
+  //     if(!isValid(skills)) return res.status(400).json({error:"Please enter skill!"});
+  //   //   if(!isValid(Experience)) return res.status(400).json({error:"Please enter experience!"})
+  //     let obj = { skills };
+  //   console.log(obj,"this is obj")
+
+  //     let add = await userModel.findOneAndUpdate(
+  //       { _id: userId },
+  //       { $push: { skillSet: obj } },
+  //       { new: true }
+  //     );
+  //     if (!add)
+  //       return res.status(400).json({ error: "Something went worng" });
+  //     return res.status(200).json({ success: "Successfully added" });
+  //   } catch (err) {
+  //     console.log(err);
+  //   }
+  // }
+
+  async addSkill  (req, res){
     try {
-      let removeId = req.params.removeId;
-      let userId = req.params.userId;
-      let add = await userModel.findOneAndUpdate(
-        { _id: userId },
-        { $pull: { skillSet: { _id: removeId } } },
-        { new: true }
-      );
-      if (!add)
-        return res.status(400).json({ success: "Something went worng" });
-      return res.status(200).json({ success: "Successfully deleted" });
-    } catch (err) {
-      console.log(err);
-    }
-  }
-
-  async AddEducation(req, res) {
-    try {
-      const { Institue, userId, field, starting, passOut, Course, Location } =
-        req.body;
-        if(!isValid(Institue))return res.status(400).json({error:"Please enter institute name!"})
-        if(!isValid(Course)) return res.status(400).json({error:"Please enter course!"});
-        if(!isValid(field)) return res.status(400).json({error:"Please enter branch!"});
-        if(!isValid(starting)) return res.status(400).json({error:"Please enter starting year!"});
-        if(!isValid(passOut)) return res.status(400).json({error:"Please enter passout year!"})
-      let obj = { Institue, Course, Location, field, starting, passOut };
-
-      let add = await userModel.findOneAndUpdate(
-        { _id: userId },
-        { $push: { education: obj } },
-        { new: true }
-      );
-      if (!add)
-        return res.status(400).json({ error: "Something went worng" });
-      return res.status(200).json({ success: "Successfully added" });
-    } catch (err) {
-      console.log(err);
-    }
-  }
+      const { userId, skill } = req.body;
+      const user = await userModel.findByIdAndUpdate(userId, { $addToSet: { skills: skill } }, { new: true });
   
-  async removeEducation(req, res) {
-    try {
-      let removeId = req.params.removeId;
-      let userId = req.params.userId;
-      let add = await userModel.findOneAndUpdate(
-        { _id: userId },
-        { $pull: { education: { _id: removeId } } },
-        { new: true }
-      );
-      if (!add)
-        return res.status(400).json({ success: "Something went worng" });
-      return res.status(200).json({ success: "Successfully deleted" });
-    } catch (err) {
-      console.log(err);
+      if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+  
+      res.status(200).json({ success: true, message: 'Skill added successfully', data: user.skills });
+    } catch (error) {
+      console.error('Add skill error:', error);
+      res.status(500).json({ success: false, message: 'Failed to add skill', error: error.message });
     }
-  }
+  };
+
+  // async removeSkill(req, res) {
+  //   try {
+  //     let removeId = req.params.removeId;
+  //     let userId = req.params.userId;
+  //     let add = await userModel.findOneAndUpdate(
+  //       { _id: userId },
+  //       { $pull: { skillSet: { _id: removeId } } },
+  //       { new: true }
+  //     );
+  //     if (!add)
+  //       return res.status(400).json({ success: "Something went worng" });
+  //     return res.status(200).json({ success: "Successfully deleted" });
+  //   } catch (err) {
+  //     console.log(err);
+  //   }
+  // }
+
+  // async AddEducation(req, res) {
+  //   try {
+  //     const { Institue, userId, field, starting, passOut, Course, Location } =
+  //       req.body;
+  //       if(!isValid(Institue))return res.status(400).json({error:"Please enter institute name!"})
+  //       if(!isValid(Course)) return res.status(400).json({error:"Please enter course!"});
+  //       if(!isValid(field)) return res.status(400).json({error:"Please enter branch!"});
+  //       if(!isValid(starting)) return res.status(400).json({error:"Please enter starting year!"});
+  //       if(!isValid(passOut)) return res.status(400).json({error:"Please enter passout year!"})
+  //     let obj = { Institue, Course, Location, field, starting, passOut };
+
+  //     let add = await userModel.findOneAndUpdate(
+  //       { _id: userId },
+  //       { $push: { education: obj } },
+  //       { new: true }
+  //     );
+  //     if (!add)
+  //       return res.status(400).json({ error: "Something went worng" });
+  //     return res.status(200).json({ success: "Successfully added" });
+  //   } catch (err) {
+  //     console.log(err);
+  //   }
+  // }
+  async removeSkill  (req, res) {
+    try {
+      const { userId, skill } = req.params;
+      const user = await userModel.findByIdAndUpdate(userId, { $pull: { skills: skill } }, { new: true });
+  
+      if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+  
+      res.status(200).json({ success: true, message: 'Skill removed successfully', data: user.skills });
+    } catch (error) {
+      console.error('Remove skill error:', error);
+      res.status(500).json({ success: false, message: 'Failed to remove skill', error: error.message });
+    }
+  };
+  
+  async  addEducation  (req, res) {
+    try {
+      const { userId, education } = req.body;
+      const user = await userModel.findByIdAndUpdate(userId, { $push: { education } }, { new: true });
+  
+      if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+  
+      res.status(200).json({ success: true, message: 'Education added successfully', data: user.education });
+    } catch (error) {
+      console.error('Add education error:', error);
+      res.status(500).json({ success: false, message: 'Failed to add education', error: error.message });
+    }
+  };
+  
+  
+  // async removeEducation(req, res) {
+  //   try {
+  //     let removeId = req.params.removeId;
+  //     let userId = req.params.userId;
+  //     let add = await userModel.findOneAndUpdate(
+  //       { _id: userId },
+  //       { $pull: { education: { _id: removeId } } },
+  //       { new: true }
+  //     );
+  //     if (!add)
+  //       return res.status(400).json({ success: "Something went worng" });
+  //     return res.status(200).json({ success: "Successfully deleted" });
+  //   } catch (err) {
+  //     console.log(err);
+  //   }
+  // }
+
+  async removeEducation  (req, res){
+    try {
+      const { userId, educationId } = req.params;
+      const user = await userModel.findByIdAndUpdate(userId, { $pull: { education: { _id: educationId } } }, { new: true });
+  
+      if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+  
+      res.status(200).json({ success: true, message: 'Education removed successfully', data: user.education });
+    } catch (error) {
+      console.error('Remove education error:', error);
+      res.status(500).json({ success: false, message: 'Failed to remove education', error: error.message });
+    }
+  };
+  
   async addWorkExperience(req, res) {
     try {
       const { Company, userId, Period, Skill, Experience } = req.body;

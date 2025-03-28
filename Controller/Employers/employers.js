@@ -16,51 +16,88 @@ const saltRounds = 10;
 
 const {isValidEmail,phonenumber,isValidString,validUrl, isValid}=require("../../Config/function")
 class Employers {
-    async  registerEmployer(req, res) {
+  async registerEmployer(req, res) {
+    try {
+        console.log("Incoming Request:", req.body);
+
+        const {
+            mobile, age, name, email, password, gender, 
+            street, city, state, pincode, country, address, 
+            hiring, MyCompany, CompanyName, companyWebsite, 
+            numberOfemp, industry, GstNum, searchCount
+        } = req.body;
+
+        if (!isValidString(name)) return res.status(400).json({ error: "Invalid name format!" });
+        if (!isValidEmail(email)) return res.status(400).json({ error: "Invalid email!" });
+        if (password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters!" });
+        if (!phonenumber(mobile)) return res.status(400).json({ error: "Invalid phone number!" });
+
+        const existingMobile = await employerModel.findOne({ mobile, isDelete: false });
+        if (existingMobile) return res.status(400).json({ error: "Mobile number already exists!" });
+
+        const existingEmail = await employerModel.findOne({ email, isDelete: false });
+        if (existingEmail) return res.status(400).json({ error: "Email ID already exists!" });
+
+        // Password hashing with error handling
+        let hashedPassword;
         try {
-            const {
-                mobile, age, name, userName, email, password, gender, 
-                street, city, state, pincode, country, address, 
-                hiring, MyCompany, CompanyName, companyWebsite, 
-                numberOfemp, industry, CompanyInd, CompanydocType, GstNum ,searchCount
-            } = req.body;
-    
-            // Validations
-            if (!isValidString(name)) return res.status(400).json({ error: "Name should be alphabets, 3-25 characters!" });
-            if (!isValidEmail(email)) return res.status(400).json({ error: "Invalid email!" });
-            if (password.length < 8) return res.status(400).json({ error: "Password should be at least 8 characters!" });
-            if (!phonenumber(mobile)) return res.status(400).json({ error: "Invalid phone number!" });
-    
-            // Check if mobile or email already exists
-            let existingMobile = await employerModel.findOne({ mobile, isDelete: false });
-            if (existingMobile) return res.status(400).json({ error: "Mobile number already exists!" });
-            
-            let existingEmail = await employerModel.findOne({ email, isDelete: false });
-            if (existingEmail) return res.status(400).json({ error: "Email ID already exists!" });
-            
-            // Encrypt password
-            const hashedPassword = await bcrypt.hash(password, saltRounds);
-    
-            // Create employer
-            await employerModel.create({
-                mobile, userName, age, name, email, password: hashedPassword, gender,
-                street, city, state, pincode, country, address,
-                hiring, MyCompany, CompanyName, companyWebsite,
-                numberOfemp, industry, CompanyInd, CompanydocType, GstNum ,searchCount
-            });
-    
-            // Send welcome email
-            send.sendMail(name, email, `Welcome to UNIVI INDIA <h3>Thank you <br>UNIVI INDIA Team</h3>`);
-    
-            return res.status(200).json({ success: "Successfully registered!" });
-        } catch (err) {
-            console.error(err);
-            return res.status(500).json({ error: "Internal server error", message: err.message });
+            hashedPassword = await bcrypt.hash(password, 10);
+        } catch (hashError) {
+            console.error("Password Hashing Error:", hashError);
+            return res.status(500).json({ error: "Failed to encrypt password" });
         }
+
+        // Employer registration
+        await employerModel.create({
+            mobile,  age, name, email, password: hashedPassword, gender,
+            street, city, state, pincode, country, address,
+            hiring, MyCompany, CompanyName, companyWebsite,
+            numberOfemp, industry, GstNum, searchCount
+        });
+
+
+        // Send welcome email
+        try {
+            await send.sendMail(name, email, `Welcome to UNIVI INDIA <h3>Thank you <br>UNIVI INDIA Team</h3>`);
+        } catch (mailError) {
+            console.error("Email Sending Error:", mailError);
+        }
+
+        return res.status(200).json({ success: "Successfully registered!" });
+
+    } catch (err) {
+        console.error("Error in registerEmployer:", err);
+        return res.status(500).json({ error: "Internal server error", details: err.message });
     }
+}
+
 
 
 // Get Employer Profile by ID
+    async UpdateEmployerImg(req, res) {
+      try {
+         const { userId } = req.params;
+  
+          let obj = {};
+          if (req.files) {
+              obj["EmployerImg"] = `employer/${req.files[0].filename}`; 
+          }
+  
+          // Update user details in the database by adminId
+          const updatedUser = await employerModel.findOneAndUpdate(
+              { _id: userId },
+              { $set: obj },
+              { new: true } 
+          );
+  
+          if (!updatedUser) return res.status(400).json({ error: "User not found or update failed!" });
+  
+          return res.status(200).json({ success: "User updated successfully", data: updatedUser });
+      } catch (err) {
+          console.error("Error updating user:", err);
+          return res.status(500).json({ error: "Internal Server Error" });
+      }
+  }
 
 
 async getEmployerProfile(req, res) {

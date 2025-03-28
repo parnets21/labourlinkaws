@@ -58,7 +58,7 @@ class admin{
         try{
             const {email,password}=req.body;
 
-            let check =await adminModel.findOne({$or:[{email:email},{userName:email}]});
+            let check =await adminModel.findOne({$or:[{email:email}]});
             if(!check) return res.status(400).json({error:"Please enter register email Id!"});
 
              let compare = await bcrypt.compare(password, check.password).then((res) => {
@@ -69,7 +69,8 @@ class admin{
 
             return res.status(200).json({msg:"Successfully login",success:check});
         }catch(err){
-            console.log(err);
+            return res.status(400).json({msg:"error login",message:err.message});
+            // console.log(err);
         }
     }
      async changepassword(req,res){
