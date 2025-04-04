@@ -25,7 +25,7 @@ router.post("/AddEducationEmployer",employerController.AddEducation);
 router.delete("/removeEducationEmployer/:userId/:removeId",employerController.removeEducation);
 router.get("/getAllProfileEmployer",employerController.getAllProfile);
 router.patch("/approve-employer/:employerId", employerController.toggleEmployerApproval);
-router.get('/api/user/check-approval-status/:userId', employerController.checkApprovalStatus);
+router.get('/check-approval-status/:userId', employerController.checkApprovalStatus);
 
 router.delete("/deleteProfileEmployer",employerController.deleteProfile);
 router.post("/addWorkExperienceEmployer",employerController.addWorkExperience);
@@ -37,8 +37,10 @@ router.delete("/deleteParmanetEmployer/:userId",employerController.deleteParmane
 
 //apply form for company
 router.post("/makeBlockUnBlockEmployer",employerController.makeBlockUnBlock)
+
 router.post("/callinterview",employerController.callinterview)
-router.get("/getcallinterview/:employerId",employerController.getcallinterview);
+router.get("/getAlllScheduledInterviews",employerController.getAllScheduledInterviews)
+router.get("/getcallinterview/:employerId/:companyId",employerController.getcallinterview);
 router.put('/updateInterviewStatus/:interviewId', employerController.updateInterviewStatus);
 router.post("/MakeIntrestedUser",employerController.MakeIntrestedUser);
 router.get("/getInterestedUser/:employerId",employerController.getInterestedUser);

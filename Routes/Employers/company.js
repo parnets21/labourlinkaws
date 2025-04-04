@@ -31,12 +31,10 @@ router.post("/getJobByfilter", jobController.getJobByfilter);
 router.post("/getJobOfTheDay", jobController.jobOftheDay);
 router.delete("/deleteJob/:jobId", jobController.deleteJob);
 
+// router.get("/getShortList", jobController.addShortList);
 // Apply API routes
 router.post("/addSelect", jobController.addSelect);
 router.get("/getSelectDatas/:companyId", jobController.getSelectData);
-router.get("/getShortList", jobController.addShortList);
-
-
 router.get("/getApplyList/:jobId", jobController.getApplyList);
 router.post("/addShortList", jobController.addShortList);
 router.get("/getShortlistingData/:jobId", jobController.getShortlistingData);

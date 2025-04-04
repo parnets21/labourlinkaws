@@ -48,10 +48,10 @@ class user {
         if (userExists) return res.status(400).json({ error: "Email already exists!" });
   
         // Parse education if it's a string
-        let parsedEducation = education;
-        if (typeof education === 'string') {
-          parsedEducation = JSON.parse(education);
-        }
+        // let parsedEducation = education;
+        // if (typeof education === 'string') {
+        //   parsedEducation = JSON.parse(education);
+        // }
   
   
         userExists = await userModel.findOne({ phone, isDelete: false });
@@ -98,11 +98,12 @@ class user {
 
   
         // Send welcome email
-        await send.sendMail(fullName, email, `Welcome to UNIVI INDIA!<h3>Thank you!<br>UNIVI INDIA Team</h3>`);
+        await send.sendMail(fullName, email, `Welcome to Labor Link!<h3>Thank you!<br>Labor Link Team</h3>`);
   
         return res.status(200).json({ 
           success: "Successfully registered!",
-          userId: newUser._id 
+          userId: newUser._id ,
+          newUser
         });
   
       } catch (err) {
@@ -150,39 +151,40 @@ class user {
             if (!user) return res.status(404).json({ error: "User not found!" });
     
             // ✅ Check if email or phone is already used by another user
-            let existingUser = await userModel.findOne({ email, _id: { $ne: id }, isDelete: false });
-            if (existingUser) return res.status(400).json({ error: "Email already exists!" });
+            // let existingUser = await userModel.findOne({ email, _id: { $ne: id }, isDelete: false });
+            // if (existingUser) return res.status(400).json({ error: "Email already exists!" });
     
-            existingUser = await userModel.findOne({ phone, _id: { $ne: id }, isDelete: false });
-            if (existingUser) return res.status(400).json({ error: "Phone number already exists!" });
+            // existingUser = await userModel.findOne({ phone, _id: { $ne: id }, isDelete: false });
+            // if (existingUser) return res.status(400).json({ error: "Phone number already exists!" });
     
             // Parse education & skills if they are strings (from Postman input)
-            let parsedEducation = typeof education === 'string' ? JSON.parse(education) : education;
-            let parsedSkills = typeof skills === 'string' ? JSON.parse(skills) : skills;
-            let parsedPreferredSalary = typeof preferredSalary === 'string' ? JSON.parse(preferredSalary) : preferredSalary;
-    
+            console.log("education",typeof education,education);
+            
+            // let parsedEducation = typeof education === 'string' ? JSON.parse(education) : education;
+         
+       
             // ✅ Update user details (without password)
             user.fullName = fullName || user.fullName;
-            user.email = email || user.email;
-            user.phone = phone || user.phone;
-            user.location = location || user.location;
-            user.workExperience = experience ? true : false;
-            user.experience = experience || user.experience;
-            user.jobRole = jobRole || user.jobRole;
-            user.companyType = companyType || user.companyType;
-            user.department = department || user.department;
-            user.workMode = workMode || user.workMode;
-            user.jobType = jobType || user.jobType;
-            user.address = address || user.address;
-            user.education = parsedEducation || user.education;
+            // user.email = email || user.email;
+            // user.phone = phone || user.phone;
+            // user.location = location || user.location;
+            // user.workExperience = experience ? true : false;
+            // user.experiences = experience || user.experiences;
+            // user.jobRole = jobRole || user.jobRole;
+            // user.companyType = companyType || user.companyType;
+            // user.department = department || user.department;
+            // user.workMode = workMode || user.workMode;
+            // user.jobType = jobType || user.jobType;
+            // user.address = address || user.address;
+            // user.education = parsedEducation || user.education;
             user.bio = bio || user.bio;
-            user.country = country || user.country;
-            user.street = street || user.street;
-            user.city = city || user.city;
-            user.state = state || user.state;
-            user.pincode = pincode || user.pincode;
-            user.skills = parsedSkills || user.skills;
-            user.preferredSalary = parsedPreferredSalary || user.preferredSalary;
+            // user.country = country || user.country;
+            // user.street = street || user.street;
+            // user.city = city || user.city;
+            // user.state = state || user.state;
+            // user.pincode = pincode || user.pincode;
+            // user.skills = parsedSkills || user.skills;
+            // user.preferredSalary = parsedPreferredSalary || user.preferredSalary;
     
             // ✅ Save updated user
             await user.save();
@@ -457,7 +459,7 @@ class user {
   
           let obj = {};
           if (req.files) {
-              obj["profile"] = `/${req.files[0].filename}`; 
+              obj["profile"] = `${req.files[0].filename}`; 
           }
   
           // Update user details in the database by adminId
@@ -478,10 +480,11 @@ class user {
   async updateResume(req, res) {
     try {
        const { userId } = req.params;
+       console.log(userId)
 
         let obj = {};
         if (req.files) {
-            obj["resume"] = `user/${req.files[0].filename}`; 
+            obj["resume"] = `${req.files[0].filename}`; 
         }
 
         // Update user details in the database by adminId
@@ -651,7 +654,7 @@ class user {
       );
       if (!add)
         return res.status(400).json({ error: "Something went worng" });
-      return res.status(200).json({ success: "Successfully added" });
+      return res.status(200).json({ success: "Successfully added" ,data:add.workExperience});
     } catch (err) {
       console.log(err);
     }
@@ -667,7 +670,7 @@ class user {
       );
       if (!add)
         return res.status(400).json({ success: "Something went worng" });
-      return res.status(200).json({ success: "Successfully deleted" });
+      return res.status(200).json({ success: "Successfully deleted" ,data:add.workExperience});
     } catch (err) {
       console.log(err);
     }
@@ -778,7 +781,7 @@ async login1(req, res) {
   
 
         const applicantId = applicant // Extract actual user ID
-        console.log(applicantId,"asljhadsalskmasmas")
+        console.log(applicantId,job,"asljhadsalskmasmas")
 
         if (!mongoose.Types.ObjectId.isValid(applicantId)) {
             return res.status(400).json({ error: "Invalid applicant ID format" });
@@ -803,7 +806,7 @@ async login1(req, res) {
 
         // Create application
         const newApplication = await applyModel.create({
-            companyId: job,
+          companyId: job,
             userId: applicantId,
             jobTitle: title,
             companyName: company,
@@ -999,13 +1002,13 @@ if (data) {
   const mailOptions = {
     from: "amitparnets@gmail.com",
     to: email ,
-    subject: 'Your UNIVI INDIA new genarated password',
+    subject: 'Your Labor Link new genarated password',
     html:`<h1>Hi ${data.name}</h1><p>Seems like you forgot your password for UNIVI. Your password is :</p> <b> ${newPassword}</b>
    
    
    <p> If you did not initiate this request, please contact us immediately
 at ${process.env.NODE_SENDER_MAIL}</p>
-"<h3>Thank you <br>UNIVI INDIA Team</h3>"`,
+"<h3>Thank you <br>Labor Link Team</h3>"`,
    
   };
 
@@ -1062,11 +1065,11 @@ async makEverifyUnverify(req,res){
       if(!data) return res.status(400).json({error:"Something went wong!"});
       if(data.status=="verify"){
           send.sendMail(data.name,data.email, `Your profile is approved now you can post job,
-          <h3>Thank you <br>UNIVI INDIA Team</h3>
+          <h3>Thank you <br>Labor Link Team</h3>
           `);
       }else{
           send.sendMail(data.name,data.email, `Your profile is ${data.status} because ${data.reasion} please complete your profile,
-          <h3>Thank you <br>UNIVI INDIA Team</h3>
+          <h3>Thank you <br>Labor Link Team</h3>
           `);
       }
       return res.status(200).json({success:"success"})
@@ -1085,11 +1088,11 @@ async makEverifyUnverify(req,res){
             if(!data) return res.status(400).json({error:"Something went wong!"});
             if(data.isBlock==false){
                 send.sendMail(data.name,data.email, `Your profile is un bloked now you can apply job,
-                <h3>Thank you <br>UNIVI INDIA Team</h3>
+                <h3>Thank you <br>Labor Link Team</h3>
                 `);
             }else{
                 send.sendMail(data.name,data.email, `Your profile is blocked  please contact admin,
-                <h3>Thank you <br>UNIVI INDIA Team</h3>
+                <h3>Thank you <br>Labor Link Team</h3>
                 `);
             }
             return res.status(200).json({success:"success"})

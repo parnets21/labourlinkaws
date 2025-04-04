@@ -52,7 +52,7 @@ class company {
 //             `This is a new ${CompanyName} company registered post by email id is ${email}
 //             Job profile is ${jobProfile} or salary ${minSalary}-${maxSalary}/${period},
 //             location is ${location} and website Link.
-//             <h3>Thank you <br>UNIVI INDIA Team</h3>`;
+//             <h3>Thank you <br>Labor Link Team</h3>`;
 
 //         sent.sendMail("Admin", "amitparnets@gmail.com", msg);
 //         console.log("📧 Email Sent Successfully");
@@ -107,7 +107,7 @@ async register(req, res) {
           `This is a new ${companyName} company registered post by email id is ${email}
           Job profile is ${jobProfile} or salary ${minSalary}-${maxSalary}/${period},
           location is ${location} and website Link.
-          <h3>Thank you <br>UNIVI INDIA Team</h3>`;
+          <h3>Thank you <br>Labor Link Team</h3>`;
 
       sent.sendMail("Admin", "amitparnets@gmail.com", msg);
       console.log("📧 Email Sent Successfully");
@@ -167,7 +167,7 @@ async register(req, res) {
             //           `This is a new ${companyName} company registered post by email id is ${email}
             //           Job profile is ${jobProfile} or salary ${minSalary}-${maxSalary}/${period},
             //           location is ${location} and website Link.
-            //           <h3>Thank you <br>UNIVI INDIA Team</h3>`;
+            //           <h3>Thank you <br>Labor Link Team</h3>`;
 
             //       sent.sendMail("Admin", "amitparnets@gmail.com", msg);
             //       console.log("📧 Email Sent Successfully");
@@ -400,11 +400,11 @@ async register(req, res) {
             if(!data) return res.status(400).json({error:"Something went wong!"});
             if(data.status=="Approved"){
                 send.sendMail(data.interviewername,data.email, `Your job is approved now,
-                <h3>Thank you <br>UNIVI INDIA Team</h3>
+                <h3>Thank you <br>Labor Link Team</h3>
                 `);
             }else{
                 send.sendMail(data.interviewername,data.email, `Your job is ${data.status} because ${data.reasion} please wait for admin approval,
-                <h3>Thank you <br>UNIVI INDIA Team</h3>
+                <h3>Thank you <br>Labor Link Team</h3>
                 `);
             }
             return res.status(200).json({success:"success"})
@@ -596,11 +596,11 @@ async register(req, res) {
             if(!data) return res.status(400).json({error:"Something went wong!"});
             if(data.isBlock==false){
                 send.sendMail(data.interviewername,data.email, `Your job is un-bloked now,
-                <h3>Thank you <br>UNIVI INDIA Team</h3>
+                <h3>Thank you <br>Labor Link Team</h3>
                 `);
             }else{
                 send.sendMail(data.interviewername,data.email, `Your job is blocked  please contact admin,
-                <h3>Thank you <br>UNIVI INDIA Team</h3>
+                <h3>Thank you <br>Labor Link Team</h3>
                 `);
             }
             return res.status(200).json({success:"success"})
@@ -636,18 +636,18 @@ async register(req, res) {
   
   async getApplyList(req, res) {
     try {
-      const{companyId}=req.params
-      const companyObjectId = new mongoose.Types.ObjectId(companyId);
+      const{jobId}=req.params
+      // const companyObjectId = new mongoose.Types.ObjectId(companyId);
 
-      console.log(companyObjectId,"adcdcjhbhbjns")
-      if (!mongoose.Types.ObjectId.isValid(companyId)) {
-        return res.status(400).json({ success: false, message: "Invalid companyId format" });
-      }
+      // console.log(companyObjectId,"adcdcjhbhbjns")
+      // if (!mongoose.Types.ObjectId.isValid(companyId)) {
+      //   return res.status(400).json({ success: false, message: "Invalid companyId format" });
+      // }
   
-      console.log("Received companyId:", companyId, "Type:", typeof companyId);
+      console.log("Received companyId:", jobId, "Type:", typeof jobId);
   
       let findData = await applyModel
-          .find({ companyId: companyId }) // Ensure conversion
+          .find({ companyId: jobId }) // Ensure conversion
           .sort({ _id: -1 })
           .populate("userId");
   
@@ -706,7 +706,7 @@ async addShortList(req, res) {
       sent.sendMail(
         data.userId.name,
         data.userId.email,
-        `This ${data.companyId.CompanyName} company shortlisted you for the position ${data.companyId.jobProfile}. Email: ${data.companyId.email}.<h3>Thank you <br>UNIVI INDIA Team</h3>`
+        `This ${data.companyId.CompanyName} company shortlisted you for the position ${data.companyId.jobProfile}. Email: ${data.companyId.email}.<h3>Thank you <br>Labor Link Team</h3>`
       );
     } else {
       console.log("Missing user or company data, email not sent.");
@@ -767,7 +767,7 @@ async addShortList(req, res) {
 //           data.companyId.jobProfile +
 //           ", and email is " +
 //           data.companyId.email +
-//           "."+"<h3>Thank you <br>UNIVI INDIA Team</h3>"
+//           "."+"<h3>Thank you <br>Labor Link Team</h3>"
 //       );
 //       return res.status(200).json({ success: "Successfully Selected" });
 //     } catch (err) {
@@ -839,7 +839,7 @@ async  addSelect(req, res) {
                 data.userId.fullName, // Changed `name` to `fullName`
                 data.userId.email,
                 `This ${data.companyId.companyName} company selected you for a position ${data.companyId.jobProfile}, and email is ${data.companyId.email}.
-                <h3>Thank you <br>UNIVI INDIA Team</h3>`
+                <h3>Thank you <br>Labor Link Team</h3>`
             );
             console.log("Email sent successfully");
         } catch (emailError) {
@@ -945,9 +945,9 @@ async getShortlistingData(req, res) {
         .findOne({ userId: userId, companyId: companyId })
         .populate("userId")
         .populate("companyId");
-      if (data.status == "Rejected") {
-        return res.status(400).json({ error: "already rejected" });
-      }
+      // if (data.status == "Rejected") {
+      //   return res.status(400).json({ error: "already rejected" });
+      // }
       sent.sendMail(
         data.userId.name,
         data.userId.email,
@@ -955,7 +955,7 @@ async getShortlistingData(req, res) {
           data.companyId.CompanyName +
           " company rejected you for position " +
           data.companyId.jobProfile +
-          ", thanks for showing your interest."+"<h3>Thank you <br>UNIVI INDIA Team</h3>"
+          ", thanks for showing your interest."+"<h3>Thank you <br>Labor Link Team</h3>"
       );
       await applyModel.findOneAndUpdate({_id:data._id},{$set:{status:"Rejected"}})
       return res.status(200).json({ success: "Successfully rejected" });
@@ -988,8 +988,6 @@ async getShortlistingData(req, res) {
             .find({ companyId: companyId, status: "Rejected" })
             .populate("userId") // Populate user details
             .populate("companyId"); // Populate company details
-            console.log(rejectedApplications,"jijkijikji")
-
         if (!rejectedApplications || rejectedApplications.length === 0) {
           console.log("rejectedApplications.length : " , rejectedApplications.length)
             return res.status(404).json({ error: "No rejected applications found" });
@@ -1001,10 +999,6 @@ async getShortlistingData(req, res) {
         return res.status(500).json({ error: "Internal server error" });
     }
 }
-
-
-
-
 
 
   async deleteApply(req,res){
@@ -1055,7 +1049,7 @@ async getShortlistingData(req, res) {
             verify.CompanyName +
             " company is successfully approved post for position " +
             verify.jobProfile +
-            "<h3>Thank you <br>UNIVI INDIA Team</h3>"
+            "<h3>Thank you <br>Labor Link Team</h3>"
         );
       }
       let user = await userModel.find({
@@ -1071,7 +1065,7 @@ async getShortlistingData(req, res) {
           verify.CompanyName +
           " company is new post for position " +
           verify.jobProfile +
-          "<h3>Thank you <br>UNIVI INDIA Team</h3>"
+          "<h3>Thank you <br>Labor Link Team</h3>"
       );
       return res.status(200).json({ success: "Successfully approved" });
     } catch (err) {
@@ -1102,7 +1096,7 @@ async getShortlistingData(req, res) {
             verify.CompanyName +
             " company is not approved post for position " +
             verify.jobProfile +
-            "<h3>Thank you <br>UNIVI INDIA Team</h3>"
+            "<h3>Thank you <br>Labor Link Team</h3>"
         );
       }
       return res.status(200).json({ success: "Successfully block!" });

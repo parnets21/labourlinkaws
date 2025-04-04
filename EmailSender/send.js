@@ -19,7 +19,7 @@ const sendMail = async (name, email, msg) => {
     var mailOptions = {
       from:"amitparnets@gmail.com",
       to: email,
-      subject: "UNIVI INDIA information",
+      subject: "Labor Link information",
       text: "Job Alert",
       html: '<h1>Hi ' + name + " </h1><p>" + msg + "</p>",
     };

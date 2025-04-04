@@ -58,7 +58,7 @@ class Employers {
 
         // Send welcome email
         try {
-            await send.sendMail(name, email, `Welcome to UNIVI INDIA <h3>Thank you <br>UNIVI INDIA Team</h3>`);
+            await send.sendMail(name, email, `Welcome to Labor Link <h3>Thank you <br>Labor Link Team</h3>`);
         } catch (mailError) {
             console.error("Email Sending Error:", mailError);
         }
@@ -77,6 +77,7 @@ class Employers {
     async UpdateEmployerImg(req, res) {
       try {
          const { userId } = req.params;
+         console.log(userId,"this is employer id ")
   
           let obj = {};
           if (req.files) {
@@ -387,7 +388,7 @@ async getJobsByEmployer(req, res) {
 
     async getAllProfile(req, res) {
         try {
-            let findData = await employerModel.find().sort({ _id: -1 });
+            let findData = await employerModel.find().sort({ _id: -1 }).limit(25);
             console.log("Success Response:", { success: "Data not found" }); // Logging response before sending
 
             if (findData.length <= 0) return res.status(400).json({ success: "Data not found" });
@@ -531,7 +532,7 @@ async getJobsByEmployer(req, res) {
             `You are shortlisted for an interview. The schedule is ${schedule}.<br>
             <strong>Platform:</strong> ${platform || "Not Specified"}<br>
             <strong>Duration:</strong> ${duration ? duration + " minutes" : "Not Specified"}<br><br>
-            <h3>Thank you,<br>UNIVI INDIA Team</h3>`
+            <h3>Thank you,<br>Labor Link Team</h3>`
           );
       
           return res.status(201).json({ success: "Interview scheduled successfully" });
@@ -544,14 +545,13 @@ async getJobsByEmployer(req, res) {
     
       async  getcallinterview(req, res) {
         try {
-          const { employerId } = req.params;
+          const { employerId ,companyId} = req.params;
       
           if (!employerId) {
             return res.status(400).json({ error: "Employer ID is required" });
           }
       
-          let interviewCalls = await callModel.find({ employerId }).sort({ _id: -1 });
-          console.log(interviewCalls,"thiaodwihaidbasdhas")
+          let interviewCalls = await callModel.find({ employerId,companyId }).sort({ _id: -1 });
       
           if (!interviewCalls.length) {
             return res.status(404).json({ error: "No interview calls found" });
@@ -564,6 +564,35 @@ async getJobsByEmployer(req, res) {
           return res.status(500).json({ error: "Internal Server Error" });
         }
       }
+
+      //getAllScheduledInterviews
+      async getAllScheduledInterviews  (req, res) {
+        try {
+            const interviews = await callModel.find({ status: "Scheduled" })
+              .populate("userId", "name email") // Populating user details
+            //   .populate("companyId", "name location"); // Populating company details
+        
+            if (!interviews || interviews.length === 0) {
+              return res.status(404).json({ 
+                success: false,
+                message: "No scheduled interviews found." 
+              });
+            }
+        
+            res.status(200).json({
+              success: true,
+              interviews,
+            });
+          } catch (error) {
+            console.error("Error fetching scheduled interviews:", error);
+            res.status(500).json({
+              success: false,
+              message: "Internal Server Error",
+              error: error.message, // Return error message for debugging
+            });
+          }
+      };
+
 
 
 
@@ -636,7 +665,7 @@ async getJobsByEmployer(req, res) {
            
             if(!data) return res.status(400).json({error:"Data not found"});
             send.sendMail(userName,userEmail, `Mr ${EmployeName} is interested in your profile please contact to this ${mobile} and email ${email},
-            <h3>Thank you <br>UNIVI INDIA Team</h3>
+            <h3>Thank you <br>Labor Link Team</h3>
             `);
             return res.status(200).json({success:"Successfully send notice"});
             }else{
@@ -660,11 +689,11 @@ async getJobsByEmployer(req, res) {
             if(!data) return res.status(400).json({error:"Something went wong!"});
             if(data.status=="Approved"){
                 send.sendMail(data.name,data.email, `Your profile is approved now you can post job,
-                <h3>Thank you <br>UNIVI INDIA Team</h3>
+                <h3>Thank you <br>Labor Link Team</h3>
                 `);
             }else{
                 send.sendMail(data.name,data.email, `Your profile is ${data.status} because ${data.reasion} please complete your profile,
-                <h3>Thank you <br>UNIVI INDIA Team</h3>
+                <h3>Thank you <br>Labor Link Team</h3>
                 `);
             }
             return res.status(200).json({success:"success"})
@@ -682,11 +711,11 @@ async getJobsByEmployer(req, res) {
             if(!data) return res.status(400).json({error:"Something went wong!"});
             if(data.isBlock==false){
                 send.sendMail(data.name,data.email, `Your profile is un-bloked now you can post job,
-                <h3>Thank you <br>UNIVI INDIA Team</h3>
+                <h3>Thank you <br>Labor Link Team</h3>
                 `);
             }else{
                 send.sendMail(data.name,data.email, `Your profile is blocked  please contact admin,
-                <h3>Thank you <br>UNIVI INDIA Team</h3>
+                <h3>Thank you <br>Labor Link Team</h3>
                 `);
             }
             return res.status(200).json({success:"success"})
@@ -767,13 +796,13 @@ async postmail(req, res){
     const mailOptions = {
       from: "amitparnets@gmail.com",
       to: email ,
-      subject: 'Your UNIVI INDIA new genarated password',
+      subject: 'Your Labor Link new genarated password',
       html:`<h1>Hi ${data.name}</h1><p>Seems like you forgot your password for UNIVI. Your password is :</p> <b> ${newPassword}</b>
      
      
      <p> If you did not initiate this request, please contact us immediately
   at ${process.env.NODE_SENDER_MAIL}</p>
-  <h3>Thank you <br>UNIVI INDIA Team</h3>`,
+  <h3>Thank you <br>Labor Link Team</h3>`,
      
     };
   
@@ -823,10 +852,11 @@ async postmail(req, res){
 
   async checkApprovalStatus  (req, res) {
     const { userId } = req.params; // Extract userId from the request parameters
+  console.log(userId);
   
     try {
       // Find the user by their ID
-      const user = await userModel.findById(userId);
+      const user = await employerModel.findById(userId);
   
       if (!user) {
         return res.status(404).json({
@@ -840,12 +870,7 @@ async postmail(req, res){
         return res.status(200).json({
           success: true,
           isApproved: true,
-          userData: {
-            _id: user._id,
-            email: user.email,
-            isApproved: user.isApproved,
-            // Include other necessary user data
-          },
+          userData: user,
           message: 'User is approved',
         });
       } else {
@@ -853,6 +878,7 @@ async postmail(req, res){
           success: true,
           isApproved: false,
           message: 'User is not yet approved',
+          userData: user,
         });
       }
     } catch (error) {

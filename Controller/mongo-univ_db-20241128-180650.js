@@ -3925,7 +3925,7 @@ db.getCollection("employers").insert({
   "updatedAt": ISODate("2024-05-17T07:05:10.771Z"),
   "__v": NumberInt(0),
   "CompanyInd": "Manufacturing",
-  "CompanyName": "Univi India",
+  "CompanyName": "Labor Link",
   "Companydoc": "1678364511351_02 Pan card.jpg",
   "CompanydocType": "Other documen",
   "Employerdoc": "1678364511355_IMG_20230309_175039.jpg",
@@ -4941,7 +4941,7 @@ db.getCollection("employers").insert({
   "updatedAt": ISODate("2024-05-17T07:05:10.280Z"),
   "__v": NumberInt(0),
   "CompanyInd": "HR",
-  "CompanyName": "Univi India HR Consultancy Pvt Ltd",
+  "CompanyName": "Labor Link HR Consultancy Pvt Ltd",
   "Companydoc": "1680526667429_Zepto VRF scan copy.jpg",
   "CompanydocType": "Company RC",
   "Employerdoc": "1680526667436_Zepto VRF scan copy.jpg",
@@ -30491,7 +30491,7 @@ db.getCollection("headingtexts").insert({
 });
 db.getCollection("headingtexts").insert({
   "_id": ObjectId("63f74d42be99ba7a21d7a104"),
-  "text1": "Are you looking for Job !! connect with UNIVI INDIA HR team",
+  "text1": "Are you looking for Job !! connect with Labor Link HR team",
   "__v": NumberInt(0)
 });
 db.getCollection("headingtexts").insert({
@@ -30900,7 +30900,7 @@ db.getCollection("intresteds").insert({
 /** jobs records **/
 db.getCollection("jobs").insert({
   "_id": ObjectId("640191004fc7c3ce20494d7f"),
-  "companyName": "UNIVI INDIA",
+  "companyName": "Labor Link",
   "averageIncentive": "5000",
   "openings": "2",
   "address": "# 42/118, Venkatappa complex,\r\nBandepalya Main Road, GB Palya, Bommanahalli,\r\nBangalore - 560068",
@@ -31578,7 +31578,7 @@ db.getCollection("jobs").insert({
 });
 db.getCollection("jobs").insert({
   "_id": ObjectId("641ea5414cbc9697b961474c"),
-  "companyName": "Univi India",
+  "companyName": "Labor Link",
   "averageIncentive": "5000",
   "openings": "25",
   "address": "",
@@ -31620,7 +31620,7 @@ db.getCollection("jobs").insert({
 });
 db.getCollection("jobs").insert({
   "_id": ObjectId("642176f74cbc9697b961a2a1"),
-  "companyName": "Univi India",
+  "companyName": "Labor Link",
   "averageIncentive": "",
   "openings": "50",
   "address": "Kudlu Gate ",
@@ -31662,7 +31662,7 @@ db.getCollection("jobs").insert({
 });
 db.getCollection("jobs").insert({
   "_id": ObjectId("6421783b4cbc9697b961a2da"),
-  "companyName": "Univi India ",
+  "companyName": "Labor Link ",
   "averageIncentive": "3000",
   "openings": "50",
   "address": "Kormangala ",
@@ -31704,7 +31704,7 @@ db.getCollection("jobs").insert({
 });
 db.getCollection("jobs").insert({
   "_id": ObjectId("64217a734cbc9697b961a359"),
-  "companyName": "Univi India ",
+  "companyName": "Labor Link ",
   "averageIncentive": "3000",
   "openings": "50",
   "address": "",
@@ -32376,7 +32376,7 @@ db.getCollection("jobs").insert({
 });
 db.getCollection("jobs").insert({
   "_id": ObjectId("64707a015d7f0bd22a1d2ec5"),
-  "companyName": "Univi India",
+  "companyName": "Labor Link",
   "averageIncentive": "",
   "openings": "20",
   "address": "Velachery ",
@@ -32502,7 +32502,7 @@ db.getCollection("jobs").insert({
 });
 db.getCollection("jobs").insert({
   "_id": ObjectId("64a25a0b5d7f0bd22a2d8b3a"),
-  "companyName": "Univi india ",
+  "companyName": "Labor Link ",
   "averageIncentive": "3000",
   "openings": "20",
   "address": "Jp nagar ",
@@ -32586,7 +32586,7 @@ db.getCollection("jobs").insert({
 });
 db.getCollection("jobs").insert({
   "_id": ObjectId("64c77ca85d7f0bd22a3c5c0f"),
-  "companyName": "UNIVI India HR consultancy pvt ltd ",
+  "companyName": "Labor Link HR consultancy pvt ltd ",
   "averageIncentive": "5000",
   "openings": "5",
   "address": "Gb Pally Bommanahalli ",
@@ -32838,7 +32838,7 @@ db.getCollection("jobs").insert({
 });
 db.getCollection("jobs").insert({
   "_id": ObjectId("65bdfc914327583ff4eccb37"),
-  "companyName": "Univi india",
+  "companyName": "Labor Link",
   "averageIncentive": "10000",
   "openings": "November",
   "address": "Koramangala",
@@ -32922,7 +32922,7 @@ db.getCollection("jobs").insert({
 });
 db.getCollection("jobs").insert({
   "_id": ObjectId("6607cafc4327583ff4029691"),
-  "companyName": "UNIVI INDIA ",
+  "companyName": "Labor Link ",
   "averageIncentive": "4000",
   "openings": "10",
   "address": "BTM Layout, Bangalore ",
@@ -32964,7 +32964,7 @@ db.getCollection("jobs").insert({
 });
 db.getCollection("jobs").insert({
   "_id": ObjectId("6607cbe84327583ff402a137"),
-  "companyName": "Univi india",
+  "companyName": "Labor Link",
   "averageIncentive": "",
   "openings": "49",
   "address": "Aa per location ",
@@ -33006,7 +33006,7 @@ db.getCollection("jobs").insert({
 });
 db.getCollection("jobs").insert({
   "_id": ObjectId("6607cd1b4327583ff402c313"),
-  "companyName": "Univi india ",
+  "companyName": "Labor Link ",
   "averageIncentive": "2000",
   "openings": "10",
   "address": "All are Bangalore ",
@@ -33048,7 +33048,7 @@ db.getCollection("jobs").insert({
 });
 db.getCollection("jobs").insert({
   "_id": ObjectId("660a444b4327583ff4035676"),
-  "companyName": "univi india",
+  "companyName": "Labor Link",
   "averageIncentive": "10000 to 25000",
   "openings": "39",
   "address": "All over Bangalore ",
@@ -33090,7 +33090,7 @@ db.getCollection("jobs").insert({
 });
 db.getCollection("jobs").insert({
   "_id": ObjectId("660a5da84327583ff403a84c"),
-  "companyName": "Univi india",
+  "companyName": "Labor Link",
   "averageIncentive": "15000",
   "openings": "29",
   "address": "All over Bangalore ",
@@ -33517,7 +33517,7 @@ db.getCollection("resumes").insert({
   ],
   "addProject": [
     {
-      "projectName": "Univi India ",
+      "projectName": "Labor Link ",
       "projectLink": "www.univiindia.com",
       "discription": "Project belongs to carrer domain",
       "DateOftime": "2022",
@@ -33922,7 +33922,7 @@ db.getCollection("resumes").insert({
   "__v": NumberInt(0),
   "profile": "1674624187737_Screenshot_20230125_105254_Gallery.jpg",
   "Hobbies": "Solo Bike Riding..",
-  "LANGUAGES": "Ì†ΩÌ≤Ø Kannada",
+  "LANGUAGES": "ÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩ Kannada",
   "birthofPlace": "#435, 4th Floor 1st main 5th cross opposite wisdom bees preschool Electronic city Bangalore ",
   "dateOfbirth": "1997-04-27",
   "singn": "Praveen BS"
@@ -35308,7 +35308,7 @@ db.getCollection("resumes").insert({
   ],
   "workAndExperience": [
     {
-      "Company": "UNIVI INDIA HR CONSULTANCY PVT LTD",
+      "Company": "Labor Link HR CONSULTANCY PVT LTD",
       "workPlace": "BOMMANAHALLI",
       "position": "HR EXECITIVE",
       "session": "2022-2023",
@@ -81005,7 +81005,7 @@ db.getCollection("users").insert({
   "createdAt": ISODate("2023-10-24T06:41:04.11Z"),
   "updatedAt": ISODate("2023-10-24T07:01:31.524Z"),
   "__v": NumberInt(0),
-  "resume": "1698130891511_Document from Ì†ºÌµ∞Ì†ºÌ∂ÅÌ†ºÌ∂àÌ†ºÌµ∞"
+  "resume": "1698130891511_Document from ÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩ"
 });
 db.getCollection("users").insert({
   "_id": ObjectId("65376bca5d7f0bd22a681047"),
