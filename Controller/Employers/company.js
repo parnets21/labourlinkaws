@@ -650,9 +650,7 @@ async register(req, res) {
           .find({ companyId: jobId }) // Ensure conversion
           .sort({ _id: -1 })
           .populate("userId");
-  
-      console.log("Query Result:", findData)
-  
+    
       if (!findData || findData.length === 0) {
           return res.status(400).json({ success: false, message: "Data not found" });
       }
@@ -778,82 +776,96 @@ async addShortList(req, res) {
 
 
 async  addSelect(req, res) {
-    try {
-        const { userId, companyId } = req.body;
+  try {
+      console.log(req.body, "this is body");
 
-        console.log("Received request:", { userId, companyId });
+      const { userId, companyId } = req.body;
+      console.log("Received request:", { userId, companyId });
 
-        // Validate input
-        if (!userId || !companyId) {
-            return res.status(400).json({ error: "User ID and Company ID are required" });
-        }
+      // Validate input
+      if (!userId || !companyId) {
+          return res.status(400).json({ error: "User ID and Company ID are required" });
+      }
 
-        // Fetch the application
-        let data = await applyModel
-            .findOne({ userId: userId, companyId: companyId })
-            .populate("userId")
-            .populate("companyId")
-            .lean(); // Lean improves performance by returning a plain object
+      // Convert to ObjectId
+      let userObjectId, companyObjectId;
+      try {
+          userObjectId = new mongoose.Types.ObjectId(userId);
+          companyObjectId = new mongoose.Types.ObjectId(companyId);
+      } catch (err) {
+          return res.status(400).json({ error: "Invalid ObjectId format" });
+      }
 
-        console.log("Fetched data:", data);
+      // Debug logs (optional)
+      const apps = await applyModel.find({ userId: userObjectId });
+      console.log("Apps with this userId:", apps);
 
-        // Check if application exists
-        if (!data) {
-            console.log("No application found");
-            return res.status(404).json({ error: "No application found" });
-        }
+      const apps2 = await applyModel.find({ companyId: companyObjectId });
+      console.log("Apps with this companyId:", apps2);
 
-        console.log("Current Status:", data.status, typeof data.status);
+      // Fetch the application
+      let data = await applyModel
+          .findOne({ userId: userObjectId, companyId: companyObjectId })
+          .populate("userId")
+          .populate("companyId")
+          .lean();
 
-        // Ensure `data.status` is not null/undefined before checking
-        if (data.status && data.status === "Selected") {
-            console.log("Already selected condition met! Returning error...");
-            return res.status(400).json({ error: "Already selected" });
-        }
+      console.log("Fetched data:", data);
 
-        // Update application status
-        let update;
-        try {
-            console.log("Updating application status...");
+      if (!data) {
+          console.log("No application found");
+          return res.status(404).json({ error: "No application found" });
+      }
 
-            update = await applyModel.findOneAndUpdate(
-                { userId: new mongoose.Types.ObjectId(userId), companyId: new mongoose.Types.ObjectId(companyId) },
-                { $set: { status: "Selected" } },
-                { new: true }
-            );
+      // Check if already selected
+      console.log("Current Status:", data.status);
+      if (data.status === "Selected") {
+          console.log("Already selected condition met! Returning error...");
+          return res.status(400).json({ error: "Already selected" });
+      }
 
-            if (!update) {
-                console.log("No matching document found for update");
-                return res.status(400).json({ error: "Something went wrong" });
-            }
+      // Update application status
+      let update;
+      try {
+          console.log("Updating application status...");
 
-            console.log("Update successful:", update);
-        } catch (error) {
-            console.error("Error updating document:", error);
-            return res.status(500).json({ error: "Database update failed" });
-        }
+          update = await applyModel.findOneAndUpdate(
+              { userId: userObjectId, companyId: companyObjectId },
+              { $set: { status: "Selected" } },
+              { new: true }
+          );
 
-        // Send email only if update is successful
-        try {
-            await sent.sendMail(
-                data.userId.fullName, // Changed `name` to `fullName`
-                data.userId.email,
-                `This ${data.companyId.companyName} company selected you for a position ${data.companyId.jobProfile}, and email is ${data.companyId.email}.
-                <h3>Thank you <br>Labor Link Team</h3>`
-            );
-            console.log("Email sent successfully");
-        } catch (emailError) {
-            console.error("Error sending email:", emailError);
-        }
+          if (!update) {
+              console.log("No matching document found for update");
+              return res.status(400).json({ error: "Something went wrong" });
+          }
 
-        return res.status(200).json({ success: "Successfully Selected" });
+          console.log("Update successful:", update);
+      } catch (error) {
+          console.error("Error updating document:", error);
+          return res.status(500).json({ error: "Database update failed" });
+      }
 
-    } catch (err) {
-        console.error("Unexpected error:", err);
-        return res.status(500).json({ error: "Internal server error" });
-    }
+      // Send email only if update is successful
+      try {
+          await sent.sendMail(
+              data.userId.fullName,
+              data.userId.email,
+              `This ${data.companyId.companyName} company selected you for a position ${data.companyId.jobProfile}, and email is ${data.companyId.email}.
+              <h3>Thank you <br>Labor Link Team</h3>`
+          );
+          console.log("Email sent successfully");
+      } catch (emailError) {
+          console.error("Error sending email:", emailError);
+      }
+
+      return res.status(200).json({ success: "Successfully Selected" });
+
+  } catch (err) {
+      console.error("Unexpected error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+  }
 }
-
 
   async getSelectData(req, res) {
     try {

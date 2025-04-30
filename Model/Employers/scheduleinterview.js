@@ -14,7 +14,12 @@ const callSchema = new Schema(
       companyId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: "Company" }, // Changed to ObjectId
       platform: { type: String, required: true },
       interviewNotes: { type: String },
-      duration: { type: Number, required: true }
+      duration: { type: String, required: true },
+      feedback: {
+        technicalSkills: String, // e.g., "Strong JS fundamentals"
+        communicationskill: String       // e.g., "Good problem solving but weak in DBs"
+      },
+      Position:{type:String}
     }, { timestamps: true });
 
 module.exports = mongoose.model("interviewcall", callSchema);

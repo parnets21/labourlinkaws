@@ -10,66 +10,136 @@ const send = require("../../EmailSender/send");
 const intrestedModel=require("../../Model/Employers/intrested");
 const nodemailer=require('nodemailer');
 const applyModel = require("../../Model/Employers/apply");
+const Appointment=require("../../Model/Admin/slotbook")
 const companyModel=require("../../Model/Employers/company");
 const saltRounds = 10;
 
 
 const {isValidEmail,phonenumber,isValidString,validUrl, isValid}=require("../../Config/function")
 class Employers {
-  async registerEmployer(req, res) {
+//   async registerEmployer(req, res) {
+//     try {
+//         console.log("Incoming Request:", req.body);
+
+//         const {
+//             mobile, age, name, email, password, gender, 
+//             street, city, state, pincode, country, address, 
+//             hiring, MyCompany, CompanyName, companyWebsite, 
+//             numberOfemp, industry, GstNum, searchCount
+//         } = req.body;
+
+//         if (!isValidString(name)) return res.status(400).json({ error: "Invalid name format!" });
+//         if (!isValidEmail(email)) return res.status(400).json({ error: "Invalid email!" });
+//         if (password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters!" });
+//         if (!phonenumber(mobile)) return res.status(400).json({ error: "Invalid phone number!" });
+
+//         const existingMobile = await employerModel.findOne({ mobile, isDelete: false });
+//         if (existingMobile) return res.status(400).json({ error: "Mobile number already exists!" });
+
+//         const existingEmail = await employerModel.findOne({ email, isDelete: false });
+//         if (existingEmail) return res.status(400).json({ error: "Email ID already exists!" });
+
+//         // Password hashing with error handling
+//         let hashedPassword;
+//         try {
+//             hashedPassword = await bcrypt.hash(password, 10);
+//         } catch (hashError) {
+//             console.error("Password Hashing Error:", hashError);
+//             return res.status(500).json({ error: "Failed to encrypt password" });
+//         }
+
+//         // Employer registration
+//         await employerModel.create({
+//             mobile,  age, name, email, password: hashedPassword, gender,
+//             street, city, state, pincode, country, address,
+//             hiring, MyCompany, CompanyName, companyWebsite,
+//             numberOfemp, industry, GstNum, searchCount
+//         });
+
+
+//         // Send welcome email
+//         try {
+//             await send.sendMail(name, email, `Welcome to Labor Link <h3>Thank you <br>Labor Link Team</h3>`);
+//         } catch (mailError) {
+//             console.error("Email Sending Error:", mailError);
+//         }
+
+//         return res.status(200).json({ success: "Successfully registered!" });
+
+//     } catch (err) {
+//         console.error("Error in registerEmployer:", err);
+//         return res.status(500).json({ error: "Internal server error", details: err.message });
+//     }
+// }
+
+async registerEmployer(req, res) {
+  try {
+    console.log("Incoming Request:", req.body);
+
+    const {
+      mobile, age, name, email, password, gender,
+      street, city, state, pincode, country, address,
+      hiring, MyCompany, CompanyName, companyWebsite,
+      numberOfemp, industry, GstNum, searchCount
+    } = req.body;
+
+    // ===== VALIDATIONS =====
+    if (!isValidString(name)) return res.status(400).json({ error: "Invalid name format!" });
+    if (!isValidEmail(email)) return res.status(400).json({ error: "Invalid email!" });
+    if (password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters!" });
+    if (!phonenumber(mobile)) return res.status(400).json({ error: "Invalid phone number!" });
+
+    const existingMobile = await employerModel.findOne({ mobile, isDelete: false });
+    if (existingMobile) return res.status(400).json({ error: "Mobile number already exists!" });
+
+    const existingEmail = await employerModel.findOne({ email, isDelete: false });
+    if (existingEmail) return res.status(400).json({ error: "Email ID already exists!" });
+
+    // ===== PASSWORD HASHING =====
+    let hashedPassword;
     try {
-        console.log("Incoming Request:", req.body);
-
-        const {
-            mobile, age, name, email, password, gender, 
-            street, city, state, pincode, country, address, 
-            hiring, MyCompany, CompanyName, companyWebsite, 
-            numberOfemp, industry, GstNum, searchCount
-        } = req.body;
-
-        if (!isValidString(name)) return res.status(400).json({ error: "Invalid name format!" });
-        if (!isValidEmail(email)) return res.status(400).json({ error: "Invalid email!" });
-        if (password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters!" });
-        if (!phonenumber(mobile)) return res.status(400).json({ error: "Invalid phone number!" });
-
-        const existingMobile = await employerModel.findOne({ mobile, isDelete: false });
-        if (existingMobile) return res.status(400).json({ error: "Mobile number already exists!" });
-
-        const existingEmail = await employerModel.findOne({ email, isDelete: false });
-        if (existingEmail) return res.status(400).json({ error: "Email ID already exists!" });
-
-        // Password hashing with error handling
-        let hashedPassword;
-        try {
-            hashedPassword = await bcrypt.hash(password, 10);
-        } catch (hashError) {
-            console.error("Password Hashing Error:", hashError);
-            return res.status(500).json({ error: "Failed to encrypt password" });
-        }
-
-        // Employer registration
-        await employerModel.create({
-            mobile,  age, name, email, password: hashedPassword, gender,
-            street, city, state, pincode, country, address,
-            hiring, MyCompany, CompanyName, companyWebsite,
-            numberOfemp, industry, GstNum, searchCount
-        });
-
-
-        // Send welcome email
-        try {
-            await send.sendMail(name, email, `Welcome to Labor Link <h3>Thank you <br>Labor Link Team</h3>`);
-        } catch (mailError) {
-            console.error("Email Sending Error:", mailError);
-        }
-
-        return res.status(200).json({ success: "Successfully registered!" });
-
-    } catch (err) {
-        console.error("Error in registerEmployer:", err);
-        return res.status(500).json({ error: "Internal server error", details: err.message });
+      hashedPassword = await bcrypt.hash(password, 10);
+    } catch (hashError) {
+      console.error("Password Hashing Error:", hashError);
+      return res.status(500).json({ error: "Failed to encrypt password" });
     }
+
+    // ===== EMPLOYER REGISTRATION =====
+    const newEmployer = await employerModel.create({
+      mobile, age, name, email, password: hashedPassword, gender,
+      street, city, state, pincode, country, address,
+      hiring, MyCompany, CompanyName, companyWebsite,
+      numberOfemp, industry, GstNum, searchCount
+    });
+
+    // ===== SEND WELCOME EMAIL =====
+    try {
+      await send.sendMail(name, email, `Welcome to Labor Link <h3>Thank you <br>Labor Link Team</h3>`);
+    } catch (mailError) {
+      console.error("Email Sending Error:", mailError);
+    }
+
+    // ===== SUCCESS RESPONSE =====
+    return res.status(200).json({
+      success: "Successfully registered!",
+      userData: {
+        _id: newEmployer._id,
+        name: newEmployer.name,
+        email: newEmployer.email,
+        mobile: newEmployer.mobile,
+        CompanyName: newEmployer.CompanyName,
+        MyCompany: newEmployer.MyCompany,
+        hiring: newEmployer.hiring
+        // Add more fields here if needed, just avoid sending hashed password
+      }
+    });
+
+  } catch (err) {
+    console.error("Error in registerEmployer:", err);
+    return res.status(500).json({ error: "Internal server error", details: err.message });
+  }
 }
+
 
 
 
@@ -481,23 +551,36 @@ async getJobsByEmployer(req, res) {
             console.log(err);
         }
     }
+    
     async  callinterview(req, res) {
         try {
-          const { userId, schedule, status, employerId, name,meetingPassword, meetingLink, email, companyId, platform, interviewNotes, duration } = req.body;
-          
-          if (!userId || !schedule || !employerId || !name || !email || !companyId) {
+          const { userId, schedule, slotId, status, employerId, feedback, Position, name, meetingPassword, meetingLink, email, companyId, platform, interviewNotes, duration } = req.body;
+          console.log(slotId,"hi")
+          if (!userId || !schedule || !slotId || !employerId  ||  !email || !companyId) {
             return res.status(400).json({ error: "Missing required fields" });
           }
+          console.log("hi sdsd")
+
+          const slot = await Appointment.findById(slotId);
+          console.log("jijiji",slot)
+          if (slot.status === "booked") {
+            return res.status(400).json({ error: "Slot already booked" });
+          }
+          console.log("sdfjndssd")
+          slot.status = "booked";
+await slot.save();
 
          
         const companyObjectId = new mongoose.Types.ObjectId(companyId);
 
+        const userData = await userModel.findById(userId)
       
           // Check if the interview call already exists
-          let existingCall = await callModel.findOne({ userId, employerId, companyObjectId });
+          let existingCall = await callModel.findOne({userId , employerId, companyObjectId });
+          
           
           if (existingCall) {
-            return res.status(200).json({ success: "Interview call already scheduled!" });
+            return res.status(200).json({user: userData,success: "Interview call already scheduled!" });
           }
       
           // Create a new interview call
@@ -513,7 +596,9 @@ async getJobsByEmployer(req, res) {
             meetingPassword,
             meetingLink,
             interviewNotes,
-            duration,
+            duration: slot.duration || duration, // prioritizing slot's duration
+            feedback,
+            Position	,
           });
           console.log(newCall,
             "thisissssss"
@@ -526,20 +611,31 @@ async getJobsByEmployer(req, res) {
           console.log(newCall, "Interview Call Created");
       
           // Send email notification
+          // await send.sendMail(
+          //   name,
+          //   email,
+          //   `You are shortlisted for an interview. The schedule is ${schedule}.<br>
+          //   <strong>Platform:</strong> ${platform || "Not Specified"}<br>
+          //   <strong>Duration:</strong> ${duration ? duration + " minutes" : "Not Specified"}<br><br>
+          //   <h3>Thank you,<br>Labor Link Team</h3>`
+          // );
           await send.sendMail(
             name,
             email,
-            `You are shortlisted for an interview. The schedule is ${schedule}.<br>
-            <strong>Platform:</strong> ${platform || "Not Specified"}<br>
-            <strong>Duration:</strong> ${duration ? duration + " minutes" : "Not Specified"}<br><br>
-            <h3>Thank you,<br>Labor Link Team</h3>`
+            `You are shortlisted for an interview.<br>
+             <strong>Date:</strong> ${slot.date.toDateString()}<br>
+             <strong>Time:</strong> ${slot.time}<br>
+             <strong>Duration:</strong> ${slot.duration}<br>
+             <strong>Platform:</strong> ${platform || "Not Specified"}<br><br>
+             <h3>Thank you,<br>Labor Link Team</h3>`
           );
+          
       
-          return res.status(201).json({ success: "Interview scheduled successfully" });
+          return res.status(201).json({success: "Interview scheduled successfully" , userData });
       
         } catch (error) {
           console.error("Error scheduling interview:", error);
-          return res.status(500).json({ message: "Internal Server Error" , error:error.message });
+          return res.status(500).json({message: "Internal Server Error" , error:error.message });
         }
       }
     

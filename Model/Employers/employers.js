@@ -31,7 +31,7 @@ const employerSchema = new Schema(
     // Additional fields
     isPrime: { type: Boolean, default: false },
     isApproved: { type: Boolean, default: false }, // Only approved employers can post jobs
-    status: { type: String, default: "Pending", enum: ["Pending", "Active", "Rejected"] },
+    status: { type: String, default: "Pending", enum: ["Pending", "Active","Approved", "Rejected"] },
     isDelete: { type: Boolean, default: false },
     isBlock: { type: Boolean, default: false },
     searchCount: { type: Number, default: 0 }

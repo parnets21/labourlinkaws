@@ -48,7 +48,7 @@ router.post("/applyForJob", userController.applyNow);
 router.get("/getlistOfaplly", userController.getAllApplyCompanyList);
 
 router.get("/getlistofinterviewscedule", userController.getlistofinterviewscedule);
-router.post("/ADDlistofinterviewscedule", userController.scheduleInterview);
+router.post("/ADDinterviewscedule", userController.scheduleInterview);
 
 router.get("/getlistOOfaplly/:userId", userController.getApplyCompanyList);
 // router.get("/getlistOfAccep/:userId", userController.getApplyCompanyList);

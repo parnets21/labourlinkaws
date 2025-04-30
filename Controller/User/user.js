@@ -694,6 +694,7 @@ class user {
       if(!isValid(email)) return res.status(400).json({error:"Please enter your email!"})
       if(!isValid(password)) return res.status(400).json({error:"Please enter your password!"})
       let hash
+    console.log("hi")
     
        if(!phonenumber(email)){
              hash = await userModel.findOne({ email: email ,isDelete:false});
@@ -703,15 +704,15 @@ class user {
         
       if (!hash)
         return res.status(400).json({ error: "Please enter register Id!" });
-
+      console.log("hi")
       let compare = await bcrypt
         .compare(password, hash.password)
         .then((res) => {
           return res;
         });
-
+        console.log("hi")
       if (!compare) {
-        return res.status(400).send({ error: "Invalid password!" });
+        return res.status(400).send({ alert: "Invalid password!" });
       }
       let updateData= await userModel.findOneAndUpdate({_id:hash._id},{$set:{online:"online"}},{new:true})
       return res.status(200).json({ msg: "Successfully login", success: updateData });
