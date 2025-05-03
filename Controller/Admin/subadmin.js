@@ -147,13 +147,13 @@ async postmail(req, res){
     const mailOptions = {
       from: "amitparnets@gmail.com",
       to: email ,
-      subject: 'Your UNIVI INDIA new genarated password',
+      subject: 'Your Labor Link new genarated password',
       html:`<h1>Hi ${data.name}</h1><p>Seems like you forgot your password for UNIVI. Your password is :</p> <b> ${newPassword}</b>
      
      
      <p> If you did not initiate this request, please contact us immediately
   at ${process.env.NODE_SENDER_MAIL}</p>
-  <h3>Thank you <br>UNIVI INDIA Team</h3>`,
+  <h3>Thank you <br>Labor Link Team</h3>`,
      
     };
   

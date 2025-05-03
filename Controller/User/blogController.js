@@ -1,6 +1,7 @@
 const blogModel=require('../../Model/User/blogModel');
 // const Validator=require('../../Config/function');
 const commentModel=require("../../Model/User/blogComment");
+const { uploadFile2, deleteFile } = require("../../middileware/aws");
 
 class blogcreate {
   //create blog
@@ -8,28 +9,53 @@ class blogcreate {
       try {
         let {title,authorName,authorImage,body,body2,body3,tag,subcategory,adminId,sellerId}=req.body
         let obj={title,authorName,authorImage,body,body2,body3,tag,subcategory,adminId,sellerId}
-        if(req.files.length!=0){
-          let arr=req.files
-          let i
-          for(i=0;i<arr.length;i++){
         
-          if(arr[i].fieldname=="image"){
-            obj["image"]=arr[i].filename   
+        if (req.files && req.files.length > 0) {
+          const uploadPromises = [];
+          
+          // Find image and image1 files
+          const imageFile = req.files.find(file => file.fieldname === "image");
+          const image1File = req.files.find(file => file.fieldname === "image1");
+          
+          // Upload image to S3 if it exists
+          if (imageFile) {
+            const uploadPromise = uploadFile2(imageFile, "blog-images")
+              .then(imageUrl => {
+                obj["image"] = imageUrl;
+              })
+              .catch(error => {
+                console.error("Error uploading image to S3:", error);
+                throw new Error(`Failed to upload image: ${error.message}`);
+              });
+            
+            uploadPromises.push(uploadPromise);
           }
-          if(arr[i].fieldname=="image1"){
-            obj["image1"]=arr[i].filename    
+          
+          // Upload image1 to S3 if it exists
+          if (image1File) {
+            const uploadPromise = uploadFile2(image1File, "blog-images")
+              .then(imageUrl => {
+                obj["image1"] = imageUrl;
+              })
+              .catch(error => {
+                console.error("Error uploading image1 to S3:", error);
+                throw new Error(`Failed to upload image1: ${error.message}`);
+              });
+            
+            uploadPromises.push(uploadPromise);
           }
-        }
+          
+          // Wait for all uploads to complete
+          await Promise.all(uploadPromises);
         }
         
         console.log(obj);
             let blogs = new blogModel(obj);
-        blogs.save().then((data) => {
-         
-            return res.status(200).json({ Success: "Successfully blogs posted" });
-          });
+        await blogs.save();
+        return res.status(200).json({ success: true, message: "Successfully blog posted" });
         } catch (error) {
-          console.log(error.message);
+          console.error("Error creating blog:", error);
+          return res.status(500).json({ success: false, message: "Failed to create blog", error: error.message });
         }
       }
 //getblog
@@ -99,6 +125,12 @@ class blogcreate {
        
           let {title,body,body2,body3,tag,subcategory}=req.body
 
+          // Get existing blog to check for images that need to be deleted
+          const existingBlog = await blogModel.findById(blogId);
+          if (!existingBlog) {
+            return res.status(404).json({ status: false, message: "Blog not found" });
+          }
+
           let obj={}
           if(title){
             obj['title']=title
@@ -119,27 +151,75 @@ class blogcreate {
             obj['subcategory']=subcategory
           }
          
-          if(req.files.length!=0){
-            let arr=req.files
-            let i
-            for(i=0;i<arr.length;i++){
-            if(arr[i].fieldname=="image"){
-              obj["image"]=arr[i].filename   
+          if (req.files && req.files.length > 0) {
+            const uploadPromises = [];
+            
+            // Find image and image1 files
+            const imageFile = req.files.find(file => file.fieldname === "image");
+            const image1File = req.files.find(file => file.fieldname === "image1");
+            
+            // Upload new image and delete old one if it exists
+            if (imageFile) {
+              // Delete old image from S3 if it exists and is an S3 URL
+              if (existingBlog.image && existingBlog.image.startsWith('https://')) {
+                try {
+                  await deleteFile(existingBlog.image);
+                } catch (deleteError) {
+                  console.warn("Could not delete old image:", deleteError);
+                  // Continue with the update even if delete fails
+                }
+              }
+              
+              // Upload new image
+              const uploadPromise = uploadFile2(imageFile, "blog-images")
+                .then(imageUrl => {
+                  obj["image"] = imageUrl;
+                })
+                .catch(error => {
+                  console.error("Error uploading image to S3:", error);
+                  throw new Error(`Failed to upload image: ${error.message}`);
+                });
+              
+              uploadPromises.push(uploadPromise);
             }
-            if(arr[i].fieldname=="image1"){
-              obj["image1"]=arr[i].filename    
+            
+            // Upload new image1 and delete old one if it exists
+            if (image1File) {
+              // Delete old image1 from S3 if it exists and is an S3 URL
+              if (existingBlog.image1 && existingBlog.image1.startsWith('https://')) {
+                try {
+                  await deleteFile(existingBlog.image1);
+                } catch (deleteError) {
+                  console.warn("Could not delete old image1:", deleteError);
+                  // Continue with the update even if delete fails
+                }
+              }
+              
+              // Upload new image1
+              const uploadPromise = uploadFile2(image1File, "blog-images")
+                .then(imageUrl => {
+                  obj["image1"] = imageUrl;
+                })
+                .catch(error => {
+                  console.error("Error uploading image1 to S3:", error);
+                  throw new Error(`Failed to upload image1: ${error.message}`);
+                });
+              
+              uploadPromises.push(uploadPromise);
             }
-          
-          }
+            
+            // Wait for all uploads to complete
+            await Promise.all(uploadPromises);
           }
           console.log(obj)
          
           let blogubdate=await blogModel.findOneAndUpdate({_id:blogId},{$set:obj},{new:true})
           if(!blogubdate) return res.status(400).json({status:false,msg:"Samething went worng"})
 
-          return res.status(200).json({status:true,msg:"Successfully updated blog"})
+          return res.status(200).json({status:true,msg:"Successfully updated blog", data: blogubdate})
         }catch(err){
-          console.log(err)
+          console.error("Error updating blog:", err);
+          return res.status(500).json({ status: false, message: "Internal server error", error: err.message });
         }
       } 
 //delete blog
@@ -147,6 +227,27 @@ class blogcreate {
         try{
           let blogId=req.params.blogId
        
+          // Get the blog to be deleted so we can delete its images from S3
+          const blogToDelete = await blogModel.findById(blogId);
+          if (!blogToDelete) {
+            return res.status(404).json({ status: false, message: "Blog not found" });
+          }
+          
+          // Delete images from S3 if they exist and are S3 URLs
+          const deletePromises = [];
+          
+          if (blogToDelete.image && blogToDelete.image.startsWith('https://')) {
+            deletePromises.push(deleteFile(blogToDelete.image));
+          }
+          
+          if (blogToDelete.image1 && blogToDelete.image1.startsWith('https://')) {
+            deletePromises.push(deleteFile(blogToDelete.image1));
+          }
+          
+          // Wait for all deletes to complete
+          await Promise.all(deletePromises);
+          
+          // Delete the blog from database
           let check= await blogModel.deleteOne(blogId);
 
           if(check.deletedCount==0){
@@ -155,7 +256,8 @@ class blogcreate {
           return res.status(200).json({status:false,msg:"Blog  Successfully deleted"});
           }
         }catch(err){
-          console.log(err)
+          console.error("Error deleting blog:", err);
+          return res.status(500).json({ status: false, message: "Internal server error", error: err.message });
         }
       }
 //get by category blog

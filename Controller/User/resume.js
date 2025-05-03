@@ -1,5 +1,6 @@
 const applyModel=require('../../Model/Employers/apply');
 const resumeModel = require('../../Model/User/resume');
+const { uploadFile2, deleteFile } = require("../../middileware/aws");
 
 class resume {
     async resumeRegister(req, res) {
@@ -84,21 +85,45 @@ class resume {
                 obj['pincode']=pincode
             }
         
+            // Get existing resume to check for profile that might need to be deleted
+            const existingResume = await resumeModel.findOne({userId: userId});
            
-            if (req.files.length != 0) {
-                let arr = req.files
-                let i
-                for (i = 0; i < arr.length; i++) {
-                    if (arr[i].fieldname == "profile") {
-                        obj["profile"] = arr[i].filename
+            if (req.files && req.files.length > 0) {
+                // Find profile file
+                const profileFile = req.files.find(file => file.fieldname === "profile");
+                
+                if (profileFile) {
+                    try {
+                        // If existing profile is an S3 URL, delete it
+                        if (existingResume && existingResume.profile && existingResume.profile.startsWith('https://')) {
+                            try {
+                                await deleteFile(existingResume.profile);
+                            } catch (deleteError) {
+                                console.warn("Could not delete old profile:", deleteError);
+                                // Continue with the update even if delete fails
+                            }
+                        }
+                        
+                        // Upload new profile to S3
+                        const profileUrl = await uploadFile2(profileFile, "resume-profiles");
+                        obj["profile"] = profileUrl;
+                    } catch (uploadError) {
+                        console.error("Error uploading profile to S3:", uploadError);
+                        return res.status(500).json({ 
+                            success: false, 
+                            msg: "Failed to upload profile image", 
+                            error: uploadError.message 
+                        });
                     }
-                }}
+                }
+            }
            
-                let updateUser=await resumeModel.findOneAndUpdate({userId:userId},{$set:obj},{new:true});
-                if(!updateUser) return res.status(400).json({msg:"Something went worng"});
-                return res.status(200).json({msg:"Successfully updated",success:updateUser})  
+            let updateUser = await resumeModel.findOneAndUpdate({userId:userId},{$set:obj},{new:true});
+            if(!updateUser) return res.status(400).json({msg:"Something went wrong"});
+            return res.status(200).json({msg:"Successfully updated",success:updateUser})  
         }catch(err){
             console.log(err);
+            return res.status(500).json({msg:"Internal server error", error: err.message});
         }
     }
     async AddSkill(req,res){

@@ -3,17 +3,8 @@ const router = express.Router();
 const careerController=require('../../Controller/User/career')
 const multer = require("multer");
 
-
-
-
-var storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "Public/career");
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "_" + file.originalname);
-  },
-});
+// Use memory storage for S3 uploads
+const storage = multer.memoryStorage();
 
 const upload = multer({ storage: storage });
 

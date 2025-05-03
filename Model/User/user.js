@@ -80,6 +80,8 @@ const userSchema = new Schema(
       min: { type: Number, default: 0 },
       max: { type: Number, default: 0 },
     },
+    fcmToken: { type: String }, // 🔥 Used for FCM push notifications
+
   },
   { timestamps: true }
 );

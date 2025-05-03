@@ -1,5 +1,6 @@
 const ChatboxModel = require("../../Model/User/chatbox")
 const mongoose = require("mongoose");
+const { uploadFile2 } = require("../../middileware/aws");
 
 
 class chat {
@@ -11,14 +12,25 @@ class chat {
       text,
       type,}
       
-      if (req.files.length != 0) {
-        let arr = req.files
-        let i
-        for (i = 0; i < arr.length; i++) {
-            if (arr[i].fieldname == "profile") {
-                obj["profile"] = arr[i].filename
-            }
-        }}
+    if (req.files && req.files.length > 0) {
+      // Find profile file
+      const profileFile = req.files.find(file => file.fieldname === "profile");
+      
+      if (profileFile) {
+        try {
+          // Upload profile to S3
+          const profileUrl = await uploadFile2(profileFile, "chat-attachments");
+          obj["profile"] = profileUrl;
+        } catch (uploadError) {
+          console.error("Error uploading attachment to S3:", uploadError);
+          return res.status(500).json({ 
+            success: false, 
+            message: "Failed to upload attachment", 
+            error: uploadError.message 
+          });
+        }
+      }
+    }
       let Newchat = new ChatboxModel(obj);
       Newchat.save().then((data) => {
         console.log(data);
@@ -26,6 +38,7 @@ class chat {
       });
     } catch (error) {
       console.log(error);
+      return res.status(500).json({ success: false, message: "Failed to add chat", error: error.message });
     }
   }
   async getchat(req, res) {

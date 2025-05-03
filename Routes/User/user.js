@@ -1,4 +1,3 @@
-
 const express = require("express");
 const router = express.Router();
 const userController = require("../../Controller/User/user");
@@ -6,27 +5,36 @@ const messageController = require('../../Controller/User/messageController');
 
 const multer = require("multer");
 
-var storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "Public/user");
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "_" + file.originalname);
-  },
-});
+// Configure multer to use memory storage for S3 uploads
+const storage = multer.memoryStorage();
 
+// Use memory storage for routes that will use S3
 const upload = multer({ storage: storage });
 
+// Keep the local disk storage for any routes that still need it
+const diskStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, "Public/user"); 
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + "_" + file.originalname); // Generate unique filename
+    },
+});
+
+const diskUpload = multer({ storage: diskStorage });
+
 router.post("/register", userController.register);
-router.post("/login", userController.login);
-router.put('/updateProfile/:userId', userController.updateProfile);
-router.put("/editProfile", upload.any(), userController.editProfile);
-router.post("/AddEducation", userController.AddEducation);
+router.post("/userlogin", userController.login);
+router.put('/updateProfileImg/:userId', upload.any(), userController.updateProfileImg);
+router.put('/editUser/:id', userController.editUser);
+router.put('/updateResume/:userId', upload.any(), userController.updateResume);
+// router.put("/editProfile", upload.any(), userController.editProfile);
+router.post("/AddEducation", userController.addEducation);
 router.delete(
   "/removeEducation/:userId/:removeId",
   userController.removeEducation
 );
-router.post("/addsKill",userController.AddSkill)
+router.post("/addsKill",userController.addSkill)
 router.delete("/removeSkill/:userId/:removeId",userController.removeSkill)
 router.get("/getUserById/:userId", userController.getUserById);
 router.get("/getAllProfile", userController.getAllProfile);
@@ -39,14 +47,12 @@ router.delete(
 router.post("/makeBlockUnBlockEmployee",userController.makeBlockUnBlock)
 router.delete('/deleteProfileParmanet/:userId',userController.deleteProfileParmanet);
 
-
-
 //apply form for company
 router.post("/applyForJob", userController.applyNow);
 router.get("/getlistOfaplly", userController.getAllApplyCompanyList);
 
 router.get("/getlistofinterviewscedule", userController.getlistofinterviewscedule);
-router.post("/ADDlistofinterviewscedule", userController.scheduleInterview);
+router.post("/ADDinterviewscedule", userController.scheduleInterview);
 
 router.get("/getlistOOfaplly/:userId", userController.getApplyCompanyList);
 // router.get("/getlistOfAccep/:userId", userController.getApplyCompanyList);

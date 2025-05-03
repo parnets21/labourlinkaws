@@ -18,54 +18,10 @@ const Salary= require("../../Model/Admin/jobmanagment/Salary")
 const Education= require("../../Model/Admin/jobmanagment/education") 
 const ExperienceLevel= require("../../Model/Admin/jobmanagment/ExperienceLevel")
 const Skill = require("../../Model/Admin/jobmanagment/Skill");
+const { uploadFile2, deleteFile } = require("../../middileware/aws");
+
 class company {
   
-//   async register(req, res) {
-//     try {
-//         console.log("📢 Register API Called");
-//         console.log("📝 Request Body:", req.body); // Log incoming request data
-
-//         const {
-//             CompanyName, jobtitle, averageIncentive, openings, address, email, skill, benefits,
-//             reason, experience, interview, category, typeofqualification, description,
-//             typeofjob, typeofwork, typeofeducation, education, experiencerequired,
-//             gendertype, jobProfile, minSalary, maxSalary, period, location, time,
-//             whatsapp, adminId, employerId, salarytype, interviewername
-//         } = req.body;
-//         console.log("📥 Received Request Body:", req.body);
-
-
-
-//         let obj = {
-//             CompanyName, jobtitle, averageIncentive, openings, address, email, reason,
-//             experience, interview, period, description, typeofjob, typeofwork, 
-//             typeofeducation, education, experiencerequired, gendertype, jobProfile, 
-//             minSalary, maxSalary, skill, benefits, category, typeofqualification, 
-//             location, time, whatsapp, adminId, employerId, salarytype, interviewername 
-//         };
-//         // Save the job in DB
-        
-//         const newJob = await jobModel.create(req.body);
-//         console.log("✅ New Job Saved:", newJob); // Log saved job details
-
-//         let msg =
-//             `This is a new ${CompanyName} company registered post by email id is ${email}
-//             Job profile is ${jobProfile} or salary ${minSalary}-${maxSalary}/${period},
-//             location is ${location} and website Link.
-//             <h3>Thank you <br>UNIVI INDIA Team</h3>`;
-
-//         sent.sendMail("Admin", "amitparnets@gmail.com", msg);
-//         console.log("📧 Email Sent Successfully");
-
-//         return res.status(200).json({ success: "Successfully registered" });
-
-//     } catch (err) {
-//         console.error("❌ Error in Register:", err); // Log error
-//         return res.status(500).json({ success: false, message: "Internal Server Error" });
-//     }
-// }
-
-
 async register(req, res) {
   try {
       console.log("📢 Register API Called");
@@ -78,12 +34,12 @@ async register(req, res) {
           gendertype, jobProfile, minSalary, maxSalary, period, location, time,
           whatsapp, adminId, employerId, salarytype, interviewername,
           // Added new fields below
-          companywebsite, companymobile, companyindustry, companytype,  department,
+          companywebsite, companymobile, companyindustry, companytype, department,
           companyaddress, requirements, responsibilities, workSchedule, locationDetails,
           preferredQualifications, additionalNotes
       } = req.body;
       console.log("📥 Received Request Body:", req.body);
-
+     
       let obj = {
           companyName, jobtitle, averageIncentive, openings, address, email, reason,
           experience, interview, period, description, typeofjob, typeofwork, 
@@ -95,25 +51,53 @@ async register(req, res) {
           companyaddress, requirements, responsibilities, workSchedule, locationDetails,
           preferredQualifications, additionalNotes
       };
-
+      
+      // Handle logo upload to S3
+      if (req.files && req.files.length > 0) {
+          const logoFile = req.files.find(file => file.fieldname === "logo");
+          
+          if (logoFile) {
+              try {
+                  // Upload logo to S3
+                  const logoUrl = await uploadFile2(logoFile, "company-logos");
+                  obj["logo"] = logoUrl;
+              } catch (uploadError) {
+                  console.error("Error uploading logo to S3:", uploadError);
+                  return res.status(500).json({ 
+                      success: false, 
+                      message: "Failed to upload company logo", 
+                      error: uploadError.message 
+                  });
+              }
+          }
+      }
+      
       // Save the job in DB
-      const newJob = await jobModel.create(obj); // Updated to use `obj` instead of `req.body`
+      const newJob = await jobModel.create(obj);
       console.log("✅ New Job Saved:", newJob); // Log saved job details
 
       let msg =
           `This is a new ${companyName} company registered post by email id is ${email}
           Job profile is ${jobProfile} or salary ${minSalary}-${maxSalary}/${period},
           location is ${location} and website Link.
-          <h3>Thank you <br>UNIVI INDIA Team</h3>`;
+          <h3>Thank you <br>Labor Link Team</h3>`;
 
       sent.sendMail("Admin", "amitparnets@gmail.com", msg);
       console.log("📧 Email Sent Successfully");
 
-      return res.status(200).json({ success: "Successfully registered" });
+      return res.status(200).json({ 
+          success: true, 
+          message: "Successfully registered",
+          data: newJob
+      });
 
   } catch (err) {
       console.error("❌ Error in Register:", err); // Log error
-      return res.status(500).json({ success: false, message: "Internal Server Error" });
+      return res.status(500).json({ 
+          success: false, 
+          message: "Internal Server Error", 
+          error: err.message 
+      });
   }
 }
 
@@ -164,7 +148,7 @@ async register(req, res) {
             //           `This is a new ${companyName} company registered post by email id is ${email}
             //           Job profile is ${jobProfile} or salary ${minSalary}-${maxSalary}/${period},
             //           location is ${location} and website Link.
-            //           <h3>Thank you <br>UNIVI INDIA Team</h3>`;
+            //           <h3>Thank you <br>Labor Link Team</h3>`;
 
             //       sent.sendMail("Admin", "amitparnets@gmail.com", msg);
             //       console.log("📧 Email Sent Successfully");
@@ -199,40 +183,48 @@ async register(req, res) {
     try {
       const {
         CompanyName,
-         jobId,
-     averageIncentive,
-    openings,
-    address,
-    jobtitle,
-    night,
-    fee,
-    email,
-    skill,benefits,
-   reason,
-    experience,
-    category,
-    typeofqualification,
-    interview, 
-    description,
-    typeofjob,
-     typeofwork,
-     typeofeducation,
-     education,
-    experiencerequired,
-    gendertype,
-     jobProfile,
-     minSalary,
-     maxSalary,
-     period,
-    isVerify,
-     location,
-     time,
-     whatsapp,
-    adminId,
-    employerId,
-    salarytype,
-    interviewername 
+        jobId,
+        averageIncentive,
+        openings,
+        address,
+        jobtitle,
+        night,
+        fee,
+        email,
+        skill,
+        benefits,
+        reason,
+        experience,
+        category,
+        typeofqualification,
+        interview, 
+        description,
+        typeofjob,
+        typeofwork,
+        typeofeducation,
+        education,
+        experiencerequired,
+        gendertype,
+        jobProfile,
+        minSalary,
+        maxSalary,
+        period,
+        isVerify,
+        location,
+        time,
+        whatsapp,
+        adminId,
+        employerId,
+        salarytype,
+        interviewername 
       } = req.body;
+      
+      // Get existing job to check for logo that might need to be deleted
+      const existingJob = await jobModel.findById(jobId);
+      if (!existingJob) {
+        return res.status(404).json({ success: false, message: "Job not found" });
+      }
+      
       let obj = {};
       if (CompanyName) {
         obj["companyName"] = CompanyName;
@@ -241,7 +233,7 @@ async register(req, res) {
         obj["averageIncentive"] = averageIncentive;
       }
      
-      if (openings ) {
+      if (openings) {
         obj["openings"] = openings;
       }
       if (address) {
@@ -291,10 +283,10 @@ async register(req, res) {
       if (experiencerequired) {
         obj["experiencerequired"] = experiencerequired;
       }
-       if (category) {
+      if (category) {
         obj["category"] = category;
       }
-       if (typeofqualification) {
+      if (typeofqualification) {
         obj["typeofqualification"] = typeofqualification;
       }
       if (location) {
@@ -318,7 +310,7 @@ async register(req, res) {
       if (salarytype) {
         obj["salarytype"] = salarytype;
       }
-     if (maxSalary) {
+      if (maxSalary) {
         obj["maxSalary"] = maxSalary;
       }
       if (skill) {
@@ -328,23 +320,64 @@ async register(req, res) {
       if (description) {
         obj["description"] = description;
       }
-       if (isVerify) {
+      if (isVerify) {
         obj["isVerify"] = isVerify;
       }
       
-      console.log("check It",obj,jobId)
+      // Handle logo upload to S3
+      if (req.files && req.files.length > 0) {
+        const logoFile = req.files.find(file => file.fieldname === "logo");
+        
+        if (logoFile) {
+          try {
+            // If existing logo is an S3 URL, delete it
+            if (existingJob.logo && existingJob.logo.startsWith('https://')) {
+              try {
+                await deleteFile(existingJob.logo);
+              } catch (deleteError) {
+                console.warn("Could not delete old logo:", deleteError);
+                // Continue with the update even if delete fails
+              }
+            }
+            
+            // Upload new logo to S3
+            const logoUrl = await uploadFile2(logoFile, "company-logos");
+            obj["logo"] = logoUrl;
+          } catch (uploadError) {
+            console.error("Error uploading logo to S3:", uploadError);
+            return res.status(500).json({ 
+              success: false, 
+              message: "Failed to upload company logo", 
+              error: uploadError.message 
+            });
+          }
+        }
+      }
+      
+      console.log("check It", obj, jobId);
 
       let updateUser = await jobModel.findOneAndUpdate(
         { _id: jobId },
-        { $set:   obj},
-        
+        { $set: obj },
         { new: true }
       );
-      if (!updateUser)
-        return res.status(400).json({ error: "Something went worng" });
-      return res.status(200).json({ success: "Successfully updated" });
+      
+      if (!updateUser) {
+        return res.status(400).json({ success: false, message: "Update failed" });
+      }
+      
+      return res.status(200).json({ 
+        success: true, 
+        message: "Successfully updated",
+        data: updateUser
+      });
     } catch (err) {
-      console.log(err);
+      console.error("Error updating job:", err);
+      return res.status(500).json({ 
+        success: false, 
+        message: "Internal Server Error", 
+        error: err.message 
+      });
     }
   }
 
@@ -397,11 +430,11 @@ async register(req, res) {
             if(!data) return res.status(400).json({error:"Something went wong!"});
             if(data.status=="Approved"){
                 send.sendMail(data.interviewername,data.email, `Your job is approved now,
-                <h3>Thank you <br>UNIVI INDIA Team</h3>
+                <h3>Thank you <br>Labor Link Team</h3>
                 `);
             }else{
                 send.sendMail(data.interviewername,data.email, `Your job is ${data.status} because ${data.reasion} please wait for admin approval,
-                <h3>Thank you <br>UNIVI INDIA Team</h3>
+                <h3>Thank you <br>Labor Link Team</h3>
                 `);
             }
             return res.status(200).json({success:"success"})
@@ -426,8 +459,6 @@ async register(req, res) {
     try {
         // Fetch all jobs (remove isVerify condition)
         let findData = await jobModel.find().sort({ _id: -1 }).populate("employerId");
-
-
         if (findData.length === 0) {
             return res.status(400).json({ success: false, message: "No jobs found" });
         }
@@ -595,11 +626,11 @@ async register(req, res) {
             if(!data) return res.status(400).json({error:"Something went wong!"});
             if(data.isBlock==false){
                 send.sendMail(data.interviewername,data.email, `Your job is un-bloked now,
-                <h3>Thank you <br>UNIVI INDIA Team</h3>
+                <h3>Thank you <br>Labor Link Team</h3>
                 `);
             }else{
                 send.sendMail(data.interviewername,data.email, `Your job is blocked  please contact admin,
-                <h3>Thank you <br>UNIVI INDIA Team</h3>
+                <h3>Thank you <br>Labor Link Team</h3>
                 `);
             }
             return res.status(200).json({success:"success"})
@@ -635,23 +666,21 @@ async register(req, res) {
   
   async getApplyList(req, res) {
     try {
-      const{companyId}=req.params
-      const companyObjectId = new mongoose.Types.ObjectId(companyId);
+      const{jobId}=req.params
+      // const companyObjectId = new mongoose.Types.ObjectId(companyId);
 
-      console.log(companyObjectId,"adcdcjhbhbjns")
-      if (!mongoose.Types.ObjectId.isValid(companyId)) {
-        return res.status(400).json({ success: false, message: "Invalid companyId format" });
-      }
+      // console.log(companyObjectId,"adcdcjhbhbjns")
+      // if (!mongoose.Types.ObjectId.isValid(companyId)) {
+      //   return res.status(400).json({ success: false, message: "Invalid companyId format" });
+      // }
   
-      console.log("Received companyId:", companyId, "Type:", typeof companyId);
+      console.log("Received companyId:", jobId, "Type:", typeof jobId);
   
       let findData = await applyModel
-          .find({ companyId: companyId }) // Ensure conversion
+          .find({ companyId: jobId }) // Ensure conversion
           .sort({ _id: -1 })
           .populate("userId");
-  
-      console.log("Query Result:", findData)
-  
+    
       if (!findData || findData.length === 0) {
           return res.status(400).json({ success: false, message: "Data not found" });
       }
@@ -705,7 +734,7 @@ async addShortList(req, res) {
       sent.sendMail(
         data.userId.name,
         data.userId.email,
-        `This ${data.companyId.CompanyName} company shortlisted you for the position ${data.companyId.jobProfile}. Email: ${data.companyId.email}.<h3>Thank you <br>UNIVI INDIA Team</h3>`
+        `This ${data.companyId.CompanyName} company shortlisted you for the position ${data.companyId.jobProfile}. Email: ${data.companyId.email}.<h3>Thank you <br>Labor Link Team</h3>`
       );
     } else {
       console.log("Missing user or company data, email not sent.");
@@ -766,7 +795,7 @@ async addShortList(req, res) {
 //           data.companyId.jobProfile +
 //           ", and email is " +
 //           data.companyId.email +
-//           "."+"<h3>Thank you <br>UNIVI INDIA Team</h3>"
+//           "."+"<h3>Thank you <br>Labor Link Team</h3>"
 //       );
 //       return res.status(200).json({ success: "Successfully Selected" });
 //     } catch (err) {
@@ -777,82 +806,96 @@ async addShortList(req, res) {
 
 
 async  addSelect(req, res) {
-    try {
-        const { userId, companyId } = req.body;
+  try {
+      console.log(req.body, "this is body");
 
-        console.log("Received request:", { userId, companyId });
+      const { userId, companyId } = req.body;
+      console.log("Received request:", { userId, companyId });
 
-        // Validate input
-        if (!userId || !companyId) {
-            return res.status(400).json({ error: "User ID and Company ID are required" });
-        }
+      // Validate input
+      if (!userId || !companyId) {
+          return res.status(400).json({ error: "User ID and Company ID are required" });
+      }
 
-        // Fetch the application
-        let data = await applyModel
-            .findOne({ userId: userId, companyId: companyId })
-            .populate("userId")
-            .populate("companyId")
-            .lean(); // Lean improves performance by returning a plain object
+      // Convert to ObjectId
+      let userObjectId, companyObjectId;
+      try {
+          userObjectId = new mongoose.Types.ObjectId(userId);
+          companyObjectId = new mongoose.Types.ObjectId(companyId);
+      } catch (err) {
+          return res.status(400).json({ error: "Invalid ObjectId format" });
+      }
 
-        console.log("Fetched data:", data);
+      // Debug logs (optional)
+      const apps = await applyModel.find({ userId: userObjectId });
+      console.log("Apps with this userId:", apps);
 
-        // Check if application exists
-        if (!data) {
-            console.log("No application found");
-            return res.status(404).json({ error: "No application found" });
-        }
+      const apps2 = await applyModel.find({ companyId: companyObjectId });
+      console.log("Apps with this companyId:", apps2);
 
-        console.log("Current Status:", data.status, typeof data.status);
+      // Fetch the application
+      let data = await applyModel
+          .findOne({ userId: userObjectId, companyId: companyObjectId })
+          .populate("userId")
+          .populate("companyId")
+          .lean();
 
-        // Ensure `data.status` is not null/undefined before checking
-        if (data.status && data.status === "Selected") {
-            console.log("Already selected condition met! Returning error...");
-            return res.status(400).json({ error: "Already selected" });
-        }
+      console.log("Fetched data:", data);
 
-        // Update application status
-        let update;
-        try {
-            console.log("Updating application status...");
+      if (!data) {
+          console.log("No application found");
+          return res.status(404).json({ error: "No application found" });
+      }
 
-            update = await applyModel.findOneAndUpdate(
-                { userId: new mongoose.Types.ObjectId(userId), companyId: new mongoose.Types.ObjectId(companyId) },
-                { $set: { status: "Selected" } },
-                { new: true }
-            );
+      // Check if already selected
+      console.log("Current Status:", data.status);
+      if (data.status === "Selected") {
+          console.log("Already selected condition met! Returning error...");
+          return res.status(400).json({ error: "Already selected" });
+      }
 
-            if (!update) {
-                console.log("No matching document found for update");
-                return res.status(400).json({ error: "Something went wrong" });
-            }
+      // Update application status
+      let update;
+      try {
+          console.log("Updating application status...");
 
-            console.log("Update successful:", update);
-        } catch (error) {
-            console.error("Error updating document:", error);
-            return res.status(500).json({ error: "Database update failed" });
-        }
+          update = await applyModel.findOneAndUpdate(
+              { userId: userObjectId, companyId: companyObjectId },
+              { $set: { status: "Selected" } },
+              { new: true }
+          );
 
-        // Send email only if update is successful
-        try {
-            await sent.sendMail(
-                data.userId.fullName, // Changed `name` to `fullName`
-                data.userId.email,
-                `This ${data.companyId.companyName} company selected you for a position ${data.companyId.jobProfile}, and email is ${data.companyId.email}.
-                <h3>Thank you <br>UNIVI INDIA Team</h3>`
-            );
-            console.log("Email sent successfully");
-        } catch (emailError) {
-            console.error("Error sending email:", emailError);
-        }
+          if (!update) {
+              console.log("No matching document found for update");
+              return res.status(400).json({ error: "Something went wrong" });
+          }
 
-        return res.status(200).json({ success: "Successfully Selected" });
+          console.log("Update successful:", update);
+      } catch (error) {
+          console.error("Error updating document:", error);
+          return res.status(500).json({ error: "Database update failed" });
+      }
 
-    } catch (err) {
-        console.error("Unexpected error:", err);
-        return res.status(500).json({ error: "Internal server error" });
-    }
+      // Send email only if update is successful
+      try {
+          await sent.sendMail(
+              data.userId.fullName,
+              data.userId.email,
+              `This ${data.companyId.companyName} company selected you for a position ${data.companyId.jobProfile}, and email is ${data.companyId.email}.
+              <h3>Thank you <br>Labor Link Team</h3>`
+          );
+          console.log("Email sent successfully");
+      } catch (emailError) {
+          console.error("Error sending email:", emailError);
+      }
+
+      return res.status(200).json({ success: "Successfully Selected" });
+
+  } catch (err) {
+      console.error("Unexpected error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+  }
 }
-
 
   async getSelectData(req, res) {
     try {
@@ -878,34 +921,49 @@ async  addSelect(req, res) {
 }
 
 
-  async getShortlistingData(req, res) {
-    try {
-        const { companyId } = req.params;
-        console.log(companyId,"llllll")
+async getShortlistingData(req, res) {
+  try {
+      const { jobId } = req.params;  // Changed from companyId to jobId to match route
+      console.log("Fetching shortlisted applications for jobId:", jobId);
 
-        // Validate companyId
-        if (!mongoose.Types.ObjectId.isValid(companyId)) {
-            return res.status(400).json({ success: false, message: "Invalid companyId format" });
-        }
+      if (!mongoose.Types.ObjectId.isValid(jobId)) {
+          return res.status(400).json({ 
+              success: false, 
+              message: "Invalid job ID format" 
+          });
+      }
 
-        console.log("Received companyId:", companyId, "Type:", typeof companyId);
+      // Match the case from your schema enum
+      const shortlistingData = await applyModel
+          .find({ 
+              companyId: new mongoose.Types.ObjectId(jobId), 
+              status: "Shortlisted",  // Matches the enum case in schema
+              isDelete: false  // Add this to exclude deleted applications
+          })
+          .populate("userId")
+          .sort({ appliedOn: -1 });  // Optional: sort by latest first
 
-        // Fetch shortlisting data (Use `status: "Shortlisted"` instead of `state`)
-        const shortlistingData = await applyModel
-            .find({ companyId: new mongoose.Types.ObjectId(companyId), status: "Shortlisted" })
-            .populate("userId");
+      if (!shortlistingData || shortlistingData.length === 0) {
+          return res.status(200).json({ 
+              success: true, 
+              data: [],
+              message: "No shortlisted applications found" 
+          });
+      }
 
-        // Handle case where no data is found
-        if (!shortlistingData.length) {
-            return res.status(404).json({ success: false, message: "No shortlisted data found" });
-        }
+      return res.status(200).json({ 
+          success: true, 
+          data: shortlistingData 
+      });
 
-        return res.status(200).json({ success: true, data: shortlistingData });
-
-    } catch (err) {
-        console.error("Server Error:", err);
-        return res.status(500).json({ success: false, message: "Internal Server Error" });
-    }
+  } catch (err) {
+      console.error("Error in getShortlistingData:", err);
+      return res.status(500).json({ 
+          success: false, 
+          message: "Internal Server Error",
+          error: err.message 
+      });
+  }
 }
 
   async AllAplliedDetals(req, res) {
@@ -929,9 +987,9 @@ async  addSelect(req, res) {
         .findOne({ userId: userId, companyId: companyId })
         .populate("userId")
         .populate("companyId");
-      if (data.status == "Rejected") {
-        return res.status(400).json({ error: "already rejected" });
-      }
+      // if (data.status == "Rejected") {
+      //   return res.status(400).json({ error: "already rejected" });
+      // }
       sent.sendMail(
         data.userId.name,
         data.userId.email,
@@ -939,7 +997,7 @@ async  addSelect(req, res) {
           data.companyId.CompanyName +
           " company rejected you for position " +
           data.companyId.jobProfile +
-          ", thanks for showing your interest."+"<h3>Thank you <br>UNIVI INDIA Team</h3>"
+          ", thanks for showing your interest."+"<h3>Thank you <br>Labor Link Team</h3>"
       );
       await applyModel.findOneAndUpdate({_id:data._id},{$set:{status:"Rejected"}})
       return res.status(200).json({ success: "Successfully rejected" });
@@ -972,8 +1030,6 @@ async  addSelect(req, res) {
             .find({ companyId: companyId, status: "Rejected" })
             .populate("userId") // Populate user details
             .populate("companyId"); // Populate company details
-            console.log(rejectedApplications,"jijkijikji")
-
         if (!rejectedApplications || rejectedApplications.length === 0) {
           console.log("rejectedApplications.length : " , rejectedApplications.length)
             return res.status(404).json({ error: "No rejected applications found" });
@@ -985,10 +1041,6 @@ async  addSelect(req, res) {
         return res.status(500).json({ error: "Internal server error" });
     }
 }
-
-
-
-
 
 
   async deleteApply(req,res){
@@ -1039,7 +1091,7 @@ async  addSelect(req, res) {
             verify.CompanyName +
             " company is successfully approved post for position " +
             verify.jobProfile +
-            "<h3>Thank you <br>UNIVI INDIA Team</h3>"
+            "<h3>Thank you <br>Labor Link Team</h3>"
         );
       }
       let user = await userModel.find({
@@ -1055,7 +1107,7 @@ async  addSelect(req, res) {
           verify.CompanyName +
           " company is new post for position " +
           verify.jobProfile +
-          "<h3>Thank you <br>UNIVI INDIA Team</h3>"
+          "<h3>Thank you <br>Labor Link Team</h3>"
       );
       return res.status(200).json({ success: "Successfully approved" });
     } catch (err) {
@@ -1086,7 +1138,7 @@ async  addSelect(req, res) {
             verify.CompanyName +
             " company is not approved post for position " +
             verify.jobProfile +
-            "<h3>Thank you <br>UNIVI INDIA Team</h3>"
+            "<h3>Thank you <br>Labor Link Team</h3>"
         );
       }
       return res.status(200).json({ success: "Successfully block!" });
@@ -2140,26 +2192,30 @@ async  addSelect(req, res) {
 
       async deleteWorkMode(req, res) {
         try {
-            const { id } = req.params;  // Capture modeId from URL
-            console.log("Received delete request for modeId:", id);
+            const { id } = req.params;  // Capture _id from URL
+            console.log("Received delete request for _id:", id);
     
-            // Find and delete using modeId, not _id
-            const deletedWorkMode = await WorkMode.findOneAndDelete({ modeId: id });
+            // Find and delete using _id
+            const deletedWorkMode = await WorkMode.findByIdAndDelete(id);
     
-            if (!deletedWorkMode) {
-                return res.status(404).json({ error: "Work mode not found" });
-            }
+            // if (!deletedWorkMode) {
+            //     return res.status(404).json({ error: "Work mode not found" });
+            // }
     
             return res.status(200).json({
                 success: true,
                 message: "Work mode deleted successfully",
+                deletedWorkMode // Optionally return the deleted item
             });
         } catch (error) {
             console.error("Error deleting work mode:", error);
+            // Check if error is due to invalid ObjectId
+            if (error.name === 'CastError') {
+                return res.status(400).json({ error: "Invalid work mode ID format" });
+            }
             return res.status(500).json({ error: "Internal server error" });
         }
     }
-    
     
     
 
