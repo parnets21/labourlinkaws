@@ -22,6 +22,55 @@ const { uploadFile2, deleteFile } = require("../../middileware/aws");
 
 class company {
   
+<<<<<<< HEAD
+=======
+//   async register(req, res) {
+//     try {
+//         console.log("📢 Register API Called");
+//         console.log("📝 Request Body:", req.body); // Log incoming request data
+
+//         const {
+//             CompanyName, jobtitle, averageIncentive, openings, address, email, skill, benefits,
+//             reason, experience, interview, category, typeofqualification, description,
+//             typeofjob, typeofwork, typeofeducation, education, experiencerequired,
+//             gendertype, jobProfile, minSalary, maxSalary, period, location, time,
+//             whatsapp, adminId, employerId, salarytype, interviewername
+//         } = req.body;
+//         console.log("📥 Received Request Body:", req.body);
+
+
+
+//         let obj = {
+//             CompanyName, jobtitle, averageIncentive, openings, address, email, reason,
+//             experience, interview, period, description, typeofjob, typeofwork, 
+//             typeofeducation, education, experiencerequired, gendertype, jobProfile, 
+//             minSalary, maxSalary, skill, benefits, category, typeofqualification, 
+//             location, time, whatsapp, adminId, employerId, salarytype, interviewername 
+//         };
+//         // Save the job in DB
+        
+//         const newJob = await jobModel.create(req.body);
+//         console.log("✅ New Job Saved:", newJob); // Log saved job details
+
+//         let msg =
+//             `This is a new ${CompanyName} company registered post by email id is ${email}
+//             Job profile is ${jobProfile} or salary ${minSalary}-${maxSalary}/${period},
+//             location is ${location} and website Link.
+//             <h3>Thank you <br>Labor Link Team</h3>`;
+
+//         sent.sendMail("Admin", "amitparnets@gmail.com", msg);
+//         console.log("📧 Email Sent Successfully");
+
+//         return res.status(200).json({ success: "Successfully registered" });
+
+//     } catch (err) {
+//         console.error("❌ Error in Register:", err); // Log error
+//         return res.status(500).json({ success: false, message: "Internal Server Error" });
+//     }
+// }
+
+
+>>>>>>> 8289b38e919b37a8b80bddf8c4c8e41bcb709239
 async register(req, res) {
   try {
       console.log("📢 Register API Called");
@@ -51,6 +100,7 @@ async register(req, res) {
           companyaddress, requirements, responsibilities, workSchedule, locationDetails,
           preferredQualifications, additionalNotes
       };
+<<<<<<< HEAD
       
       // Handle logo upload to S3
       if (req.files && req.files.length > 0) {
@@ -72,6 +122,12 @@ async register(req, res) {
           }
       }
       
+=======
+      if (req.files) {
+        obj["logo"] = `company/${req.files[0].filename}`; 
+        //frontend integration 
+    }
+>>>>>>> 8289b38e919b37a8b80bddf8c4c8e41bcb709239
       // Save the job in DB
       const newJob = await jobModel.create(obj);
       console.log("✅ New Job Saved:", newJob); // Log saved job details

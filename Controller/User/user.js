@@ -460,6 +460,7 @@ class user {
     // }
     async updateProfileImg(req, res) {
       try {
+<<<<<<< HEAD
         const { userId } = req.params;
 
         if (!req.files || req.files.length === 0) {
@@ -563,6 +564,55 @@ class user {
         return res.status(500).json({ success: false, message: "Internal Server Error", error: err.message });
       }
     }
+=======
+         const { userId } = req.params;
+  
+          let obj = {};
+          if (req.files) {
+              obj["profile"] = `${req.files[0].filename}`; 
+          }
+  
+          // Update user details in the database by adminId
+          const updatedUser = await userModel.findOneAndUpdate(
+              { _id: userId },
+              { $set: obj },
+              { new: true } 
+          );
+  
+          if (!updatedUser) return res.status(400).json({ error: "User not found or update failed!" });
+  
+          return res.status(200).json({ success: "User updated successfully", data: updatedUser });
+      } catch (err) {
+          console.error("Error updating user:", err);
+          return res.status(500).json({ error: "Internal Server Error" });
+      }
+  }
+  async updateResume(req, res) {
+    try {
+       const { userId } = req.params;
+       console.log(userId)
+
+        let obj = {};
+        if (req.files) {
+            obj["resume"] = `${req.files[0].filename}`; 
+        }
+
+        // Update user details in the database by adminId
+        const updatedUser = await userModel.findOneAndUpdate(
+            { _id: userId },
+            { $set: obj },
+            { new: true } 
+        );
+
+        if (!updatedUser) return res.status(400).json({ error: "User not found or update failed!" });
+
+        return res.status(200).json({ success: "User updated successfully", data: updatedUser });
+    } catch (err) {
+        console.error("Error updating user:", err);
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
+}
+>>>>>>> 8289b38e919b37a8b80bddf8c4c8e41bcb709239
 
 
   // async AddSkill(req, res) {
