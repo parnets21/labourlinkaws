@@ -552,92 +552,132 @@ async getJobsByEmployer(req, res) {
         }
     }
     
-    async  callinterview(req, res) {
-        try {
-          const { userId, schedule, slotId, status, employerId, feedback, Position, name, meetingPassword, meetingLink, email, companyId, platform, interviewNotes, duration } = req.body;
-          console.log(slotId,"hi")
-          if (!userId || !schedule || !slotId || !employerId  ||  !email || !companyId) {
-            return res.status(400).json({ error: "Missing required fields" });
-          }
-          console.log("hi sdsd")
-
-          const slot = await Appointment.findById(slotId);
-          console.log("jijiji",slot)
-          if (slot.status === "booked") {
-            return res.status(400).json({ error: "Slot already booked" });
-          }
-          console.log("sdfjndssd")
-          slot.status = "booked";
-await slot.save();
-
-         
-        const companyObjectId = new mongoose.Types.ObjectId(companyId);
-
-        const userData = await userModel.findById(userId)
+  async callinterview(req, res) {
+  try {
+    const { 
+      userId, schedule, slotId, status, employerId, feedback, 
+      Position, name, meetingPassword, meetingLink, email, 
+      companyId, platform, interviewNotes, duration 
+    } = req.body;
+    
+    console.log("Request body:", req.body); // Log entire request body
+    
+    // Check if slotId exists in request body
+    if (slotId) {
+      console.log("SlotId exists:", slotId);
       
-          // Check if the interview call already exists
-          let existingCall = await callModel.findOne({userId , employerId, companyObjectId });
-          
-          
-          if (existingCall) {
-            return res.status(200).json({user: userData,success: "Interview call already scheduled!" });
-          }
-      
-          // Create a new interview call
-          let newCall = await callModel.create({
-            employerId,
-            userId,
-            schedule,
-            status: status || "Scheduled", // Default status
-            name,
-            email,
-            companyId:companyObjectId,
-            platform,
-            meetingPassword,
-            meetingLink,
-            interviewNotes,
-            duration: slot.duration || duration, // prioritizing slot's duration
-            feedback,
-            Position	,
-          });
-          console.log(newCall,
-            "thisissssss"
-          )
-      
-          if (!newCall) {
-            return res.status(500).json({ error: "Failed to schedule interview call" });
-          }
-      
-          console.log(newCall, "Interview Call Created");
-      
-          // Send email notification
-          // await send.sendMail(
-          //   name,
-          //   email,
-          //   `You are shortlisted for an interview. The schedule is ${schedule}.<br>
-          //   <strong>Platform:</strong> ${platform || "Not Specified"}<br>
-          //   <strong>Duration:</strong> ${duration ? duration + " minutes" : "Not Specified"}<br><br>
-          //   <h3>Thank you,<br>Labor Link Team</h3>`
-          // );
-          await send.sendMail(
-            name,
-            email,
-            `You are shortlisted for an interview.<br>
-             <strong>Date:</strong> ${slot.date.toDateString()}<br>
-             <strong>Time:</strong> ${slot.time}<br>
-             <strong>Duration:</strong> ${slot.duration}<br>
-             <strong>Platform:</strong> ${platform || "Not Specified"}<br><br>
-             <h3>Thank you,<br>Labor Link Team</h3>`
-          );
-          
-      
-          return res.status(201).json({success: "Interview scheduled successfully" , userData });
-      
-        } catch (error) {
-          console.error("Error scheduling interview:", error);
-          return res.status(500).json({message: "Internal Server Error" , error:error.message });
-        }
+      // If slotId is provided, validate and use slot
+      if (!userId || !schedule || !slotId || !employerId || !email || !companyId) {
+        return res.status(400).json({ error: "Missing required fields" });
       }
+      
+      const slot = await Appointment.findById(slotId);
+      
+      if (!slot) {
+        return res.status(404).json({ error: "Appointment slot not found" });
+      }
+      
+      if (slot.status === "booked") {
+        return res.status(400).json({ error: "Slot already booked" });
+      }
+      
+      slot.status = "booked";
+      await slot.save();
+    } else {
+      // If no slotId is provided, just validate other required fields
+      if (!userId || !schedule || !employerId || !email || !companyId) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+    }
+    
+    const companyObjectId = mongoose.Types.ObjectId.isValid(companyId) 
+      ? new mongoose.Types.ObjectId(companyId) 
+      : companyId;
+
+    const userData = await userModel.findById(userId);
+    if (!userData) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    
+    // Check if the interview call already exists
+    let existingCall = await callModel.findOne({
+      userId,
+      employerId,
+      companyId: companyObjectId
+    });
+    
+    if (existingCall) {
+      return res.status(200).json({
+        user: userData,
+        success: "Interview call already scheduled!"
+      });
+    }
+    
+    // Create a new interview call
+    let newCall = await callModel.create({
+      employerId,
+      userId,
+      schedule,
+      status: status || "Scheduled", // Default status
+      name,
+      email,
+      companyId: companyObjectId,
+      platform,
+      meetingPassword,
+      meetingLink,
+      interviewNotes,
+      duration: slotId ? (await Appointment.findById(slotId))?.duration || duration : duration,
+      feedback,
+      Position,
+    });
+    
+    if (!newCall) {
+      return res.status(500).json({ error: "Failed to schedule interview call" });
+    }
+    
+    console.log("Interview Call Created:", newCall);
+    
+    // Send email notification with conditional slot data
+    if (slotId) {
+      const slot = await Appointment.findById(slotId);
+      await send.sendMail(
+        name,
+        email,
+        `You are shortlisted for an interview.<br>
+         <strong>Date:</strong> ${slot.date.toDateString()}<br>
+         <strong>Time:</strong> ${slot.time}<br>
+         <strong>Duration:</strong> ${slot.duration}<br>
+         <strong>Platform:</strong> ${platform || "Not Specified"}<br><br>
+         <h3>Thank you,<br>Labor Link Team</h3>`
+      );
+    } else {
+      // Format the date from the schedule for the email
+      const interviewDate = new Date(schedule);
+      await send.sendMail(
+        name,
+        email,
+        `You are shortlisted for an interview.<br>
+         <strong>Date:</strong> ${interviewDate.toDateString()}<br>
+         <strong>Time:</strong> ${interviewDate.toTimeString().split(' ')[0]}<br>
+         <strong>Duration:</strong> ${duration} minutes<br>
+         <strong>Platform:</strong> ${platform || "Not Specified"}<br><br>
+         <h3>Thank you,<br>Labor Link Team</h3>`
+      );
+    }
+    
+    return res.status(201).json({
+      success: "Interview scheduled successfully",
+      userData
+    });
+    
+  } catch (error) {
+    console.error("Error scheduling interview:", error);
+    return res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message
+    });
+  }
+}
     
       async  getcallinterview(req, res) {
         try {

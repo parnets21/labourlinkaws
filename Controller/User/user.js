@@ -357,110 +357,9 @@ class user {
   // }
 
 
-// In userController.js
-    // In userController.js
-    // async updateProfile(req, res) {
-    //   try {
-    //     const { userId } = req.params;
-    //     const updateData = req.body;
-
-    //     console.log('Received userId:', userId);
-    //     console.log('Received updateData:', updateData);
-
-    //     // Basic validation
-    //     if (!userId || userId === 'null' || userId === 'undefined') {
-    //       return res.status(400).json({
-    //         success: false,
-    //         error: "User ID is required"
-    //       });
-    //     }
-
-    //     // Validate MongoDB ObjectId
-    //     if (!mongoose.Types.ObjectId.isValid(userId)) {
-    //       return res.status(400).json({
-    //         success: false,
-    //         error: "Invalid user ID format"
-    //       });
-    //     }
-
-    //     // Validate update data
-    //     if (!updateData || Object.keys(updateData).length === 0) {
-    //       return res.status(400).json({
-    //         success: false,
-    //         error: "Update data is required"
-    //       });
-    //     }
-
-    //     // Find user first
-    //     const user = await userModel.findById(userId);
-    //     if (!user) {
-    //       return res.status(404).json({
-    //         success: false,
-    //         error: "User not found"
-    //       });
-    //     }
-
-    //     // Update user
-    //     const updatedUser = await userModel.findByIdAndUpdate(
-    //       userId,
-    //       { $set: updateData },
-    //       { 
-    //         new: true,
-    //         runValidators: true,
-    //         context: 'query'
-    //       }
-    //     );
-
-    //     return res.status(200).json({
-    //       success: true,
-    //       message: "Profile updated successfully",
-    //       data: updatedUser
-    //     });
-
-    //   } catch (err) {
-    //     console.error("Error in updateProfile:", err);
-    //     return res.status(500).json({
-    //       success: false,
-    //       error: "Internal server error",
-    //       message: err.message
-    //     });
-    //   }
-    // }
-
-    // async updateProfileImg(req, res) {
-    //   try {
-    //     const { userId } = req.params;
-        
-    //     // Ensure updates object is defined
-    //     const updates = {};
-    
-    //     // Handle file upload if present
-    //     if (req.files?.profile) {
-    //       updates.profile = req.files.profile[0].path;
-    //     }
-    
-    //     // Check if there is an update to be made
-    //     if (Object.keys(updates).length === 0) {
-    //       return res.status(400).json({ success: false, message: "No file uploaded for update" });
-    //     }
-    
-    //     // Update user profile
-    //     const user = await userModel.findByIdAndUpdate(userId, { $set: updates }, { new: true });
-    
-    //     if (!user) {
-    //       return res.status(404).json({ success: false, message: "User not found" });
-    //     }
-    
-    //     res.status(200).json({ success: true, message: "Profile updated successfully", data: user });
-    
-    //   } catch (error) {
-    //     console.error("Update profile error:", error);
-    //     res.status(500).json({ success: false, message: "Failed to update profile", error: error.message });
-    //   }
-    // }
+   
     async updateProfileImg(req, res) {
       try {
-<<<<<<< HEAD
         const { userId } = req.params;
 
         if (!req.files || req.files.length === 0) {
@@ -564,55 +463,6 @@ class user {
         return res.status(500).json({ success: false, message: "Internal Server Error", error: err.message });
       }
     }
-=======
-         const { userId } = req.params;
-  
-          let obj = {};
-          if (req.files) {
-              obj["profile"] = `${req.files[0].filename}`; 
-          }
-  
-          // Update user details in the database by adminId
-          const updatedUser = await userModel.findOneAndUpdate(
-              { _id: userId },
-              { $set: obj },
-              { new: true } 
-          );
-  
-          if (!updatedUser) return res.status(400).json({ error: "User not found or update failed!" });
-  
-          return res.status(200).json({ success: "User updated successfully", data: updatedUser });
-      } catch (err) {
-          console.error("Error updating user:", err);
-          return res.status(500).json({ error: "Internal Server Error" });
-      }
-  }
-  async updateResume(req, res) {
-    try {
-       const { userId } = req.params;
-       console.log(userId)
-
-        let obj = {};
-        if (req.files) {
-            obj["resume"] = `${req.files[0].filename}`; 
-        }
-
-        // Update user details in the database by adminId
-        const updatedUser = await userModel.findOneAndUpdate(
-            { _id: userId },
-            { $set: obj },
-            { new: true } 
-        );
-
-        if (!updatedUser) return res.status(400).json({ error: "User not found or update failed!" });
-
-        return res.status(200).json({ success: "User updated successfully", data: updatedUser });
-    } catch (err) {
-        console.error("Error updating user:", err);
-        return res.status(500).json({ error: "Internal Server Error" });
-    }
-}
->>>>>>> 8289b38e919b37a8b80bddf8c4c8e41bcb709239
 
 
   // async AddSkill(req, res) {

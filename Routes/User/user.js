@@ -5,19 +5,8 @@ const messageController = require('../../Controller/User/messageController');
 
 const multer = require("multer");
 
-<<<<<<< HEAD
 // Configure multer to use memory storage for S3 uploads
 const storage = multer.memoryStorage();
-=======
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, "Public/user"); 
-    },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + "_" + file.originalname); // Generate unique filename
-    },
-});
->>>>>>> 8289b38e919b37a8b80bddf8c4c8e41bcb709239
 
 // Use memory storage for routes that will use S3
 const upload = multer({ storage: storage });
@@ -36,15 +25,9 @@ const diskUpload = multer({ storage: diskStorage });
 
 router.post("/register", userController.register);
 router.post("/userlogin", userController.login);
-<<<<<<< HEAD
 router.put('/updateProfileImg/:userId', upload.any(), userController.updateProfileImg);
 router.put('/editUser/:id', userController.editUser);
 router.put('/updateResume/:userId', upload.any(), userController.updateResume);
-=======
-router.put('/updateProfileImg/:userId',upload.any(), userController.updateProfileImg);
-router.put('/editUser/:id', userController.editUser);
-router.put('/updateResume/:userId',upload.any(), userController.updateResume);
->>>>>>> 8289b38e919b37a8b80bddf8c4c8e41bcb709239
 // router.put("/editProfile", upload.any(), userController.editProfile);
 router.post("/AddEducation", userController.addEducation);
 router.delete(
