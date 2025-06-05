@@ -71,7 +71,13 @@ setInterval(()=>{
   employerController.deleteOfline();
   employeeController.deleteOfline();
 },60000)
+app.use(express.static(path.join(__dirname, 'build'))); // Change 'build' to your frontend folder if needed
 
+// Redirect all requests to the index.html file
+
+app.get("*", (req, res) => {
+  return  res.sendFile(path.join(__dirname, 'build', 'index.html'));
+});
 const PORT = process.env.PORT || 8500;
 
 app.listen(PORT, () => {

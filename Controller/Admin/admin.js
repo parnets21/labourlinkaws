@@ -61,6 +61,7 @@ class admin{
     async login(req,res){
         try{
             const {email,password}=req.body;
+console.log("fff",req.body);
 
             let check =await adminModel.findOne({$or:[{email:email}]});
             if(!check) return res.status(400).json({error:"Please enter register email Id!"});
