@@ -5,6 +5,7 @@ const mongoose = require("mongoose");
 require("dotenv").config();
 const morgan = require("morgan");
 const path = require('path')
+const locationRoutes = require('./Routes/User/location');
 
 var cookieParser = require("cookie-parser");
 //Db Connection
@@ -38,6 +39,8 @@ const notification =require('./Routes/Admin/notification')
 const business =require('./Routes/Admin/business')
 const ourclient=require("./Routes/Admin/ourclien");
 const subadmin=require("./Routes/Admin/subadmin");
+const offer=require("./Routes/offerRoutes")
+app.use('/api/user', locationRoutes);
 
 //middleware
 app.use(morgan("dev"));
@@ -64,6 +67,7 @@ app.use("/api/user", blog);
 app.use("/api/user", chat);
 app.use("/api/user", resume);
 app.use("/api/admin",subadmin);
+app.use("/api/offers",offer)
 
 const employerController=require("./Controller/Employers/employers");
 const employeeController=require("./Controller/User/user");
@@ -71,9 +75,7 @@ setInterval(()=>{
   employerController.deleteOfline();
   employeeController.deleteOfline();
 },60000)
-app.use(express.static(path.join(__dirname, 'build'))); // Change 'build' to your frontend folder if needed
-
-// Redirect all requests to the index.html file
+app.use(express.static(path.join(__dirname, 'build'))); 
 
 app.get("*", (req, res) => {
   return  res.sendFile(path.join(__dirname, 'build', 'index.html'));

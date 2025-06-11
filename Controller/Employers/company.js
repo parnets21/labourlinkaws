@@ -662,18 +662,10 @@ async register(req, res) {
     }
   }
 
-
   
   async getApplyList(req, res) {
     try {
       const{jobId}=req.params
-      // const companyObjectId = new mongoose.Types.ObjectId(companyId);
-
-      // console.log(companyObjectId,"adcdcjhbhbjns")
-      // if (!mongoose.Types.ObjectId.isValid(companyId)) {
-      //   return res.status(400).json({ success: false, message: "Invalid companyId format" });
-      // }
-  
       console.log("Received companyId:", jobId, "Type:", typeof jobId);
   
       let findData = await applyModel
@@ -692,9 +684,6 @@ async register(req, res) {
   }
   
 }
-
-
-
 
 
 async addShortList(req, res) {
@@ -746,7 +735,6 @@ async addShortList(req, res) {
     return res.status(500).json({ success: false, error: "Internal server error" });
   }
 }
-
 
 
 // async addSelect(req, res) {
@@ -802,7 +790,6 @@ async addShortList(req, res) {
 //       console.log(err);
 //     }
 //   }
-
 
 
 async  addSelect(req, res) {
@@ -979,6 +966,7 @@ async getShortlistingData(req, res) {
       console.log(error);
     }
   }
+
   async rejectApply(req, res) {
     try {
       const { userId, companyId } = req.body;
@@ -1005,9 +993,6 @@ async getShortlistingData(req, res) {
       console.log(err);
     }
   }
-
-
-
 
 
   async getRejectedApplications(req, res) {
@@ -1053,6 +1038,7 @@ async getShortlistingData(req, res) {
       console.log(error)
     }
   }
+
   async isVerify(req, res) {
     try {
       let data = await jobModel
@@ -1067,6 +1053,7 @@ async getShortlistingData(req, res) {
       console.log(err);
     }
   }
+
   async makeVerify(req, res) {
     try {
       let companyId = req.params.companyId;
@@ -1187,8 +1174,6 @@ async getShortlistingData(req, res) {
     }
   }
   
-  
-
   async getSuggestedJobs(req, res) {
     console.log("Getting Suggested Jobs...");
     try {
@@ -1229,7 +1214,6 @@ async getShortlistingData(req, res) {
     }
   }
   
-
       async getRecommendedJobs(req, res) {
         try {
             const { userId } = req.params;
@@ -2092,8 +2076,6 @@ async getShortlistingData(req, res) {
         }
     }
     
-
-
       // Delete functions
       async deleteCompanyType(req, res) {
         try {

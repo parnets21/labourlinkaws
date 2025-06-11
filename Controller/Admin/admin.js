@@ -101,10 +101,6 @@ console.log("fff",req.body);
 
     }
 
-
-
-
-
      async changepassword(req,res){
         try{
             const {userId,password,cpassword}=req.body;
@@ -191,10 +187,7 @@ console.log("fff",req.body);
         console.log(err,"this is err")
         res.status(400).json({ error: err.message });
       }
-    }
-    
-    
-      
+    } 
       // GET ALL
       async getAppointments  (req, res){
         try {

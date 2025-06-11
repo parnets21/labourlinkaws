@@ -31,7 +31,27 @@ const applySchema = new Schema({
     appliedOn: {
         type: Date,
         default: Date.now
-    }
+    },
+    offerLetter: {
+    url: String,
+    generatedAt: Date,
+    status: {
+        type: String,
+        enum: ['pending','sent','accepted', 'declined'],
+        default: 'pending'
+    },
+    position: String,
+    salary: String,
+    startDate: String,
+    workLocation: String,
+    respondedAt: Date,
+    response: String
+},
+applicationStatus: {
+    type: String,
+    enum: ['applied', 'shortlisted', 'selected', 'hired', 'rejected', 'offer_declined'],
+    default: 'applied'
+}
 }, { timestamps: true });
 
 // Add a compound unique index
