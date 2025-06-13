@@ -651,12 +651,10 @@ class user {
   async login(req, res) {
     try {
       const { email, password } = req.body;
-      console.log(req.body,"saldjna")
+      // console.log(req.body,"saldjna")
       if(!isValid(email)) return res.status(400).json({error:"Please enter your email!"})
       if(!isValid(password)) return res.status(400).json({error:"Please enter your password!"})
-      let hash
-    console.log("hi")
-    
+      let hash;
        if(!phonenumber(email)){
              hash = await userModel.findOne({ email: email ,isDelete:false});
             }else{
@@ -665,13 +663,11 @@ class user {
         
       if (!hash)
         return res.status(400).json({ error: "Please enter register Id!" });
-      console.log("hi")
       let compare = await bcrypt
         .compare(password, hash.password)
         .then((res) => {
           return res;
         });
-        console.log("hi")
       if (!compare) {
         return res.status(400).send({ alert: "Invalid password!" });
       }

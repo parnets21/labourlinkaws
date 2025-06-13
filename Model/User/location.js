@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const locationSchema = new mongoose.Schema({
-  jobseekerId: {
+  userId: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
     ref: 'user'
@@ -18,6 +18,6 @@ const locationSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   }
-});
+},{ timestamps: true });
 
 module.exports = mongoose.model('Location', locationSchema);

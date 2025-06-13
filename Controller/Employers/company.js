@@ -1187,7 +1187,7 @@ async getShortlistingData(req, res) {
   
       // Fetch user with skills
       const user = await userModel.findById(userId)
-      console.log(user,"User from DB:")
+      // console.log(user,"User from DB:")
       if (!user) return res.status(404).json({ message: "User not found" });
       console.log(user,"yusdna")
       if (!user.skills || user.skills.length === 0) {
