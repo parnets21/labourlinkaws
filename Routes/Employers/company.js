@@ -61,6 +61,7 @@ router.post("/add-job-role", jobController.addJobRole);
 router.post("/add-work-mode", jobController.addWorkMode);
 router.post("/add-education", jobController.addEducation);
 router.post("/add-skill", jobController.addSkill);
+router.post("/add-chef", jobController.addChef);
 // router.post("/add-experience-level", jobController.addExperienceLevel);
 
 // Job Management Routes - GET endpoints
@@ -71,6 +72,7 @@ router.get("/job-roles", jobController.getJobRoles);
 router.get("/work-modes", jobController.getWorkModes);
 router.get("/educations", jobController.getEducations);
 router.get("/skills", jobController.getSkills);
+router.get("/chefs", jobController.getChefs);
 
 //get api http://localhost:8500/api/user/skills
 
@@ -82,6 +84,7 @@ router.put("/edit-job-role/:id", jobController.editJobRole);
 router.put("/edit-work-mode/:id", jobController.editWorkMode);
 router.put("/edit-education/:id", jobController.editEducation);
 router.put("/edit-skill/:id", jobController.editSkill);
+router.put("/edit-chef/:id", jobController.editChef);
 
 
 // Job Management Routes - DELETE endpoints
@@ -92,5 +95,6 @@ router.delete("/delete-job-role/:id", jobController.deleteJobRole);
 router.delete("/delete-work-mode/:id", jobController.deleteWorkMode);
 router.delete("/delete-education/:id", jobController.deleteEducation);
 router.delete("/delete-skill/:id", jobController.deleteSkill);
+router.delete("/delete-chef/:id", jobController.deletechefCategory);
 
 module.exports = router;
