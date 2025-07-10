@@ -19,6 +19,7 @@ const Education= require("../../Model/Admin/jobmanagment/education")
 const ExperienceLevel= require("../../Model/Admin/jobmanagment/ExperienceLevel")
 const Skill = require("../../Model/Admin/jobmanagment/Skill");
 const { uploadFile2, deleteFile } = require("../../middileware/aws");
+const Chefs = require("../../Model/Admin/jobmanagment/Chefs");
 
 class company {
   
@@ -1641,6 +1642,50 @@ async getShortlistingData(req, res) {
           });
         }
       }
+      async addChef(req, res) {
+        try {
+          console.log("Received body:", req.body); // Debugging step ✅
+          
+          const { chefCategory } = req.body;
+      
+          if (!chefCategory) {
+            return res.status(400).json({ error: "Chefs name is required" });
+          }
+      
+          // ✅ Check if skill already exists
+          const existingSkill = await Chefs.findOne({ chefCategory: { $regex: new RegExp(`^${chefCategory}$`, "i") } });
+          if (existingSkill) {
+            return res.status(400).json({ error: "chefCategory already exists" });
+          }
+      
+          // ✅ Fetch last skillId correctly
+          const lastRecord = await Skill.find().sort({ createdAt: -1 }).limit(1).lean();
+          let newIdNumber = 1;
+          if (lastRecord.length > 0 && lastRecord[0].chefId) {
+            const match = lastRecord[0].chefId.match(/\d+/);
+            newIdNumber = match ? parseInt(match[0], 10) + 1 : 1;
+          }
+          const newSkillId = `SK${String(newIdNumber).padStart(3, "0")}`;
+      
+          // ✅ Create new skill
+          const newSkill = await Chefs.create({
+            chefCategory,
+            chefId: newSkillId,
+            action: true,
+          });
+      
+          return res.status(201).json({
+            success: true,
+            data: newSkill,
+          });
+        } catch (error) {
+          console.error("Error adding Chefs:", error);
+          return res.status(500).json({
+            error: "Internal server error",
+            details: error.message,
+          });
+        }
+      }
       
     
 
@@ -1650,7 +1695,7 @@ async getShortlistingData(req, res) {
         try {
             const companyTypes = await CompanyType.find({ action: true })
                 .select('_id type typeId')  // ✅ Add typeId
-                .sort({ type: 1 });
+                .sort({ typeId: 1 });
     
             return res.status(200).json({
                 success: true,
@@ -1702,7 +1747,7 @@ async getShortlistingData(req, res) {
         try {
             const departments = await Department.find({ action: true })
                 .select('_id departmentName departmentId')  // ✅ Include departmentId
-                .sort({ departmentName: 1 });
+                .sort({ departmentId: 1 });
     
             return res.status(200).json({
                 success: true,
@@ -1750,7 +1795,7 @@ async getShortlistingData(req, res) {
 
       async getEducations(req, res) {
         try {
-          const educations = await Education.find();
+          const educations = await Education.find().sort({ educationId: 1 });;
           res.json(educations);
         } catch (error) {
           res.status(500).json({ message: error.message });
@@ -1762,12 +1807,31 @@ async getShortlistingData(req, res) {
         try {
           const skills = await Skill.find({ action: true })
             .select('_id skillName') // Select only necessary fields
-            .sort({ skillName: 1 }); // Sort by skillName
+            .sort({ skillId: 1 }); // Sort by skillName
       
           return res.status(200).json({
             success: true,
             count: skills.length,
             data: skills
+          });
+        } catch (error) {
+          console.error("Error fetching skills:", error);
+          return res.status(500).json({
+            error: "Internal server error",
+            details: error.message
+          });
+        }
+      }
+      async getChefs(req, res) {
+        try {
+          const Chefs = await Chefs.find({ action: true })
+            .select('_id chefCategory') // Select only necessary fields
+            .sort({ chefId: 1 }); // Sort by skillName
+      
+          return res.status(200).json({
+            success: true,
+            count: Chefs.length,
+            data: Chefs
           });
         } catch (error) {
           console.error("Error fetching skills:", error);
@@ -2075,6 +2139,62 @@ async getShortlistingData(req, res) {
             });
         }
     }
+      async editChef(req, res) {
+        try {
+            const { id } = req.params;
+            const { chefCategory, action } = req.body;
+    
+            // Validate ObjectId
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+                return res.status(400).json({
+                    error: "Invalid skill ID format",
+                    details: "The provided ID is not a valid MongoDB ObjectId"
+                });
+            }
+    
+            if (!chefCategory) {
+                return res.status(400).json({ error: "Skill name is required" });
+            }
+    
+            // Check if skill name already exists (excluding the current record)
+            const existingSkill = await Chefs.findOne({
+                chefCategory,
+                _id: { $ne: id }
+            });
+    
+            if (existingSkill) {
+                return res.status(400).json({ error: "Skill name already exists" });
+            }
+    
+            const updatedSkill = await Chefs.findByIdAndUpdate(
+                id,
+                {
+                    chefCategory,
+                    action: action !== undefined ? action : true,
+                    updatedAt: new Date()
+                },
+                {
+                    new: true,
+                    runValidators: true
+                }
+            );
+    
+            if (!updatedSkill) {
+                return res.status(404).json({ error: "Skill not found" });
+            }
+    
+            return res.status(200).json({
+                success: true,
+                data: updatedSkill
+            });
+        } catch (error) {
+            console.error("Error updating chefCategory:", error);
+            return res.status(500).json({
+                error: "Internal server error",
+                details: error.message
+            });
+        }
+    }
     
       // Delete functions
       async deleteCompanyType(req, res) {
@@ -2234,6 +2354,36 @@ async getShortlistingData(req, res) {
             });
         } catch (error) {
             console.error("Error deleting skill:", error);
+            return res.status(500).json({
+                error: "Internal server error",
+                details: error.message
+            });
+        }
+    }
+      async deletechefCategory(req, res) {
+        try {
+            const { id } = req.params;
+    
+            // Validate ObjectId
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+                return res.status(400).json({
+                    error: "Invalid skill ID format",
+                    details: "The provided ID is not a valid MongoDB ObjectId"
+                });
+            }
+    
+            const deletedSkill = await Chefs.findByIdAndDelete(id);
+    
+            if (!deletedSkill) {
+                return res.status(404).json({ error: "Skill not found" });
+            }
+    
+            return res.status(200).json({
+                success: true,
+                message: "chefCategory deleted successfully"
+            });
+        } catch (error) {
+            console.error("Error deleting chefCategory:", error);
             return res.status(500).json({
                 error: "Internal server error",
                 details: error.message
