@@ -1659,7 +1659,7 @@ async getShortlistingData(req, res) {
           }
       
           // ✅ Fetch last skillId correctly
-          const lastRecord = await Skill.find().sort({ createdAt: -1 }).limit(1).lean();
+          const lastRecord = await Chefs.find().sort({ createdAt: -1 }).limit(1).lean();
           let newIdNumber = 1;
           if (lastRecord.length > 0 && lastRecord[0].chefId) {
             const match = lastRecord[0].chefId.match(/\d+/);
@@ -1822,25 +1822,26 @@ async getShortlistingData(req, res) {
           });
         }
       }
-      async getChefs(req, res) {
-        try {
-          const Chefs = await Chefs.find({ action: true })
-            .select('_id chefCategory') // Select only necessary fields
-            .sort({ chefId: 1 }); // Sort by skillName
-      
-          return res.status(200).json({
-            success: true,
-            count: Chefs.length,
-            data: Chefs
-          });
-        } catch (error) {
-          console.error("Error fetching skills:", error);
-          return res.status(500).json({
-            error: "Internal server error",
-            details: error.message
-          });
-        }
-      }
+   async getChefs(req, res) {
+  try {
+    const chefs = await Chefs.find({ action: true })
+      .select('_id chefCategory chefId') // include chefId for sorting
+      .sort({ chefId: 1 });
+
+    return res.status(200).json({
+      success: true,
+      count: chefs.length,
+      data: chefs
+    });
+  } catch (error) {
+    console.error("Error fetching chefs:", error);
+    return res.status(500).json({
+      error: "Internal server error",
+      details: error.message
+    });
+  }
+}
+
 
 
       // Edit functions
@@ -2367,7 +2368,7 @@ async getShortlistingData(req, res) {
             // Validate ObjectId
             if (!mongoose.Types.ObjectId.isValid(id)) {
                 return res.status(400).json({
-                    error: "Invalid skill ID format",
+                    error: "Invalid Chefs ID format",
                     details: "The provided ID is not a valid MongoDB ObjectId"
                 });
             }

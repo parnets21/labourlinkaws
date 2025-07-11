@@ -1,10 +1,11 @@
 const mongoose = require("mongoose");
 
+// Define Chef Schema
 const ChefSchema = new mongoose.Schema(
   {
     chefCategory: {
       type: String,
-      required: [true, "ChefsCategory is required"],
+      required: [true, "Chef Category is required"],
       trim: true,
       unique: true,
     },
@@ -17,37 +18,37 @@ const ChefSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    },
-    updatedAt: {
-      type: Date,
-      default: Date.now,
-    },
   },
   {
-    timestamps: true,
+    timestamps: true, // Auto-manages createdAt and updatedAt
   }
 );
 
+// Auto-generate sequential chefId (e.g., SK001, SK002) if not provided
 ChefSchema.pre("save", async function (next) {
-  if (!this.chefId) {
-    // Fetch all chefId, sort them numerically
-    const allRecords = await this.constructor.find({}, { chefId: 1 }).lean();
-    const existingIds = allRecords.map((record) => parseInt(record.chefId.replace("SK", ""), 10));
+  try {
+    if (!this.chefId) {
+      // Fetch all chefIds, parse to integers for sorting
+      const allRecords = await this.constructor.find({}, { chefId: 1 }).lean();
+      const existingIds = allRecords
+        .map(record => parseInt(record.chefId.replace("SK", ""), 10))
+        .filter(num => !isNaN(num)); // Safety check in case of bad data
 
-    // Find the smallest missing number
-    let newIdNumber = 1;
-    while (existingIds.includes(newIdNumber)) {
-      newIdNumber++; // Keep incrementing until we find a missing ID
+      // Find the smallest missing number in sequence
+      let newIdNumber = 1;
+      while (existingIds.includes(newIdNumber)) {
+        newIdNumber++;
+      }
+
+      // Assign formatted chefId (e.g., SK001)
+      this.chefId = `SK${String(newIdNumber).padStart(3, "0")}`;
+      console.log("Generated chefId:", this.chefId);
     }
-
-    // Assign new sequential ID
-    this.chefId = `SK${String(newIdNumber).padStart(3, "0")}`;
-    console.log("Generated chefId:", this.chefId);
+    next();
+  } catch (error) {
+    next(error); // Pass errors to Mongoose
   }
-  next();
 });
 
+// Export Chef model
 module.exports = mongoose.model("Chef", ChefSchema);

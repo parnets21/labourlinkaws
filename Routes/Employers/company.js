@@ -54,7 +54,7 @@ router.get("/getJobByEmployerId/:employerId", jobController.getJobByEmployerId);
 router.delete("/deleteApply/:applyId", jobController.deleteApply);
 
 // Job Management Routes - POST endpoints
-router.post("/add-company-type", jobController.addCompanyType); //done x
+router.post("/add-company-type", jobController.addCompanyType); 
 router.post("/add-industry", jobController.addIndustry);
 router.post("/add-department", jobController.addDepartment);
 router.post("/add-job-role", jobController.addJobRole);
