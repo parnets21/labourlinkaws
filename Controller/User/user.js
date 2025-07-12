@@ -123,6 +123,64 @@ class user {
       }
     }
 
+  async  registerFromResume(req, res) {
+    try {
+        const file = req.file;
+        if (!file) return res.status(400).json({ error: "No resume uploaded." });
+
+        // 1️⃣ Parse resume
+        const parsedData = await parseResume(file.path); // your parser function
+        const {
+            fullName, email, phone, skills, education, location, workExperience
+        } = parsedData;
+
+        // 2️⃣ Check existing
+        let userExists = await userModel.findOne({ email, isDelete: false });
+        if (userExists) return res.status(400).json({ error: "Email already exists!" });
+
+        userExists = await userModel.findOne({ phone, isDelete: false });
+        if (userExists) return res.status(400).json({ error: "Phone already exists!" });
+
+        // 3️⃣ Generate random password
+        const generatedPassword = crypto.randomBytes(8).toString('hex');
+        const encryptedPassword = await bcrypt.hash(generatedPassword, 10);
+
+        // 4️⃣ Create user
+        const userData = {
+            profile: "", // default or extracted profile URL if available
+            fullName,
+            email,
+            phone,
+            location,
+            password: encryptedPassword,
+            confirmPassword: encryptedPassword,
+            workExperience: workExperience ? true : false,
+            experiences: workExperience,
+            education,
+            skills,
+            appliedOn: new Date(),
+            online: "Offline",
+            isBlock: false,
+            isDelete: false
+        };
+
+        const newUser = await userModel.create(userData);
+
+        // 5️⃣ Send welcome email with credentials
+        await send.sendMail(fullName, email, `Welcome to Labor Link!<br>Your temporary password is: <b>${generatedPassword}</b><br>Please log in and change your password.`);
+
+        return res.status(200).json({
+            success: "Jobseeker registered successfully!",
+            userId: newUser._id,
+            email,
+            password: generatedPassword
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Server error during resume registration." });
+    }
+    }
     async  editUser(req, res) {
         try {
             const { id } = req.params; // Get user ID from params
@@ -206,7 +264,6 @@ class user {
         }
 
     }
-    
     
   // async editProfile(req, res) {
   //   try {
@@ -356,8 +413,6 @@ class user {
   //   }
   // }
 
-
-   
     async updateProfileImg(req, res) {
       try {
         const { userId } = req.params;

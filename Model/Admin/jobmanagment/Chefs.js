@@ -11,7 +11,6 @@ const ChefSchema = new mongoose.Schema(
     },
     chefId: {
       type: String,
-      required: true,
       unique: true,
     },
     action: {

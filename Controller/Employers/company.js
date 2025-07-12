@@ -20,6 +20,7 @@ const ExperienceLevel= require("../../Model/Admin/jobmanagment/ExperienceLevel")
 const Skill = require("../../Model/Admin/jobmanagment/Skill");
 const { uploadFile2, deleteFile } = require("../../middileware/aws");
 const Chefs = require("../../Model/Admin/jobmanagment/Chefs");
+const Cuisines = require("../../Model/Admin/jobmanagment/Cuisines");
 
 class company {
   
@@ -1687,7 +1688,43 @@ async getShortlistingData(req, res) {
         }
       }
       
-    
+      async addCuisine(req, res) {
+    try {
+        console.log("Received body:", req.body);
+
+        const { Cuisine } = req.body;
+
+        if (!Cuisine) {
+            return res.status(400).json({ error: "Cuisine name is required" });
+        }
+
+        // Check if the Cuisine already exists (case-insensitive)
+        const existingCuisine = await Cuisines.findOne({
+            Cuisine: { $regex: new RegExp(`^${Cuisine}$`, "i") }
+        });
+
+        if (existingCuisine) {
+            return res.status(400).json({ error: "Cuisine already exists" });
+        }
+
+        const newCuisine = await Cuisines.create({
+            Cuisine,
+            action: true
+        });
+
+        return res.status(201).json({
+            success: true,
+            data: newCuisine
+        });
+
+    } catch (error) {
+        console.error("Error adding Cuisine:", error);
+        return res.status(500).json({
+            error: "Internal server error",
+            details: error.message
+        });
+    }
+}
 
 
       // GET Controllers
@@ -1793,7 +1830,7 @@ async getShortlistingData(req, res) {
   }
   
 
-      async getEducations(req, res) {
+   async getEducations(req, res) {
         try {
           const educations = await Education.find().sort({ educationId: 1 });;
           res.json(educations);
@@ -1822,6 +1859,8 @@ async getShortlistingData(req, res) {
           });
         }
       }
+      
+
    async getChefs(req, res) {
   try {
     const chefs = await Chefs.find({ action: true })
@@ -1842,6 +1881,25 @@ async getShortlistingData(req, res) {
   }
 }
 
+async getCuisine(req, res) {
+  try {
+    const cuisines = await Cuisines.find({ action: true })
+      .select('_id Cuisine CuisineId') // fields relevant to Cuisine
+      .sort({ CuisineId: 1 }); // sort by CuisineId ascending
+
+    return res.status(200).json({
+      success: true,
+      count: cuisines.length,
+      data: cuisines
+    });
+  } catch (error) {
+    console.error("Error fetching cuisines:", error);
+    return res.status(500).json({
+      error: "Internal server error",
+      details: error.message
+    });
+  }
+}
 
 
       // Edit functions
@@ -2196,7 +2254,62 @@ async getShortlistingData(req, res) {
             });
         }
     }
-    
+    async editCuisine(req, res) {
+    try {
+        const { id } = req.params;
+        const { Cuisine: cuisineName, action } = req.body;
+
+        // Validate ObjectId
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                error: "Invalid Cuisine ID format",
+                details: "The provided ID is not a valid MongoDB ObjectId"
+            });
+        }
+
+        if (!cuisineName) {
+            return res.status(400).json({ error: "Cuisine name is required" });
+        }
+
+        // Check if Cuisine name already exists (case-insensitive, excluding current record)
+        const existingCuisine = await Cuisines.findOne({
+            Cuisine: { $regex: new RegExp(`^${cuisineName}$`, "i") },
+            _id: { $ne: id }
+        });
+
+        if (existingCuisine) {
+            return res.status(400).json({ error: "Cuisine name already exists" });
+        }
+
+        // Update the Cuisine
+        const updatedCuisine = await Cuisines.findByIdAndUpdate(
+            id,
+            {
+                Cuisine: cuisineName,
+                action: action !== undefined ? action : true
+            },
+            {
+                new: true,
+                runValidators: true
+            }
+        );
+
+        if (!updatedCuisine) {
+            return res.status(404).json({ error: "Cuisine not found" });
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: updatedCuisine
+        });
+    } catch (error) {
+        console.error("Error updating Cuisine:", error);
+        return res.status(500).json({
+            error: "Internal server error",
+            details: error.message
+        });
+    }
+     }
       // Delete functions
       async deleteCompanyType(req, res) {
         try {
@@ -2382,6 +2495,37 @@ async getShortlistingData(req, res) {
             return res.status(200).json({
                 success: true,
                 message: "chefCategory deleted successfully"
+            });
+        } catch (error) {
+            console.error("Error deleting chefCategory:", error);
+            return res.status(500).json({
+                error: "Internal server error",
+                details: error.message
+            });
+        }
+    }
+    
+      async deleteCuisine(req, res) {
+        try {
+            const { id } = req.params;
+    
+            // Validate ObjectId
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+                return res.status(400).json({
+                    error: "Invalid Cuisine ID format",
+                    details: "The provided ID is not a valid MongoDB ObjectId"
+                });
+            }
+    
+            const deletedSkill = await Cuisines.findByIdAndDelete(id);
+    
+            if (!deletedSkill) {
+                return res.status(404).json({ error: "Skill not found" });
+            }
+    
+            return res.status(200).json({
+                success: true,
+                message: "Cuisine deleted successfully"
             });
         } catch (error) {
             console.error("Error deleting chefCategory:", error);

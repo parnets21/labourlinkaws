@@ -3,7 +3,7 @@ const Schema = mongoose.Schema;
 
 const userSchema = new Schema(
   {
-    profile: { type: String }, // Profile logo
+    profile: { type: String }, 
     fullName: { type: String },
     email: {
       type: String,
@@ -54,8 +54,8 @@ const userSchema = new Schema(
       institute: String,
       course: String,
       field: String,
-      starting: Number, // Will store dates as YYYYMM
-      passOut: Number, // Will store dates as YYYYMM
+      starting: Number, 
+      passOut: Number, 
       grade: String
 
    
