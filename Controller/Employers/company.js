@@ -1732,7 +1732,7 @@ async getShortlistingData(req, res) {
         try {
             const companyTypes = await CompanyType.find({ action: true })
                 .select('_id type typeId')  // ✅ Add typeId
-                .sort({ typeId: 1 });
+                .sort({ type: 1 });
     
             return res.status(200).json({
                 success: true,
@@ -1766,7 +1766,7 @@ async getShortlistingData(req, res) {
       // }
       async getIndustries  (req, res)  {
         try {
-          const industries = await Industry.find({}); // Fetch all industries from the database
+          const industries = await Industry.find({}).sort({ industryName: 1 }); // Fetch all industries from the database
           res.status(200).json({
             success: true,
             data: industries, // Ensure the data is returned in the correct format
@@ -1784,7 +1784,7 @@ async getShortlistingData(req, res) {
         try {
             const departments = await Department.find({ action: true })
                 .select('_id departmentName departmentId')  // ✅ Include departmentId
-                .sort({ departmentId: 1 });
+                .sort({ departmentName: 1 });
     
             return res.status(200).json({
                 success: true,
@@ -1803,7 +1803,7 @@ async getShortlistingData(req, res) {
 
     async getJobRoles  (req, res)  {
       try {
-        const roles = await JobRole.find({});
+        const roles = await JobRole.find({}).sort({ jobRole: 1 });;
         console.log(roles,"sdsd")
         return res.status(200).json({ success: true, data: roles });
       } catch (error) {
@@ -1832,7 +1832,7 @@ async getShortlistingData(req, res) {
 
    async getEducations(req, res) {
         try {
-          const educations = await Education.find().sort({ educationId: 1 });;
+          const educations = await Education.find().sort({ qualification: 1 });;
           res.json(educations);
         } catch (error) {
           res.status(500).json({ message: error.message });
@@ -1844,7 +1844,7 @@ async getShortlistingData(req, res) {
         try {
           const skills = await Skill.find({ action: true })
             .select('_id skillName') // Select only necessary fields
-            .sort({ skillId: 1 }); // Sort by skillName
+            .sort({ skillName: 1 }); // Sort by skillName
       
           return res.status(200).json({
             success: true,
@@ -1865,7 +1865,7 @@ async getShortlistingData(req, res) {
   try {
     const chefs = await Chefs.find({ action: true })
       .select('_id chefCategory chefId') // include chefId for sorting
-      .sort({ chefId: 1 });
+      .sort({ chefCategory: 1 });
 
     return res.status(200).json({
       success: true,
@@ -1885,7 +1885,7 @@ async getCuisine(req, res) {
   try {
     const cuisines = await Cuisines.find({ action: true })
       .select('_id Cuisine CuisineId') // fields relevant to Cuisine
-      .sort({ CuisineId: 1 }); // sort by CuisineId ascending
+      .sort({ Cuisine: 1 }); // sort by CuisineId ascending
 
     return res.status(200).json({
       success: true,
