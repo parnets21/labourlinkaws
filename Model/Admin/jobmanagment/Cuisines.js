@@ -5,13 +5,12 @@ const CuisineSchema = new mongoose.Schema(
   {
     Cuisine: {
       type: String,
-      required: [true, "CuisineId Category is required"],
+      required: [true, "Cuisine  is required"],
       trim: true,
       unique: true,
     },
     CuisineId: {
       type: String,
-      unique: true,
     },
     action: {
       type: Boolean,
