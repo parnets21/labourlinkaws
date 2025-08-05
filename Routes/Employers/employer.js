@@ -4,11 +4,11 @@ const employerController=require("../../Controller/Employers/employers")
 const multer = require("multer");
 
 // Use memory storage for S3 uploads
-const storage = multer.memoryStorage();
 
-const upload = multer({ storage: storage });
+
+const upload = multer();
 router.post("/registerEmployer", employerController.registerEmployer);
-router.put("/UpdateEmployerImg/:userId", upload.any(),employerController.UpdateEmployerImg);
+router.put("/UpdateEmployerImg/:userId", upload.single('EmployerImg'),employerController.UpdateEmployerImg);
 router.post("/loginEmployer", employerController.login);
 router.get("/employer/:employerId",employerController.getEmployerProfile);
 router.get("/Postedjobs/:employerId", employerController.getJobsByEmployer);

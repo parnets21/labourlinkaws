@@ -26,6 +26,7 @@ const employerSchema = new Schema(
     numberOfemp: { type: Number },
     industry: { type: String },
     GstNum: { type: String },
+    PanNum: { type: String },
     EmployerImg:String,
 
     // Additional fields
