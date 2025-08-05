@@ -723,7 +723,7 @@ async addShortList(req, res) {
     // ✅ Check if userId and companyId exist before sending an email
     if (data.userId && data.companyId) {
       sent.sendMail(
-        data.userId.name,
+        data.userId.fullName,
         data.userId.email,
         `This ${data.companyId.companyName} company shortlisted you for the position ${data.companyId.jobProfile}. Phone: ${data.companyId.companymobile}.<h3>Thank you <br>Labor Link Team</h3>`
       );
