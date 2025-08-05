@@ -749,9 +749,9 @@ class Employers {
          <strong>Date:</strong> ${interviewDate.toDateString()}<br>
          <strong>Time:</strong> ${interviewDate.toTimeString().split(' ')[0]}<br>
          <strong>Duration:</strong> ${duration} minutes<br>
-         <strong>Platform:</strong> ${platform || "Not Specified"}<br><br>
-         <strong>Platform Link:</strong> ${meetingLink || "Not Specified"}<br><br>
-         <strong>Platform Password:</strong> ${meetingPassword || "Not Required"}<br><br>
+         <strong>Platform:</strong> ${platform || "Not Specified"}<br>
+         <strong>Platform Link:</strong> ${meetingLink || "Not Specified"}<br>
+         <strong>Platform Password:</strong> ${meetingPassword || "Not Required"}<br>
          <strong>Note:</strong> ${interviewNotes || "Not Specified"}<br>
          <h3>Thank you,<br>Labor Link Team</h3>`
         );
