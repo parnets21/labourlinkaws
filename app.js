@@ -40,6 +40,11 @@ const business =require('./Routes/Admin/business')
 const ourclient=require("./Routes/Admin/ourclien");
 const subadmin=require("./Routes/Admin/subadmin");
 const offer=require("./Routes/offerRoutes")
+const subscription = require("./Routes/subscription")
+const offertemplate = require("./Routes/template")
+
+
+
 app.use('/api/user', locationRoutes);
 
 //middleware
@@ -68,6 +73,8 @@ app.use("/api/user", chat);
 app.use("/api/user", resume);
 app.use("/api/admin",subadmin);
 app.use("/api/offers",offer)
+app.use("/api/subscription", subscription)
+app.use("/api/templates", offertemplate)
 
 const employerController=require("./Controller/Employers/employers");
 const employeeController=require("./Controller/User/user");
