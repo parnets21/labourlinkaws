@@ -848,13 +848,13 @@ if (slotId) {
     mobile,
     `You are shortlisted for an interview.\n
      Date: ${interviewDate.toDateString()}\n
-     Time: ${interviewDate.toTimeString().split(" ")[0]}\n
-     Duration: ${duration} minutes\n
-     Platform: ${platform || "Not Specified"}\n
-     Platform Link: ${meetingLink || "Not Specified"}\n
-     Platform Password: ${meetingPassword || "Not Required"}\n
-     Note: ${interviewNotes || "Not Specified"}\n
-     Thank you,\nLabor Link Team`
+     Time: ${interviewDate.toTimeString().split(" ")[0]}
+     Duration: ${duration} minutes
+     Platform: ${platform || "Not Specified"}
+     Platform Link: ${meetingLink || "Not Specified"}
+     Platform Password: ${meetingPassword || "Not Required"}
+     Note: ${interviewNotes || "Not Specified"}
+     Thank you,Labor Link Team`
   );
 }
 

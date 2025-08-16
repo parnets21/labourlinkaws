@@ -161,24 +161,35 @@ const sendSelectedWhatsapp = async (name,mobile,msg) =>{
     throw err;
   }
 }; 
-const sendInterviewDetails = async (name,mobile,msg) =>{ 
-     try {
+const sendInterviewDetails = async (name, mobile, interviewDetails) => {
+  try {
+  
 
-    const formattedMobile = String(mobile).replace(/\D/g, ''); 
+    // Format mobile number (ensure it's a string and remove all non-digits)
+    const formattedMobile = String(mobile).replace(/\D/g, '');
+    
+    // Ensure proper formatting (91 for India + 10 digits)
+    const finalMobile = formattedMobile.length === 10 ? `91${formattedMobile}` : formattedMobile;
+    
+    console.log(`Attempting to send WhatsApp to: ${finalMobile}`);
+
     const payload = {
-    apiKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4OTMyYzBlZmY4NGRiMGMwZjNlNDg4ZiIsIm5hbWUiOiJMYWJvciBMaW5rIiwiYXBwTmFtZSI6IkFpU2Vuc3kiLCJjbGllbnRJZCI6IjY4OTMyYzBkZmY4NGRiMGMwZjNlNDg4NyIsImFjdGl2ZVBsYW4iOiJCQVNJQ19UUklBTCIsImlhdCI6MTc1NDQ3NTUzNH0.1SEjuYr_EQBgevXcTCP2wMTQ-M_EuznoS_-3XEiEeK4",
-  campaignName: "Interview_Details",
-      destination: formattedMobile, 
+      apiKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4OTMyYzBlZmY4NGRiMGMwZjNlNDg4ZiIsIm5hbWUiOiJMYWJvciBMaW5rIiwiYXBwTmFtZSI6IkFpU2Vuc3kiLCJjbGllbnRJZCI6IjY4OTMyYzBkZmY4NGRiMGMwZjNlNDg4NyIsImFjdGl2ZVBsYW4iOiJCQVNJQ19UUklBTCIsImlhdCI6MTc1NDQ3NTUzNH0.1SEjuYr_EQBgevXcTCP2wMTQ-M_EuznoS_-3XEiEeK4", // Your API key
+      campaignName: "interview_schedule", 
       userName: "Labor Link",
-      templateParams: [name, msg],
-      source: "new-landing-page form",
+      templateParams: [name], 
+      source: "labor-link-system",
       media: {},
       buttons: [],
-      carouselCards: [],
-      location: {},
-      attributes: {},
-      paramsFallbackValue: { FirstName: "user" }
+      attributes: {
+      interview_details: interviewDetails 
+      },
+      paramsFallbackValue: {
+        FirstName: name || "Candidate"
+      }
     };
+
+    console.log("Sending WhatsApp payload:", payload);
 
     const response = await axios.post(
       "https://backend.api-wa.co/campaign/combirds/api/v2",
@@ -187,23 +198,26 @@ const sendInterviewDetails = async (name,mobile,msg) =>{
         headers: {
           "Content-Type": "application/json",
           "Accept": "application/json"
-        }
+        },
+        timeout: 10000 // 10 second timeout
       }
     );
 
+    console.log("WhatsApp API Success:", response.data);
     return response.data;
-  } catch (err) {
-    console.error("WhatsApp API Error:", {
-      status: err.response?.status,
-      data: err.response?.data,
-      config: {
-        url: err.config?.url,
-        data: err.config?.data
-      }
-    });
-    throw err;
-  } 
 
+  } catch (err) {
+    const errorInfo = {
+      message: err.message,
+      status: err.response?.status,
+      responseData: err.response?.data,
+      mobile: mobile,
+      timestamp: new Date().toISOString()
+    };
+    
+    console.error("WhatsApp Send Failed:", errorInfo);
+    throw new Error(`WhatsApp notification failed: ${err.message}`);
+  }
 };
 
 module.exports = { 
