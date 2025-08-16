@@ -39,7 +39,7 @@ const sendMail = async (name, email, msg) => {
  
 
 
-const sendWhatsAppShortlisted = async (name, mobile,msg) => {
+const sendWhatsAppShortlisted = async (name, mobile,msg,) => {
   try {
     const response = await axios.post(
       "https://backend.api-wa.co/campaign/combirds/api/v2",
@@ -72,4 +72,7 @@ const sendWhatsAppShortlisted = async (name, mobile,msg) => {
   }
 };
 
-
+module.exports = { 
+  sendMail,
+  sendWhatsAppShortlisted
+};

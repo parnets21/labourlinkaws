@@ -5,8 +5,8 @@ const jobModel = require("../../Model/Employers/company");
 const applyModel = require("../../Model/Employers/apply");
 const selectModel = require("../../Model/Employers/selected");
 const userModel = require("../../Model/User/user");
-// const send = require("../../EmailSender/send");
-// const sent = require("../../EmailSender/send");
+const send = require("../../EmailSender/send");
+const sent = require("../../EmailSender/send");
 const {isValid,isValidEmail,phonenumber,validUrl}=require("../../Config/function")
 const CompanyType = require("../../Model/Admin/jobmanagment/CompanyType");
 const Industry = require("../../Model/Admin/jobmanagment/industrymanagment");
@@ -21,7 +21,7 @@ const Skill = require("../../Model/Admin/jobmanagment/Skill");
 const { uploadFile2, deleteFile } = require("../../middileware/aws");
 const Chefs = require("../../Model/Admin/jobmanagment/Chefs");
 const Cuisines = require("../../Model/Admin/jobmanagment/Cuisines");
-const { sendMail, sendWhatsAppShortlisted } = require("../../EmailSender/send");
+
 class company {
   
 async register(req, res) {
@@ -626,161 +626,61 @@ async register(req, res) {
 }
 
 
-// async addShortList(req, res) {
-//   try {
-//     const { userId, companyId } = req.body;
-//     console.log("Received request with the rdfjk:", userId, companyId);
-
-//     let data = await applyModel
-//     .findOne({ userId: mongoose.Types.ObjectId(userId), companyId: mongoose.Types.ObjectId(companyId) })
-//     .populate("userId")
-//       .populate("companyId");
-//       console.log("Query result:", data);  
-
-//     // ✅ Check if data exists before accessing properties
-//     if (!data) {
-//       return res.status(404).json({ error: "Application record not found" });
-//     }
-
-//     if (data.status === "Shortlisted") {
-//       return res.status(400).json({ message: "Already shortlisted" });
-//     }
-
-//     let update = await applyModel.findOneAndUpdate(
-//       { userId: userId, companyId: companyId },
-//       { $set: { status: "Shortlisted" } },
-//       { new: true }
-//     );
-
-//     console.log(update, "Updated document");
-
-//     if (!update) {
-//       return res.status(400).json({ success: false, message: "Something went wrong" });
-//     }
-
-//     // ✅ Check if userId and companyId exist before sending an email
-//     if (data.userId && data.companyId) {
-//       sent.sendMail(
-//         data.userId.fullName,
-//         data.userId.email,
-//         ` Congratulations! Your profile has been shortlisted for the position of  ${data.companyId.jobProfile} in ${data.companyId.companyName}<h3>Our team will connect with you shortly to discuss the next steps.</h3>`
-//       );
-//     } else {
-//       console.log("Missing user or company data, email not sent.");
-//     }
-
-//     return res.status(200).json({ success: true, message: "Successfully shortlisted" });
-//   } catch (err) {
-//     console.error("Error in addShortList:", err);
-//     return res.status(500).json({ success: false, error: "Internal server error" });
-//   }
-// } 
-  async addShortList(req, res) {
+async addShortList(req, res) {
   try {
     const { userId, companyId } = req.body;
-    console.log("Shortlisting request:", { userId, companyId });
+    console.log("Received request with the rdfjk:", userId, companyId);
 
-    // Validate input
-    if (!userId || !companyId) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "User ID and Company ID are required" 
-      });
-    }
-
-    // Find application
-    const application = await applyModel
-      .findOne({ 
-        userId: new mongoose.Types.ObjectId(userId),
-        companyId: new mongoose.Types.ObjectId(companyId) 
-      })
-      .populate("userId")
+    let data = await applyModel
+    .findOne({ userId: mongoose.Types.ObjectId(userId), companyId: mongoose.Types.ObjectId(companyId) })
+    .populate("userId")
       .populate("companyId");
+      console.log("Query result:", data);  
 
-    if (!application) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "Application not found" 
-      });
+    // ✅ Check if data exists before accessing properties
+    if (!data) {
+      return res.status(404).json({ error: "Application record not found" });
     }
 
-    // Check if already shortlisted
-    if (application.status === "Shortlisted") {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Candidate already shortlisted" 
-      });
+    if (data.status === "Shortlisted") {
+      return res.status(400).json({ message: "Already shortlisted" });
     }
 
-    // Update status to shortlisted
-    const updatedApp = await applyModel.findByIdAndUpdate(
-      application._id,
+    let update = await applyModel.findOneAndUpdate(
+      { userId: userId, companyId: companyId },
       { $set: { status: "Shortlisted" } },
       { new: true }
     );
 
-    if (!updatedApp) {
-      return res.status(500).json({ 
-        success: false, 
-        message: "Failed to update application status" 
-      });
+    console.log(update, "Updated document");
+
+    if (!update) {
+      return res.status(400).json({ success: false, message: "Something went wrong" });
     }
 
-    // Prepare messages
-    const emailMessage = `
-      <h2>Congratulations!</h2>
-      <p>Your profile has been shortlisted for the position of ${application.companyId.jobProfile} at ${application.companyId.companyName}.</p>
-      <p>Our team will connect with you shortly to discuss the next steps.</p>
-      <p>Best regards,<br>${application.companyId.companyName} Team</p>
-    `;
-
-    const whatsappMessage = 
-      `Congratulations! Your profile has been shortlisted for *${application.companyId.jobProfile}* at *${application.companyId.companyName}*.\n\n` +
-      `Our team will contact you shortly to discuss next steps.\n\n` +
-      `Best regards,\n${application.companyId.companyName} Team`;
-
-    // Send notifications
-    try {
-      // Send email
-      await sent.sendMail(
-        application.userId.fullName,
-        application.userId.email,
-        emailMessage
+//whatsapp 
+    if (data.userId && data.companyId) {
+      sent.sendMail(
+        data.userId.fullName,
+        data.userId.email,
+        ` Congratulations! Your profile has been shortlisted for the position of  ${data.companyId.jobProfile} in ${data.companyId.companyName}<h3>Our team will connect with you shortly to discuss the next steps.</h3>`
       );
-      console.log("Email sent to:", application.userId.email);
-
-      // Send WhatsApp if phone exists
-      if (application.userId.phone) {
-        try {
-          await whatsappSender.sendWhatsApp(
-            application.userId.phone,
-            whatsappMessage
-          );
-          console.log("WhatsApp sent to:", application.userId.phone);
-        } catch (whatsappError) {
-          console.error("WhatsApp failed but proceeding:", whatsappError);
-        }
-      } else {
-        console.warn("No phone number for WhatsApp notification");
-      }
-
-    } catch (notificationError) {
-      console.error("Notification error but proceeding:", notificationError);
+    } else {
+      console.log("Missing user or company data, email not sent.");
     }
-
-    return res.status(200).json({ 
-      success: true, 
-      message: "Candidate shortlisted successfully",
-      data: updatedApp
-    });
-
+  if (data.userId && data.companyId) {
+      sent.sendWhatsAppShortlisted(
+        data.userId.fullName,
+        data.userId.mobile,
+        ` Congratulations! Your profile has been shortlisted for the position of  ${data.companyId.jobProfile} in ${data.companyId.companyName}<h3>Our team will connect with you shortly to discuss the next steps.</h3>`
+      );
+    } else {
+      console.log("Missing user or company data, email not sent.");
+    }
+    return res.status(200).json({ success: true, message: "Successfully shortlisted" });
   } catch (err) {
     console.error("Error in addShortList:", err);
-    return res.status(500).json({ 
-      success: false, 
-      message: "Internal server error",
-      error: err.message 
-    });
+    return res.status(500).json({ success: false, error: "Internal server error" });
   }
 }
 
