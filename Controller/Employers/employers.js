@@ -724,71 +724,140 @@ class Employers {
       console.log("Interview Call Created:", newCall);
 
       // Send email notification with conditional slot data
-      if (slotId) {
-        const slot = await Appointment.findById(slotId);
-        await send.sendMail(
-          name,
-          email,
-          `You are shortlisted for an interview.<br>
-         <strong>Date:</strong> ${slot.date.toDateString()}<br>
-         <strong>Time:</strong> ${slot.time}<br>
-         <strong>Duration:</strong> ${slot.duration}<br>
-         <strong>Platform:</strong> ${platform || "Not Specified"}<br><br>
-           <strong>Platform Link:</strong> ${meetingLink || "Not Specified"}<br>
-     <strong>Platform Password:</strong> ${meetingPassword || "Not Required"}<br>
-     <strong>Note:</strong> ${interviewNotes || "Not Required"}<br>
-         <h3>Thank you,<br>Labor Link Team</h3>`
-        );
-      } else {
-        // Format the date from the schedule for the email
-        const interviewDate = new Date(schedule);
-        await send.sendMail(
-          name,
-          email,
-          `You are shortlisted for an interview.<br>
-         <strong>Date:</strong> ${interviewDate.toDateString()}<br>
-         <strong>Time:</strong> ${interviewDate.toTimeString().split(' ')[0]}<br>
-         <strong>Duration:</strong> ${duration} minutes<br>
-         <strong>Platform:</strong> ${platform || "Not Specified"}<br>
-         <strong>Platform Link:</strong> ${meetingLink || "Not Specified"}<br>
-         <strong>Platform Password:</strong> ${meetingPassword || "Not Required"}<br>
-         <strong>Note:</strong> ${interviewNotes || "Not Specified"}<br>
-         <h3>Thank you,<br>Labor Link Team</h3>`
-        );
-      }   
+    //   if (slotId) {
+    //     const slot = await Appointment.findById(slotId);
+    //     await send.sendMail(
+    //       name,
+    //       email,
+    //       `You are shortlisted for an interview.<br>
+    //      <strong>Date:</strong> ${slot.date.toDateString()}<br>
+    //      <strong>Time:</strong> ${slot.time}<br>
+    //      <strong>Duration:</strong> ${slot.duration}<br>
+    //      <strong>Platform:</strong> ${platform || "Not Specified"}<br><br>
+    //        <strong>Platform Link:</strong> ${meetingLink || "Not Specified"}<br>
+    //  <strong>Platform Password:</strong> ${meetingPassword || "Not Required"}<br>
+    //  <strong>Note:</strong> ${interviewNotes || "Not Required"}<br>
+    //      <h3>Thank you,<br>Labor Link Team</h3>`
+    //     );
+    //   } else {
+    //     // Format the date from the schedule for the email
+    //     const interviewDate = new Date(schedule);
+    //     await send.sendMail(
+    //       name,
+    //       email,
+    //       `You are shortlisted for an interview.<br>
+    //      <strong>Date:</strong> ${interviewDate.toDateString()}<br>
+    //      <strong>Time:</strong> ${interviewDate.toTimeString().split(' ')[0]}<br>
+    //      <strong>Duration:</strong> ${duration} minutes<br>
+    //      <strong>Platform:</strong> ${platform || "Not Specified"}<br>
+    //      <strong>Platform Link:</strong> ${meetingLink || "Not Specified"}<br>
+    //      <strong>Platform Password:</strong> ${meetingPassword || "Not Required"}<br>
+    //      <strong>Note:</strong> ${interviewNotes || "Not Specified"}<br>
+    //      <h3>Thank you,<br>Labor Link Team</h3>`
+    //     );
+    //   }   
         
-        if (slotId) {
-        const slot = await Appointment.findById(slotId);
-        await send.sendMail(
-          name,
-          email,
-          `You are shortlisted for an interview.<br>
-         <strong>Date:</strong> ${slot.date.toDateString()}<br>
-         <strong>Time:</strong> ${slot.time}<br>
-         <strong>Duration:</strong> ${slot.duration}<br>
-         <strong>Platform:</strong> ${platform || "Not Specified"}<br><br>
-           <strong>Platform Link:</strong> ${meetingLink || "Not Specified"}<br>
+    //     if (slotId) {
+    //     const slot = await Appointment.findById(slotId);
+    //     await send.sendMail(
+    //       name,
+    //       email,
+    //       `You are shortlisted for an interview.<br>
+    //      <strong>Date:</strong> ${slot.date.toDateString()}<br>
+    //      <strong>Time:</strong> ${slot.time}<br>
+    //      <strong>Duration:</strong> ${slot.duration}<br>
+    //      <strong>Platform:</strong> ${platform || "Not Specified"}<br><br>
+    //        <strong>Platform Link:</strong> ${meetingLink || "Not Specified"}<br>
+    //  <strong>Platform Password:</strong> ${meetingPassword || "Not Required"}<br>
+    //  <strong>Note:</strong> ${interviewNotes || "Not Required"}<br>
+    //      <h3>Thank you,<br>Labor Link Team</h3>`
+    //     );
+    //   } else {
+    //     // Format the date from the schedule for the email
+    //     const interviewDate = new Date(schedule);
+    //      send.sendInterviewDetails(
+    //       name,
+    //       email,
+    //       `You are shortlisted for an interview.<br>
+    //      <strong>Date:</strong> ${interviewDate.toDateString()}<br>
+    //      <strong>Time:</strong> ${interviewDate.toTimeString().split(' ')[0]}<br>
+    //      <strong>Duration:</strong> ${duration} minutes<br>
+    //      <strong>Platform:</strong> ${platform || "Not Specified"}<br>
+    //      <strong>Platform Link:</strong> ${meetingLink || "Not Specified"}<br>
+    //      <strong>Platform Password:</strong> ${meetingPassword || "Not Required"}<br>
+    //      <strong>Note:</strong> ${interviewNotes || "Not Specified"}<br>
+    //      <h3>Thank you,<br>Labor Link Team</h3>`
+    //     );
+    //   }  
+     
+     
+    // --- Email Sending ---
+if (slotId) {
+  const slot = await Appointment.findById(slotId);
+
+  await send.sendMail(
+    name,
+    email,
+    `You are shortlisted for an interview.<br>
+     <strong>Date:</strong> ${slot.date.toDateString()}<br>
+     <strong>Time:</strong> ${slot.time}<br>
+     <strong>Duration:</strong> ${slot.duration}<br>
+     <strong>Platform:</strong> ${platform || "Not Specified"}<br>
+     <strong>Platform Link:</strong> ${meetingLink || "Not Specified"}<br>
      <strong>Platform Password:</strong> ${meetingPassword || "Not Required"}<br>
      <strong>Note:</strong> ${interviewNotes || "Not Required"}<br>
-         <h3>Thank you,<br>Labor Link Team</h3>`
-        );
-      } else {
-        // Format the date from the schedule for the email
-        const interviewDate = new Date(schedule);
-          send.sendInterviewDetails(
-          name,
-          email,
-          `You are shortlisted for an interview.<br>
-         <strong>Date:</strong> ${interviewDate.toDateString()}<br>
-         <strong>Time:</strong> ${interviewDate.toTimeString().split(' ')[0]}<br>
-         <strong>Duration:</strong> ${duration} minutes<br>
-         <strong>Platform:</strong> ${platform || "Not Specified"}<br>
-         <strong>Platform Link:</strong> ${meetingLink || "Not Specified"}<br>
-         <strong>Platform Password:</strong> ${meetingPassword || "Not Required"}<br>
-         <strong>Note:</strong> ${interviewNotes || "Not Specified"}<br>
-         <h3>Thank you,<br>Labor Link Team</h3>`
-        );
-      }
+     <h3>Thank you,<br>Labor Link Team</h3>`
+  );
+
+  // WhatsApp notification
+  await sendInterviewDetails(
+    name,
+    mobile,
+    `You are shortlisted for an interview.\n
+     Date: ${slot.date.toDateString()}\n
+     Time: ${slot.time}\n
+     Duration: ${slot.duration}\n
+     Platform: ${platform || "Not Specified"}\n
+     Platform Link: ${meetingLink || "Not Specified"}\n
+     Platform Password: ${meetingPassword || "Not Required"}\n
+     Note: ${interviewNotes || "Not Required"}\n
+     Thank you,\nLabor Link Team`
+  );
+
+} else {
+  // Use schedule field when no slotId
+  const interviewDate = new Date(schedule);
+
+  await send.sendMail(
+    name,
+    email,
+    `You are shortlisted for an interview.<br>
+     <strong>Date:</strong> ${interviewDate.toDateString()}<br>
+     <strong>Time:</strong> ${interviewDate.toTimeString().split(" ")[0]}<br>
+     <strong>Duration:</strong> ${duration} minutes<br>
+     <strong>Platform:</strong> ${platform || "Not Specified"}<br>
+     <strong>Platform Link:</strong> ${meetingLink || "Not Specified"}<br>
+     <strong>Platform Password:</strong> ${meetingPassword || "Not Required"}<br>
+     <strong>Note:</strong> ${interviewNotes || "Not Specified"}<br>
+     <h3>Thank you,<br>Labor Link Team</h3>`
+  );
+
+  // WhatsApp notification
+  await sendInterviewDetails(
+    name,
+    mobile,
+    `You are shortlisted for an interview.\n
+     Date: ${interviewDate.toDateString()}\n
+     Time: ${interviewDate.toTimeString().split(" ")[0]}\n
+     Duration: ${duration} minutes\n
+     Platform: ${platform || "Not Specified"}\n
+     Platform Link: ${meetingLink || "Not Specified"}\n
+     Platform Password: ${meetingPassword || "Not Required"}\n
+     Note: ${interviewNotes || "Not Specified"}\n
+     Thank you,\nLabor Link Team`
+  );
+}
+
 
       return res.status(201).json({
         success: "Interview scheduled successfully",
