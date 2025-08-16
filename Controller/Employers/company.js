@@ -671,7 +671,7 @@ async addShortList(req, res) {
   if (data.userId && data.companyId) {
       sent.sendWhatsAppShortlisted(
         data.userId.fullName,
-        data.userId.mobile,
+        data.userId.phone,
         ` Congratulations! Your profile has been shortlisted for the position of  ${data.companyId.jobProfile} in ${data.companyId.companyName}<h3>Our team will connect with you shortly to discuss the next steps.</h3>`
       );
     } else {
