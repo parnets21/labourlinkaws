@@ -626,18 +626,80 @@ async register(req, res) {
 }
 
 
+// async addShortList(req, res) {
+//   try {
+//     const { userId, companyId } = req.body;
+//     console.log("Received request with the rdfjk:", userId, companyId);
+
+//     let data = await applyModel
+//     .findOne({ userId: mongoose.Types.ObjectId(userId), companyId: mongoose.Types.ObjectId(companyId) })
+//     .populate("userId")
+//       .populate("companyId");
+//       console.log("Query result:", data);  
+
+//     // ✅ Check if data exists before accessing properties
+//     if (!data) {
+//       return res.status(404).json({ error: "Application record not found" });
+//     }
+
+//     if (data.status === "Shortlisted") {
+//       return res.status(400).json({ message: "Already shortlisted" });
+//     }
+
+//     let update = await applyModel.findOneAndUpdate(
+//       { userId: userId, companyId: companyId },
+//       { $set: { status: "Shortlisted" } },
+//       { new: true }
+//     );
+
+//     console.log(update, "Updated document");
+
+//     if (!update) {
+//       return res.status(400).json({ success: false, message: "Something went wrong" });
+//     }
+
+// //whatsapp 
+//     if (data.userId && data.companyId) {
+//       sent.sendMail(
+//         data.userId.fullName,
+//         data.userId.email,
+//         ` Congratulations! Your profile has been shortlisted for the position of  ${data.companyId.jobProfile} in ${data.companyId.companyName}<h3>Our team will connect with you shortly to discuss the next steps.</h3>`
+//       );
+//     } else {
+//       console.log("Missing user or company data, email not sent.");
+//     }
+//   if (data.userId && data.companyId) {
+//       sent.sendWhatsAppShortlisted(
+//         data.userId.fullName,
+//         data.userId.phone,
+//         ` Congratulations! Your profile has been shortlisted for the position of  ${data.companyId.jobProfile} in ${data.companyId.companyName}<h3>Our team will connect with you shortly to discuss the next steps.</h3>`
+//       );
+//     } else {
+//       console.log("Missing user or company data, email not sent.");
+//     }
+//     return res.status(200).json({ success: true, message: "Successfully shortlisted" });
+//   } catch (err) {
+//     console.error("Error in addShortList:", err);
+//     return res.status(500).json({ success: false, error: "Internal server error" });
+//   }
+// }
+
+ 
 async addShortList(req, res) {
   try {
     const { userId, companyId } = req.body;
     console.log("Received request with the rdfjk:", userId, companyId);
 
     let data = await applyModel
-    .findOne({ userId: mongoose.Types.ObjectId(userId), companyId: mongoose.Types.ObjectId(companyId) })
-    .populate("userId")
+      .findOne({ 
+        userId: mongoose.Types.ObjectId(userId), 
+        companyId: mongoose.Types.ObjectId(companyId) 
+      })
+      .populate("userId")
       .populate("companyId");
-      console.log("Query result:", data);  
+    
+    console.log("Query result:", data);  
 
-    // ✅ Check if data exists before accessing properties
     if (!data) {
       return res.status(404).json({ error: "Application record not found" });
     }
@@ -658,33 +720,45 @@ async addShortList(req, res) {
       return res.status(400).json({ success: false, message: "Something went wrong" });
     }
 
-//whatsapp 
+    // Email notification
     if (data.userId && data.companyId) {
       sent.sendMail(
         data.userId.fullName,
         data.userId.email,
-        ` Congratulations! Your profile has been shortlisted for the position of  ${data.companyId.jobProfile} in ${data.companyId.companyName}<h3>Our team will connect with you shortly to discuss the next steps.</h3>`
+        `Congratulations! Your profile has been shortlisted for the position of ${data.companyId.jobProfile} in ${data.companyId.companyName}<h3>Our team will connect with you shortly to discuss the next steps.</h3>`
       );
     } else {
       console.log("Missing user or company data, email not sent.");
     }
-  if (data.userId && data.companyId) {
+
+    // WhatsApp notification
+    if (data.userId && data.companyId) {
+      const position = data.companyId.jobProfile || "the position";
+      const company = data.companyId.companyName || "our company";
+      
+      const whatsappMessage = `Hello ${data.userId.fullName},\n\nCongratulations! Your profile has been shortlisted for the position of ${position} in ${company}.\n\nOur team will connect with you shortly to discuss the next steps.`;
+      
       sent.sendWhatsAppShortlisted(
         data.userId.fullName,
         data.userId.phone,
-        ` Congratulations! Your profile has been shortlisted for the position of  ${data.companyId.jobProfile} in ${data.companyId.companyName}<h3>Our team will connect with you shortly to discuss the next steps.</h3>`
+        whatsappMessage
       );
     } else {
-      console.log("Missing user or company data, email not sent.");
+      console.log("Missing user or company data, WhatsApp not sent.");
     }
-    return res.status(200).json({ success: true, message: "Successfully shortlisted" });
+    
+    return res.status(200).json({ 
+      success: true, 
+      message: "Successfully shortlisted" 
+    });
   } catch (err) {
     console.error("Error in addShortList:", err);
-    return res.status(500).json({ success: false, error: "Internal server error" });
+    return res.status(500).json({ 
+      success: false, 
+      error: "Internal server error" 
+    });
   }
 }
-
-
 
 async  addSelect(req, res) {
   try {
