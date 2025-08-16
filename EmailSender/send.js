@@ -72,7 +72,4 @@ const sendWhatsAppShortlisted = async (name, mobile,msg) => {
   }
 };
 
-module.exports = { 
-  sendMail,
-  sendWhatsAppShortlisted
-};
+

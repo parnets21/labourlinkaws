@@ -21,7 +21,7 @@ const Skill = require("../../Model/Admin/jobmanagment/Skill");
 const { uploadFile2, deleteFile } = require("../../middileware/aws");
 const Chefs = require("../../Model/Admin/jobmanagment/Chefs");
 const Cuisines = require("../../Model/Admin/jobmanagment/Cuisines");
-
+const { sendMail, sendWhatsAppShortlisted } = require("../../EmailSender/send");
 class company {
   
 async register(req, res) {
