@@ -19,7 +19,8 @@ const subscriptionSchema = new Schema({
   },
   price: {
     type: Number,
-    required: true
+    required: false, 
+    default:0,
   }
 }, { timestamps: true });
 

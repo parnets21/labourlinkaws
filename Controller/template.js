@@ -88,9 +88,9 @@ const templateController = {
       }
 
       // Delete image from S3
-      if (template.image?.startsWith("https://")) {
-        await deleteFile(template.image);
-      }
+      // if (template.image?.startsWith("https://")) {
+      //   await deleteFile(template.image);
+      // }
 
       await Template.findByIdAndDelete(id);
       return res.status(200).json({ success: true, message: "Template deleted successfully" });

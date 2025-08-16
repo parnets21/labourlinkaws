@@ -101,69 +101,7 @@ async register(req, res) {
           error: err.message 
       });
   }
-}
-
-
-
-            // async register(req, res) {
-            //   try {
-            //       console.log("📢 Register API Called");
-            //       console.log("📝 Request Body:", req.body); // Log incoming request data
-
-            //       const {
-            //           companyName, jobtitle, averageIncentive, openings, address, email, skill, benefits,
-            //           reason, experience, interview, category, typeofqualification, description,
-            //           typeofjob, typeofwork, typeofeducation, education, experiencerequired,
-            //           gendertype, jobProfile, minSalary, maxSalary, period, location, time,
-            //           whatsapp, adminId, employerId, salarytype, interviewername
-            //       } = req.body;
-
-            //       console.log("📥 Received Request Body:", req.body);
-            //       console.log("📥 Received Skills:", req.body[0].skill);
-
-
-            //       // Ensure skill is always an array
-            //       // if (!Array.isArray(skill)) {
-            //       //     if (typeof skill === "string") {
-            //       //         skill = skill.split(",").map(s => s.trim()); // Convert string to array
-            //       //     } else {
-            //       //         skill = [];
-            //       //     }
-            //       // }
-            //       const newSkills = req.body[0].skill
-
-            //       console.log("🛠 Processed newSkills Data:", newSkills); // Log skills before saving
-
-            //       let obj = {
-            //           companyName, jobtitle, averageIncentive, openings, address, email, reason,
-            //           experience, interview, period, description, typeofjob, typeofwork, 
-            //           typeofeducation, education, experiencerequired, gendertype, jobProfile, 
-            //           minSalary, maxSalary, skill : newSkills, benefits, category, typeofqualification, 
-            //           location, time, whatsapp, adminId, employerId, salarytype, interviewername 
-            //       };
-
-            //       // Save the job in DB
-            //       const newJob = await jobModel.create(obj);
-            //       console.log("✅ New Job Saved:", newJob); // Log saved job details
-
-            //       let msg =
-            //           `This is a new ${companyName} company registered post by email id is ${email}
-            //           Job profile is ${jobProfile} or salary ${minSalary}-${maxSalary}/${period},
-            //           location is ${location} and website Link.
-            //           <h3>Thank you <br>Labor Link Team</h3>`;
-
-            //       sent.sendMail("Admin", "amitparnets@gmail.com", msg);
-            //       console.log("📧 Email Sent Successfully");
-
-            //       return res.status(200).json({ success: "Successfully registered" });
-
-            //   } catch (err) {
-            //       console.error("❌ Error in Register:", err); // Log error
-            //       return res.status(500).json({ success: false, message: "Internal Server Error" });
-            //   }
-            // }
-
-
+} 
   async registeredjobbyId(req, res){
     try {
       const { jobId } = req.params;
@@ -725,7 +663,7 @@ async addShortList(req, res) {
       sent.sendMail(
         data.userId.fullName,
         data.userId.email,
-        `This ${data.companyId.companyName} company shortlisted you for the position ${data.companyId.jobProfile}. Phone: ${data.companyId.companymobile}.<h3>Thank you <br>Labor Link Team</h3>`
+        ` Congratulations! Your profile has been shortlisted for the position of  ${data.companyId.jobProfile} in ${data.companyId.companyName}<h3>Our team will connect with you shortly to discuss the next steps.</h3>`
       );
     } else {
       console.log("Missing user or company data, email not sent.");
@@ -738,60 +676,6 @@ async addShortList(req, res) {
   }
 }
 
-
-// async addSelect(req, res) {
-//     try {
-//       const { userId, companyId } = req.body;
-//       let data = await applyModel
-//         .findOne({ userId: userId, companyId: companyId })
-//         .populate("userId")
-//         .populate("companyId");
-
-// console.log("check",data)
-// // Check if data exists
-//       if (!data) {
-//         return res.status(404).json({ error: "No application found" });
-//       }
-//             if (data.status == "Selected") {
-//         return res.status(400).json({ error: "already selected" });
-//       }
-
-//       try {
-//         console.log("hiii")
-//         let update = await applyModel.findOneAndUpdate(
-//           { userId: new mongoose.Types.ObjectId(userId), companyId: new mongoose.Types.ObjectId(companyId) },
-//           { $set: { status: "Selected" } },
-//           { new: true }
-//         );
-//         console.log(update,"this is an update ")
-      
-//         if (!update) {
-//           console.log("No matching document found");
-//         } else {
-//           console.log("Update successful:", update);
-//         }
-//       } catch (error) {
-//         console.error("Error updating document:", error);
-//       }
-//       console.log(update,"update")
-//       if (!update)
-//         return res.status(400).json({ success: "Something went worng" });
-//       sent.sendMail(
-//         data.userId.name,
-//         data.userId.email,
-//         "This " +
-//           data.companyId.CompanyName +
-//           " company Selected you for a position " +
-//           data.companyId.jobProfile +
-//           ", and email is " +
-//           data.companyId.email +
-//           "."+"<h3>Thank you <br>Labor Link Team</h3>"
-//       );
-//       return res.status(200).json({ success: "Successfully Selected" });
-//     } catch (err) {
-//       console.log(err);
-//     }
-//   }
 
 
 async  addSelect(req, res) {
@@ -870,7 +754,8 @@ async  addSelect(req, res) {
           await sent.sendMail(
               data.userId.fullName,
               data.userId.email,
-              `This ${data.companyId.companyName} company selected you for a position ${data.companyId.jobProfile}, and phone is ${data.companyId.companymobile}.
+              `We are pleased to inform you that you have been selected for the position of ${data.companyId.jobProfile} in ${data.companyId.companyName}Our HR team will contact you with the joining formalities and offer details. Congratulations once again!
+.
               <h3>Thank you <br>Labor Link Team</h3>`
           );
           console.log("Email sent successfully");
