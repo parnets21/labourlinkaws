@@ -165,7 +165,7 @@ const sendInterviewDetails = async (name, mobile, interviewDetails) => {
   try {
   
 
-    // Format mobile number (ensure it's a string and remove all non-digits)
+ 
     const formattedMobile = String(mobile).replace(/\D/g, '');
     
     // Ensure proper formatting (91 for India + 10 digits)

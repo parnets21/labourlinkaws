@@ -813,15 +813,15 @@ if (slotId) {
   await sendInterviewDetails(
     name,
     mobile,
-    `You are shortlisted for an interview.\n
-     Date: ${slot.date.toDateString()}\n
-     Time: ${slot.time}\n
-     Duration: ${slot.duration}\n
-     Platform: ${platform || "Not Specified"}\n
-     Platform Link: ${meetingLink || "Not Specified"}\n
-     Platform Password: ${meetingPassword || "Not Required"}\n
-     Note: ${interviewNotes || "Not Required"}\n
-     Thank you,\nLabor Link Team`
+    `You are shortlisted for an interview.
+     Date: ${slot.date.toDateString()}
+     Time: ${slot.time}
+     Duration: ${slot.duration}
+     Platform: ${platform || "Not Specified"}
+     Platform Link: ${meetingLink || "Not Specified"}
+     Platform Password: ${meetingPassword || "Not Required"}
+     Note: ${interviewNotes || "Not Required"}
+     Thank you,Labor Link Team`
   );
 
 } else {
@@ -846,8 +846,8 @@ if (slotId) {
   await sendInterviewDetails(
     name,
     mobile,
-    `You are shortlisted for an interview.\n
-     Date: ${interviewDate.toDateString()}\n
+    `You are shortlisted for an interview.
+     Date: ${interviewDate.toDateString()}
      Time: ${interviewDate.toTimeString().split(" ")[0]}
      Duration: ${duration} minutes
      Platform: ${platform || "Not Specified"}
