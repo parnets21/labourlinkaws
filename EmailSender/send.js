@@ -119,13 +119,13 @@ const sendWhatsAppShortlisted = async (name, mobile, msg) => {
  
 const sendSelectedWhatsapp = async (name,mobile,msg) =>{  
     try {
-    // Ensure mobile is a STRING with country code but no + sign
+
     const formattedMobile = String(mobile).replace(/\D/g, ''); // Remove all non-digits
     
     const payload = {
       apiKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4OTMyYzBlZmY4NGRiMGMwZjNlNDg4ZiIsIm5hbWUiOiJMYWJvciBMaW5rIiwiYXBwTmFtZSI6IkFpU2Vuc3kiLCJjbGllbnRJZCI6IjY4OTMyYzBkZmY4NGRiMGMwZjNlNDg4NyIsImFjdGl2ZVBsYW4iOiJCQVNJQ19UUklBTCIsImlhdCI6MTc1NDQ3NTUzNH0.1SEjuYr_EQBgevXcTCP2wMTQ-M_EuznoS_-3XEiEeK4",
       campaignName: "selected candidates",
-      destination: formattedMobile, // MUST be string without + sign
+      destination: formattedMobile, 
       userName: "Labor Link",
       templateParams: [name, msg],
       source: "new-landing-page form",

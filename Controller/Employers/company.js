@@ -774,7 +774,7 @@ async  addSelect(req, res) {
         try {
           await sent.sendSelectedWhatsapp(
               data.userId.fullName,
-              data.userId.email,
+              data.userId.phone,
               `We are pleased to inform you that you have been selected for the position of ${data.companyId.jobProfile} in ${data.companyId.companyName}Our HR team will contact you with the joining formalities and offer details. Congratulations once again!
 .
               <h3>Thank you <br>Labor Link Team</h3>`
