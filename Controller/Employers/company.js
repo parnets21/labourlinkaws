@@ -863,7 +863,7 @@ async addSelect(req, res) {
   await sent.sendSelectedWhatsapp(
     data.userId.fullName,
     data.userId.phone,
-    `Hello ${data.userId.fullName},\n\nWe are pleased to inform you that you have been selected for the position of ${data.companyId.jobProfile} in ${data.companyId.companyName}. Our HR team will contact you with the joining formalities and offer details.\n\nCongratulations once again!\n\nThank you,\nLabor Link Team`
+    `Hello ${data.userId.fullName},We are pleased to inform you that you have been selected for the position of ${data.companyId.jobProfile} in ${data.companyId.companyName}. Our HR team will contact you with the joining formalities and offer details.Congratulations once again!Thank you,Labor Link Team`
   );
   console.log("WhatsApp message sent successfully");
 
