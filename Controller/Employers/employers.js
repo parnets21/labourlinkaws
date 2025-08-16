@@ -755,6 +755,39 @@ class Employers {
          <strong>Note:</strong> ${interviewNotes || "Not Specified"}<br>
          <h3>Thank you,<br>Labor Link Team</h3>`
         );
+      }   
+        
+        if (slotId) {
+        const slot = await Appointment.findById(slotId);
+        await send.sendMail(
+          name,
+          email,
+          `You are shortlisted for an interview.<br>
+         <strong>Date:</strong> ${slot.date.toDateString()}<br>
+         <strong>Time:</strong> ${slot.time}<br>
+         <strong>Duration:</strong> ${slot.duration}<br>
+         <strong>Platform:</strong> ${platform || "Not Specified"}<br><br>
+           <strong>Platform Link:</strong> ${meetingLink || "Not Specified"}<br>
+     <strong>Platform Password:</strong> ${meetingPassword || "Not Required"}<br>
+     <strong>Note:</strong> ${interviewNotes || "Not Required"}<br>
+         <h3>Thank you,<br>Labor Link Team</h3>`
+        );
+      } else {
+        // Format the date from the schedule for the email
+        const interviewDate = new Date(schedule);
+        await send.sendInterviewDetails(
+          name,
+          phone,
+          `You are shortlisted for an interview.<br>
+         <strong>Date:</strong> ${interviewDate.toDateString()}<br>
+         <strong>Time:</strong> ${interviewDate.toTimeString().split(' ')[0]}<br>
+         <strong>Duration:</strong> ${duration} minutes<br>
+         <strong>Platform:</strong> ${platform || "Not Specified"}<br>
+         <strong>Platform Link:</strong> ${meetingLink || "Not Specified"}<br>
+         <strong>Platform Password:</strong> ${meetingPassword || "Not Required"}<br>
+         <strong>Note:</strong> ${interviewNotes || "Not Specified"}<br>
+         <h3>Thank you,<br>Labor Link Team</h3>`
+        );
       }
 
       return res.status(201).json({
