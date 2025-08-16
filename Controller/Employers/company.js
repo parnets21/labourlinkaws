@@ -757,9 +757,22 @@ async  addSelect(req, res) {
           return res.status(500).json({ error: "Database update failed" });
       }
 
-      // Send email only if update is successful
+    
       try {
           await sent.sendMail(
+              data.userId.fullName,
+              data.userId.email,
+              `We are pleased to inform you that you have been selected for the position of ${data.companyId.jobProfile} in ${data.companyId.companyName}Our HR team will contact you with the joining formalities and offer details. Congratulations once again!
+.
+              <h3>Thank you <br>Labor Link Team</h3>`
+          );
+          console.log("Email sent successfully");
+      } catch (emailError) {
+          console.error("Error sending email:", emailError);
+      } 
+       
+        try {
+          await sent.sendSelectedWhatsapp(
               data.userId.fullName,
               data.userId.email,
               `We are pleased to inform you that you have been selected for the position of ${data.companyId.jobProfile} in ${data.companyId.companyName}Our HR team will contact you with the joining formalities and offer details. Congratulations once again!
