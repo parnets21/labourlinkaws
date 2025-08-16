@@ -686,111 +686,190 @@ async addShortList(req, res) {
 
 
 
-async  addSelect(req, res) {
-  try {
-      console.log(req.body, "this is body");
+// async  addSelect(req, res) {
+//   try {
+//       console.log(req.body, "this is body");
 
-      const { userId, companyId } = req.body;
-      console.log("Received request:", { userId, companyId });
+//       const { userId, companyId } = req.body;
+//       console.log("Received request:", { userId, companyId });
 
-      // Validate input
-      if (!userId || !companyId) {
-          return res.status(400).json({ error: "User ID and Company ID are required" });
-      }
+//       // Validate input
+//       if (!userId || !companyId) {
+//           return res.status(400).json({ error: "User ID and Company ID are required" });
+//       }
 
-      // Convert to ObjectId
-      let userObjectId, companyObjectId;
-      try {
-          userObjectId = new mongoose.Types.ObjectId(userId);
-          companyObjectId = new mongoose.Types.ObjectId(companyId);
-      } catch (err) {
-          return res.status(400).json({ error: "Invalid ObjectId format" });
-      }
+//       // Convert to ObjectId
+//       let userObjectId, companyObjectId;
+//       try {
+//           userObjectId = new mongoose.Types.ObjectId(userId);
+//           companyObjectId = new mongoose.Types.ObjectId(companyId);
+//       } catch (err) {
+//           return res.status(400).json({ error: "Invalid ObjectId format" });
+//       }
 
-      // Debug logs (optional)
-      const apps = await applyModel.find({ userId: userObjectId });
-      console.log("Apps with this userId:", apps);
+//       // Debug logs (optional)
+//       const apps = await applyModel.find({ userId: userObjectId });
+//       console.log("Apps with this userId:", apps);
 
-      const apps2 = await applyModel.find({ companyId: companyObjectId });
-      console.log("Apps with this companyId:", apps2);
+//       const apps2 = await applyModel.find({ companyId: companyObjectId });
+//       console.log("Apps with this companyId:", apps2);
 
-      // Fetch the application
-      let data = await applyModel
-          .findOne({ userId: userObjectId, companyId: companyObjectId })
-          .populate("userId")
-          .populate("companyId")
-          .lean();
+//       // Fetch the application
+//       let data = await applyModel
+//           .findOne({ userId: userObjectId, companyId: companyObjectId })
+//           .populate("userId")
+//           .populate("companyId")
+//           .lean();
 
-      console.log("Fetched data:", data);
+//       console.log("Fetched data:", data);
 
-      if (!data) {
-          console.log("No application found");
-          return res.status(404).json({ error: "No application found" });
-      }
+//       if (!data) {
+//           console.log("No application found");
+//           return res.status(404).json({ error: "No application found" });
+//       }
 
-      // Check if already selected
-      console.log("Current Status:", data.status);
-      if (data.status === "Selected") {
-          console.log("Already selected condition met! Returning error...");
-          return res.status(400).json({ error: "Already selected" });
-      }
+//       // Check if already selected
+//       console.log("Current Status:", data.status);
+//       if (data.status === "Selected") {
+//           console.log("Already selected condition met! Returning error...");
+//           return res.status(400).json({ error: "Already selected" });
+//       }
 
-      // Update application status
-      let update;
-      try {
-          console.log("Updating application status...");
+//       // Update application status
+//       let update;
+//       try {
+//           console.log("Updating application status...");
 
-          update = await applyModel.findOneAndUpdate(
-              { userId: userObjectId, companyId: companyObjectId },
-              { $set: { status: "Selected" } },
-              { new: true }
-          );
+//           update = await applyModel.findOneAndUpdate(
+//               { userId: userObjectId, companyId: companyObjectId },
+//               { $set: { status: "Selected" } },
+//               { new: true }
+//           );
 
-          if (!update) {
-              console.log("No matching document found for update");
-              return res.status(400).json({ error: "Something went wrong" });
-          }
+//           if (!update) {
+//               console.log("No matching document found for update");
+//               return res.status(400).json({ error: "Something went wrong" });
+//           }
 
-          console.log("Update successful:", update);
-      } catch (error) {
-          console.error("Error updating document:", error);
-          return res.status(500).json({ error: "Database update failed" });
-      }
+//           console.log("Update successful:", update);
+//       } catch (error) {
+//           console.error("Error updating document:", error);
+//           return res.status(500).json({ error: "Database update failed" });
+//       }
 
     
-      try {
-          await sent.sendMail(
-              data.userId.fullName,
-              data.userId.email,
-              `We are pleased to inform you that you have been selected for the position of ${data.companyId.jobProfile} in ${data.companyId.companyName}Our HR team will contact you with the joining formalities and offer details. Congratulations once again!
-.
-              <h3>Thank you <br>Labor Link Team</h3>`
-          );
-          console.log("Email sent successfully");
-      } catch (emailError) {
-          console.error("Error sending email:", emailError);
-      } 
+//       try {
+//           await sent.sendMail(
+//               data.userId.fullName,
+//               data.userId.email,
+//               `We are pleased to inform you that you have been selected for the position of ${data.companyId.jobProfile} in ${data.companyId.companyName}Our HR team will contact you with the joining formalities and offer details. Congratulations once again!
+// .
+//               <h3>Thank you <br>Labor Link Team</h3>`
+//           );
+//           console.log("Email sent successfully");
+//       } catch (emailError) {
+//           console.error("Error sending email:", emailError);
+//       } 
        
-        try {
-          await sent.sendSelectedWhatsapp(
-              data.userId.fullName,
-              data.userId.phone,
-              `We are pleased to inform you that you have been selected for the position of ${data.companyId.jobProfile} in ${data.companyId.companyName}Our HR team will contact you with the joining formalities and offer details. Congratulations once again!
-.
-              <h3>Thank you <br>Labor Link Team</h3>`
-          );
-          console.log("Email sent successfully");
-      } catch (emailError) {
-          console.error("Error sending email:", emailError);
-      }
+//         try {
+//            sent.sendSelectedWhatsapp(
+//               data.userId.fullName,
+//               data.userId.phone,
+//               `We are pleased to inform you that you have been selected for the position of ${data.companyId.jobProfile} in ${data.companyId.companyName}Our HR team will contact you with the joining formalities and offer details. Congratulations once again!
+// .
+//               <h3>Thank you <br>Labor Link Team</h3>`
+//           );
+//           console.log("Email sent successfully");
+//       } catch (emailError) {
+//           console.error("Error sending email:", emailError);
+//       }
 
-      return res.status(200).json({ success: "Successfully Selected" });
+//       return res.status(200).json({ success: "Successfully Selected" });
 
-  } catch (err) {
-      console.error("Unexpected error:", err);
-      return res.status(500).json({ error: "Internal server error" });
+//   } catch (err) {
+//       console.error("Unexpected error:", err);
+//       return res.status(500).json({ error: "Internal server error" });
+//   }
+// }   
+  
+async addSelect(req, res) {
+  console.log(req.body, "this is body");
+
+  const { userId, companyId } = req.body;
+  console.log("Received request:", { userId, companyId });
+
+  // Validate input
+  if (!userId || !companyId) {
+    return res.status(400).json({ error: "User ID and Company ID are required" });
   }
+
+  // Convert to ObjectId safely
+  let userObjectId, companyObjectId;
+  try {
+    userObjectId = new mongoose.Types.ObjectId(userId);
+    companyObjectId = new mongoose.Types.ObjectId(companyId);
+  } catch {
+    return res.status(400).json({ error: "Invalid ObjectId format" });
+  }
+
+  // Debug logs
+  const apps = await applyModel.find({ userId: userObjectId });
+  console.log("Apps with this userId:", apps);
+
+  const apps2 = await applyModel.find({ companyId: companyObjectId });
+  console.log("Apps with this companyId:", apps2);
+
+  // Fetch application
+  let data = await applyModel
+    .findOne({ userId: userObjectId, companyId: companyObjectId })
+    .populate("userId")
+    .populate("companyId")
+    .lean();
+
+  console.log("Fetched data:", data);
+
+  if (!data) {
+    return res.status(404).json({ error: "No application found" });
+  }
+
+  // Check if already selected
+  if (data.status === "Selected") {
+    return res.status(400).json({ error: "Already selected" });
+  }
+
+  // Update status
+  const update = await applyModel.findOneAndUpdate(
+    { userId: userObjectId, companyId: companyObjectId },
+    { $set: { status: "Selected" } },
+    { new: true }
+  );
+
+  if (!update) {
+    return res.status(400).json({ error: "Something went wrong" });
+  }
+
+  console.log("Update successful:", update);
+
+  // Send Email
+  await sent.sendMail(
+    data.userId.fullName,
+    data.userId.email,
+    `We are pleased to inform you that you have been selected for the position of ${data.companyId.jobProfile} in ${data.companyId.companyName}. Our HR team will contact you with the joining formalities and offer details. Congratulations once again!<br><br>
+     <h3>Thank you <br>Labor Link Team</h3>`
+  );
+  console.log("Email sent successfully");
+
+  // Send WhatsApp
+  await sent.sendSelectedWhatsapp(
+    data.userId.fullName,
+    data.userId.phone,
+    `Hello ${data.userId.fullName},\n\nWe are pleased to inform you that you have been selected for the position of ${data.companyId.jobProfile} in ${data.companyId.companyName}. Our HR team will contact you with the joining formalities and offer details.\n\nCongratulations once again!\n\nThank you,\nLabor Link Team`
+  );
+  console.log("WhatsApp message sent successfully");
+
+  return res.status(200).json({ success: "Successfully Selected" });
 }
+
 
   async getSelectData(req, res) {
     try {
