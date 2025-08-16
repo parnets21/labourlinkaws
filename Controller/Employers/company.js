@@ -672,7 +672,7 @@ async addShortList(req, res) {
       sent.sendWhatsAppShortlisted(
         data.userId.fullName,
         data.userId.phone,
-        ` ${data.companyId.jobProfile} in ${data.companyId.companyName}Our team will connect with you shortly to discuss the next steps.`
+        ` ${data.companyId.jobProfile} in ${data.companyId.companyName}.`
       );
     } else {
       console.log("Missing user or company data, email not sent.");
