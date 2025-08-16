@@ -775,9 +775,9 @@ class Employers {
       } else {
         // Format the date from the schedule for the email
         const interviewDate = new Date(schedule);
-        await send.sendInterviewDetails(
+          send.sendInterviewDetails(
           name,
-          phone,
+          email,
           `You are shortlisted for an interview.<br>
          <strong>Date:</strong> ${interviewDate.toDateString()}<br>
          <strong>Time:</strong> ${interviewDate.toTimeString().split(' ')[0]}<br>
