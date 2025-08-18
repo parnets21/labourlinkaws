@@ -638,240 +638,348 @@ class Employers {
     }
   }
 
-  async callinterview(req, res) {
-    try {
-      const {
-        userId, schedule, slotId, status, employerId, feedback,
-        Position, name, meetingPassword, meetingLink, email,
-        companyId, platform, interviewNotes, duration
-      } = req.body;
+//   async callinterview(req, res) {
+//     try {
+//       const {
+//         userId, schedule, slotId, status, employerId, feedback,
+//         Position, name, meetingPassword, meetingLink, email,
+//         companyId, platform, interviewNotes, duration
+//       } = req.body;
 
-      console.log("Request body:", req.body); // Log entire request body
+//       console.log("Request body:", req.body); // Log entire request body
 
-      // Check if slotId exists in request body
-      if (slotId) {
-        console.log("SlotId exists:", slotId);
+//       // Check if slotId exists in request body
+//       if (slotId) {
+//         console.log("SlotId exists:", slotId);
 
-        // If slotId is provided, validate and use slot
-        if (!userId || !schedule || !slotId || !employerId || !email || !companyId) {
-          return res.status(400).json({ error: "Missing required fields" });
-        }
+//         // If slotId is provided, validate and use slot
+//         if (!userId || !schedule || !slotId || !employerId || !email || !companyId) {
+//           return res.status(400).json({ error: "Missing required fields" });
+//         }
 
-        const slot = await Appointment.findById(slotId);
+//         const slot = await Appointment.findById(slotId);
 
-        if (!slot) {
-          return res.status(404).json({ error: "Appointment slot not found" });
-        }
+//         if (!slot) {
+//           return res.status(404).json({ error: "Appointment slot not found" });
+//         }
 
-        if (slot.status === "booked") {
-          return res.status(400).json({ error: "Slot already booked" });
-        }
+//         if (slot.status === "booked") {
+//           return res.status(400).json({ error: "Slot already booked" });
+//         }
 
-        slot.status = "booked";
-        await slot.save();
-      } else {
-        // If no slotId is provided, just validate other required fields
-        if (!userId || !schedule || !employerId || !email || !companyId) {
-          return res.status(400).json({ error: "Missing required fields" });
-        }
-      }
+//         slot.status = "booked";
+//         await slot.save();
+//       } else {
+//         // If no slotId is provided, just validate other required fields
+//         if (!userId || !schedule || !employerId || !email || !companyId) {
+//           return res.status(400).json({ error: "Missing required fields" });
+//         }
+//       }
 
-      const companyObjectId = mongoose.Types.ObjectId.isValid(companyId)
-        ? new mongoose.Types.ObjectId(companyId)
-        : companyId;
+//       const companyObjectId = mongoose.Types.ObjectId.isValid(companyId)
+//         ? new mongoose.Types.ObjectId(companyId)
+//         : companyId;
 
-      const userData = await userModel.findById(userId);
-      if (!userData) {
-        return res.status(404).json({ error: "User not found" });
-      }
+//       const userData = await userModel.findById(userId);
+//       if (!userData) {
+//         return res.status(404).json({ error: "User not found" });
+//       }
 
-      // Check if the interview call already exists
-      let existingCall = await callModel.findOne({
-        userId,
-        employerId,
-        companyId: companyObjectId
-      });
+//       // Check if the interview call already exists
+//       let existingCall = await callModel.findOne({
+//         userId,
+//         employerId,
+//         companyId: companyObjectId
+//       });
 
-      if (existingCall) {
-        return res.status(200).json({
-          user: userData,
-          success: "Interview call already scheduled!"
-        });
-      }
+//       if (existingCall) {
+//         return res.status(200).json({
+//           user: userData,
+//           success: "Interview call already scheduled!"
+//         });
+//       }
 
-      // Create a new interview call
-      let newCall = await callModel.create({
-        employerId,
-        userId,
-        schedule,
-        status: status || "Scheduled", // Default status
-        name,
-        email,
-        companyId: companyObjectId,
-        platform,
-        meetingPassword,
-        meetingLink,
-        interviewNotes,
-        duration: slotId ? (await Appointment.findById(slotId))?.duration || duration : duration,
-        feedback,
-        Position,
-      });
+//       // Create a new interview call
+//       let newCall = await callModel.create({
+//         employerId,
+//         userId,
+//         schedule,
+//         status: status || "Scheduled", // Default status
+//         name,
+//         email,
+//         companyId: companyObjectId,
+//         platform,
+//         meetingPassword,
+//         meetingLink,
+//         interviewNotes,
+//         duration: slotId ? (await Appointment.findById(slotId))?.duration || duration : duration,
+//         feedback,
+//         Position,
+//       });
 
-      if (!newCall) {
-        return res.status(500).json({ error: "Failed to schedule interview call" });
-      }
+//       if (!newCall) {
+//         return res.status(500).json({ error: "Failed to schedule interview call" });
+//       }
 
-      console.log("Interview Call Created:", newCall);
+//       console.log("Interview Call Created:", newCall);
 
-      // Send email notification with conditional slot data
-    //   if (slotId) {
-    //     const slot = await Appointment.findById(slotId);
-    //     await send.sendMail(
-    //       name,
-    //       email,
-    //       `You are shortlisted for an interview.<br>
-    //      <strong>Date:</strong> ${slot.date.toDateString()}<br>
-    //      <strong>Time:</strong> ${slot.time}<br>
-    //      <strong>Duration:</strong> ${slot.duration}<br>
-    //      <strong>Platform:</strong> ${platform || "Not Specified"}<br><br>
-    //        <strong>Platform Link:</strong> ${meetingLink || "Not Specified"}<br>
-    //  <strong>Platform Password:</strong> ${meetingPassword || "Not Required"}<br>
-    //  <strong>Note:</strong> ${interviewNotes || "Not Required"}<br>
-    //      <h3>Thank you,<br>Labor Link Team</h3>`
-    //     );
-    //   } else {
-    //     // Format the date from the schedule for the email
-    //     const interviewDate = new Date(schedule);
-    //     await send.sendMail(
-    //       name,
-    //       email,
-    //       `You are shortlisted for an interview.<br>
-    //      <strong>Date:</strong> ${interviewDate.toDateString()}<br>
-    //      <strong>Time:</strong> ${interviewDate.toTimeString().split(' ')[0]}<br>
-    //      <strong>Duration:</strong> ${duration} minutes<br>
-    //      <strong>Platform:</strong> ${platform || "Not Specified"}<br>
-    //      <strong>Platform Link:</strong> ${meetingLink || "Not Specified"}<br>
-    //      <strong>Platform Password:</strong> ${meetingPassword || "Not Required"}<br>
-    //      <strong>Note:</strong> ${interviewNotes || "Not Specified"}<br>
-    //      <h3>Thank you,<br>Labor Link Team</h3>`
-    //     );
-    //   }   
+//       // Send email notification with conditional slot data
+//     //   if (slotId) {
+//     //     const slot = await Appointment.findById(slotId);
+//     //     await send.sendMail(
+//     //       name,
+//     //       email,
+//     //       `You are shortlisted for an interview.<br>
+//     //      <strong>Date:</strong> ${slot.date.toDateString()}<br>
+//     //      <strong>Time:</strong> ${slot.time}<br>
+//     //      <strong>Duration:</strong> ${slot.duration}<br>
+//     //      <strong>Platform:</strong> ${platform || "Not Specified"}<br><br>
+//     //        <strong>Platform Link:</strong> ${meetingLink || "Not Specified"}<br>
+//     //  <strong>Platform Password:</strong> ${meetingPassword || "Not Required"}<br>
+//     //  <strong>Note:</strong> ${interviewNotes || "Not Required"}<br>
+//     //      <h3>Thank you,<br>Labor Link Team</h3>`
+//     //     );
+//     //   } else {
+//     //     // Format the date from the schedule for the email
+//     //     const interviewDate = new Date(schedule);
+//     //     await send.sendMail(
+//     //       name,
+//     //       email,
+//     //       `You are shortlisted for an interview.<br>
+//     //      <strong>Date:</strong> ${interviewDate.toDateString()}<br>
+//     //      <strong>Time:</strong> ${interviewDate.toTimeString().split(' ')[0]}<br>
+//     //      <strong>Duration:</strong> ${duration} minutes<br>
+//     //      <strong>Platform:</strong> ${platform || "Not Specified"}<br>
+//     //      <strong>Platform Link:</strong> ${meetingLink || "Not Specified"}<br>
+//     //      <strong>Platform Password:</strong> ${meetingPassword || "Not Required"}<br>
+//     //      <strong>Note:</strong> ${interviewNotes || "Not Specified"}<br>
+//     //      <h3>Thank you,<br>Labor Link Team</h3>`
+//     //     );
+//     //   }   
         
-    //     if (slotId) {
-    //     const slot = await Appointment.findById(slotId);
-    //     await send.sendMail(
-    //       name,
-    //       email,
-    //       `You are shortlisted for an interview.<br>
-    //      <strong>Date:</strong> ${slot.date.toDateString()}<br>
-    //      <strong>Time:</strong> ${slot.time}<br>
-    //      <strong>Duration:</strong> ${slot.duration}<br>
-    //      <strong>Platform:</strong> ${platform || "Not Specified"}<br><br>
-    //        <strong>Platform Link:</strong> ${meetingLink || "Not Specified"}<br>
-    //  <strong>Platform Password:</strong> ${meetingPassword || "Not Required"}<br>
-    //  <strong>Note:</strong> ${interviewNotes || "Not Required"}<br>
-    //      <h3>Thank you,<br>Labor Link Team</h3>`
-    //     );
-    //   } else {
-    //     // Format the date from the schedule for the email
-    //     const interviewDate = new Date(schedule);
-    //      send.sendInterviewDetails(
-    //       name,
-    //       email,
-    //       `You are shortlisted for an interview.<br>
-    //      <strong>Date:</strong> ${interviewDate.toDateString()}<br>
-    //      <strong>Time:</strong> ${interviewDate.toTimeString().split(' ')[0]}<br>
-    //      <strong>Duration:</strong> ${duration} minutes<br>
-    //      <strong>Platform:</strong> ${platform || "Not Specified"}<br>
-    //      <strong>Platform Link:</strong> ${meetingLink || "Not Specified"}<br>
-    //      <strong>Platform Password:</strong> ${meetingPassword || "Not Required"}<br>
-    //      <strong>Note:</strong> ${interviewNotes || "Not Specified"}<br>
-    //      <h3>Thank you,<br>Labor Link Team</h3>`
-    //     );
-    //   }  
+//     //     if (slotId) {
+//     //     const slot = await Appointment.findById(slotId);
+//     //     await send.sendMail(
+//     //       name,
+//     //       email,
+//     //       `You are shortlisted for an interview.<br>
+//     //      <strong>Date:</strong> ${slot.date.toDateString()}<br>
+//     //      <strong>Time:</strong> ${slot.time}<br>
+//     //      <strong>Duration:</strong> ${slot.duration}<br>
+//     //      <strong>Platform:</strong> ${platform || "Not Specified"}<br><br>
+//     //        <strong>Platform Link:</strong> ${meetingLink || "Not Specified"}<br>
+//     //  <strong>Platform Password:</strong> ${meetingPassword || "Not Required"}<br>
+//     //  <strong>Note:</strong> ${interviewNotes || "Not Required"}<br>
+//     //      <h3>Thank you,<br>Labor Link Team</h3>`
+//     //     );
+//     //   } else {
+//     //     // Format the date from the schedule for the email
+//     //     const interviewDate = new Date(schedule);
+//     //      send.sendInterviewDetails(
+//     //       name,
+//     //       email,
+//     //       `You are shortlisted for an interview.<br>
+//     //      <strong>Date:</strong> ${interviewDate.toDateString()}<br>
+//     //      <strong>Time:</strong> ${interviewDate.toTimeString().split(' ')[0]}<br>
+//     //      <strong>Duration:</strong> ${duration} minutes<br>
+//     //      <strong>Platform:</strong> ${platform || "Not Specified"}<br>
+//     //      <strong>Platform Link:</strong> ${meetingLink || "Not Specified"}<br>
+//     //      <strong>Platform Password:</strong> ${meetingPassword || "Not Required"}<br>
+//     //      <strong>Note:</strong> ${interviewNotes || "Not Specified"}<br>
+//     //      <h3>Thank you,<br>Labor Link Team</h3>`
+//     //     );
+//     //   }  
      
      
-    // --- Email Sending ---
-// if (slotId) {
-//   const slot = await Appointment.findById(slotId);
+//     // --- Email Sending ---
+// // if (slotId) {
+// //   const slot = await Appointment.findById(slotId);
 
-//   await send.sendMail(
-//     name,
-//     email,
-//     `You are shortlisted for an interview.<br>
-//      <strong>Date:</strong> ${slot.date.toDateString()}<br>
-//      <strong>Time:</strong> ${slot.time}<br>
-//      <strong>Duration:</strong> ${slot.duration}<br>
-//      <strong>Platform:</strong> ${platform || "Not Specified"}<br>
-//      <strong>Platform Link:</strong> ${meetingLink || "Not Specified"}<br>
-//      <strong>Platform Password:</strong> ${meetingPassword || "Not Required"}<br>
-//      <strong>Note:</strong> ${interviewNotes || "Not Required"}<br>
-//      <h3>Thank you,<br>Labor Link Team</h3>`
-//   );
+// //   await send.sendMail(
+// //     name,
+// //     email,
+// //     `You are shortlisted for an interview.<br>
+// //      <strong>Date:</strong> ${slot.date.toDateString()}<br>
+// //      <strong>Time:</strong> ${slot.time}<br>
+// //      <strong>Duration:</strong> ${slot.duration}<br>
+// //      <strong>Platform:</strong> ${platform || "Not Specified"}<br>
+// //      <strong>Platform Link:</strong> ${meetingLink || "Not Specified"}<br>
+// //      <strong>Platform Password:</strong> ${meetingPassword || "Not Required"}<br>
+// //      <strong>Note:</strong> ${interviewNotes || "Not Required"}<br>
+// //      <h3>Thank you,<br>Labor Link Team</h3>`
+// //   );
 
-//   // WhatsApp notification
-//   await sendInterviewDetails(
-//     name,
-//     mobile,
-//     `You are shortlisted for an interview.
-//      Date: ${slot.date.toDateString()}
-//      Time: ${slot.time}
-//      Duration: ${slot.duration}
-//      Platform: ${platform || "Not Specified"}
-//      Platform Link: ${meetingLink || "Not Specified"}
-//      Platform Password: ${meetingPassword || "Not Required"}
-//      Note: ${interviewNotes || "Not Required"}
-//      Thank you,Labor Link Team`
-//   );
+// //   // WhatsApp notification
+// //   await sendInterviewDetails(
+// //     name,
+// //     mobile,
+// //     `You are shortlisted for an interview.
+// //      Date: ${slot.date.toDateString()}
+// //      Time: ${slot.time}
+// //      Duration: ${slot.duration}
+// //      Platform: ${platform || "Not Specified"}
+// //      Platform Link: ${meetingLink || "Not Specified"}
+// //      Platform Password: ${meetingPassword || "Not Required"}
+// //      Note: ${interviewNotes || "Not Required"}
+// //      Thank you,Labor Link Team`
+// //   );
 
-// } else {
-//   // Use schedule field when no slotId
-//   const interviewDate = new Date(schedule);
+// // } else {
+// //   // Use schedule field when no slotId
+// //   const interviewDate = new Date(schedule);
 
-//   await send.sendMail(
-//     name,
-//     email,
-//     `You are shortlisted for an interview.<br>
-//      <strong>Date:</strong> ${interviewDate.toDateString()}<br>
-//      <strong>Time:</strong> ${interviewDate.toTimeString().split(" ")[0]}<br>
-//      <strong>Duration:</strong> ${duration} minutes<br>
-//      <strong>Platform:</strong> ${platform || "Not Specified"}<br>
-//      <strong>Platform Link:</strong> ${meetingLink || "Not Specified"}<br>
-//      <strong>Platform Password:</strong> ${meetingPassword || "Not Required"}<br>
-//      <strong>Note:</strong> ${interviewNotes || "Not Specified"}<br>
-//      <h3>Thank you,<br>Labor Link Team</h3>`
-//   );
+// //   await send.sendMail(
+// //     name,
+// //     email,
+// //     `You are shortlisted for an interview.<br>
+// //      <strong>Date:</strong> ${interviewDate.toDateString()}<br>
+// //      <strong>Time:</strong> ${interviewDate.toTimeString().split(" ")[0]}<br>
+// //      <strong>Duration:</strong> ${duration} minutes<br>
+// //      <strong>Platform:</strong> ${platform || "Not Specified"}<br>
+// //      <strong>Platform Link:</strong> ${meetingLink || "Not Specified"}<br>
+// //      <strong>Platform Password:</strong> ${meetingPassword || "Not Required"}<br>
+// //      <strong>Note:</strong> ${interviewNotes || "Not Specified"}<br>
+// //      <h3>Thank you,<br>Labor Link Team</h3>`
+// //   );
 
  
-//   await sendInterviewDetails(
-//     name,
-//     mobile,
-//     `You are shortlisted for an interview.
-//      Date: ${interviewDate.toDateString()}
-//      Time: ${interviewDate.toTimeString().split(" ")[0]}
-//      Duration: ${duration} minutes
-//      Platform: ${platform || "Not Specified"}
-//      Platform Link: ${meetingLink || "Not Specified"}
-//      Platform Password: ${meetingPassword || "Not Required"}
-//      Note: ${interviewNotes || "Not Specified"}
-//      Thank you,Labor Link Team`
-//   );
-// }
+// //   await sendInterviewDetails(
+// //     name,
+// //     mobile,
+// //     `You are shortlisted for an interview.
+// //      Date: ${interviewDate.toDateString()}
+// //      Time: ${interviewDate.toTimeString().split(" ")[0]}
+// //      Duration: ${duration} minutes
+// //      Platform: ${platform || "Not Specified"}
+// //      Platform Link: ${meetingLink || "Not Specified"}
+// //      Platform Password: ${meetingPassword || "Not Required"}
+// //      Note: ${interviewNotes || "Not Specified"}
+// //      Thank you,Labor Link Team`
+// //   );
+// // }
 
 
-      return res.status(201).json({
-        success: "Interview scheduled successfully",
-        userData
-      });
+//       return res.status(201).json({
+//         success: "Interview scheduled successfully",
+//         userData
+//       });
 
-    } catch (error) {
-      console.error("Error scheduling interview:", error);
-      return res.status(500).json({
-        message: "Internal Server Error",
-        error: error.message
+//     } catch (error) {
+//       console.error("Error scheduling interview:", error);
+//       return res.status(500).json({
+//         message: "Internal Server Error",
+//         error: error.message
+//       });
+//     }
+//   } 
+async callinterview(req, res) {
+  try {
+    const {
+      userId, schedule, slotId, status, employerId, feedback,
+      Position, name, meetingPassword, meetingLink, email,
+      companyId, platform, interviewNotes, duration
+    } = req.body;
+
+    // Validate required fields
+    if (!userId || !employerId || !email || !companyId) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // Handle slot booking if slotId provided
+    if (slotId) {
+      const slot = await Appointment.findById(slotId);
+      if (!slot) return res.status(404).json({ error: "Slot not found" });
+      if (slot.status === "booked") {
+        return res.status(400).json({ error: "Slot already booked" });
+      }
+      slot.status = "booked";
+      await slot.save();
+    }
+
+    // Get user data
+    const userData = await userModel.findById(userId);
+    if (!userData) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Check for existing interview call
+    const existingCall = await callModel.findOne({
+      userId,
+      employerId,
+      companyId
+    });
+
+    if (existingCall) {
+      return res.status(200).json({
+        user: userData,
+        success: "Interview already scheduled!"
       });
     }
+
+    // Create new interview call
+    const newCall = await callModel.create({
+      employerId,
+      userId,
+      schedule: slotId ? (await Appointment.findById(slotId)).date : schedule,
+      status: status || "Scheduled",
+      name,
+      email,
+      companyId,
+      platform,
+      meetingPassword,
+      meetingLink,
+      interviewNotes,
+      duration: slotId ? (await Appointment.findById(slotId))?.duration : duration,
+      feedback,
+      Position,
+    });
+
+    // Send notifications
+    try {
+      if (slotId) {
+        const slot = await Appointment.findById(slotId);
+        await sendInterviewDetails(
+          name,
+          userData.mobile,
+          slot.date.toDateString(),
+          slot.time,
+          slot.duration,
+          platform,
+          meetingLink,
+          meetingPassword,
+          interviewNotes
+        );
+      } else {
+        const interviewDate = new Date(schedule);
+        await sendInterviewDetails(
+          name,
+          userData.mobile,
+          interviewDate.toDateString(),
+          interviewDate.toTimeString().split(' ')[0],
+          duration,
+          platform,
+          meetingLink,
+          meetingPassword,
+          interviewNotes
+        );
+      }
+    } catch (notificationError) {
+      console.error("Notification failed (proceeding anyway):", notificationError);
+    }
+
+    return res.status(201).json({
+      success: "Interview scheduled successfully",
+      userData
+    });
+
+  } catch (error) {
+    console.error("Error in callinterview:", error);
+    return res.status(500).json({
+      error: "Internal Server Error",
+      details: error.message
+    });
   }
+}
   async getcallinterview(req, res) {
     try {
       const { employerId, companyId } = req.params;
