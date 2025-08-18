@@ -1777,7 +1777,7 @@ class Employers {
       } 
             if (slotId) {
         const slot = await Appointment.findById(slotId);
-        await send.sendMail(
+        await send.sendInterviewDetails(
           name,
           email,
           `You are shortlisted for an interview.<br>
@@ -1790,10 +1790,10 @@ class Employers {
      <strong>Note:</strong> ${interviewNotes || "Not Required"}<br>
          <h3>Thank you,<br>Labor Link Team</h3>`
         );
-      } else {
+      }else {
         // Format the date from the schedule for the email
         const interviewDate = new Date(schedule);
-        await send.sendInterviewDetails(
+        await send.sendMail(
           name,
           email,
           `You are shortlisted for an interview.<br>
@@ -1806,7 +1806,7 @@ class Employers {
          <strong>Note:</strong> ${interviewNotes || "Not Specified"}<br>
          <h3>Thank you,<br>Labor Link Team</h3>`
         );
-      }
+      } 
 
       return res.status(201).json({
         success: "Interview scheduled successfully",
