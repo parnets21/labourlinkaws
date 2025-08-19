@@ -1171,7 +1171,8 @@ const userModel = require('../../Model/User/user');
 const intrestedModel = require("../../Model/Employers/intrested");
 const applyModel = require("../../Model/Employers/apply");
 const Appointment = require("../../Model/Admin/slotbook");
-const companyModel = require("../../Model/Employers/company");
+const companyModel = require("../../Model/Employers/company"); 
+
 
 // Utilities
 const send = require("../../EmailSender/send");
@@ -1207,7 +1208,8 @@ class Employers {
       if (existingEmail) return res.status(400).json({ error: "Email ID already exists!" });
 
       // Password hashing
-      let hashedPassword;
+      let hashedPassword; 
+      
       try {
         hashedPassword = await bcrypt.hash(password, 10);
       } catch (hashError) {

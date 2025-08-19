@@ -17,111 +17,227 @@ const path = require("path");
 const { uploadFile2, deleteFile } = require("../../middileware/aws");
 
 class user {
-    async register(req, res) {
-      try {
-        const {
-          profile,
-          fullName,
-          email,
-          phone,
-          location,
-          password,
-          confirmPassword,
-          experience,
-          workExperience,
-          jobType,
-          resume,
-          address,
-          education,
-          bio,
-          country,
-          street,
-          city,
-          state,
-          pincode,
-          skills,
-          jobRole,
-          companyType,
-          department,
-          workMode,
-          preferredSalary
-        } = req.body;
+    // async register(req, res) {
+    //   try {
+    //     const {
+    //       profile,
+    //       fullName,
+    //       email,
+    //       phone,
+    //       location,
+    //       password,
+    //       confirmPassword,
+    //       experience,
+    //       workExperience,
+    //       jobType,
+    //       resume,
+    //       address,
+    //       education,
+    //       bio,
+    //       country,
+    //       street,
+    //       city,
+    //       state,
+    //       pincode,
+    //       skills,
+    //       jobRole,
+    //       companyType,
+    //       department,
+    //       workMode,
+    //       preferredSalary
+    //     } = req.body;
   
-        console.log("Incoming request body:", req.body);
-        // ✅ Check if user already exists
-        let userExists = await userModel.findOne({ email, isDelete: false });
-        if (userExists) return res.status(400).json({ error: "Email already exists!" });
+    //     console.log("Incoming request body:", req.body);
+    //     // ✅ Check if user already exists
+    //     let userExists = await userModel.findOne({ email, isDelete: false });
+    //     if (userExists) return res.status(400).json({ error: "Email already exists!" });
   
-        // Parse education if it's a string
-        // let parsedEducation = education;
-        // if (typeof education === 'string') {
-        //   parsedEducation = JSON.parse(education);
-        // }
+    //     // Parse education if it's a string
+    //     // let parsedEducation = education;
+    //     // if (typeof education === 'string') {
+    //     //   parsedEducation = JSON.parse(education);
+    //     // }
   
   
-        userExists = await userModel.findOne({ phone, isDelete: false });
-        if (userExists) return res.status(400).json({ error: "Phone number already exists!" });
+    //     userExists = await userModel.findOne({ phone, isDelete: false });
+    //     if (userExists) return res.status(400).json({ error: "Phone number already exists!" });
   
-        // ✅ Encrypt password
-        const encryptedPassword = await bcrypt.hash(password, 10);
-        // Create user object
-        const userData = {
-          profile,
-          fullName,
-          email,
-          phone,
-          location,
-          password: encryptedPassword,
-          confirmPassword: encryptedPassword,
-          workExperience: experience ? true : false,
-          experiences: experience,
-          jobRole,
-          companyType,
-          department,
-          workMode,
-          jobType,
-          resume,
-          address,
-          education,
-          bio,
-          country,
-          street,
-          city,
-          state,
-          pincode,
-          skills ,
-          preferredSalary: preferredSalary || { min: 0, max: 0 },
-          appliedOn: new Date(),
-          online: "Offline",
-          isBlock: false,
-          isDelete: false
-        };
-        // Create new user
-        const newUser = await userModel.create(userData);
-        console.log("User created successfully:", newUser._id);
-        console.log("User created successfully yuppp:", userData);
+    //     // ✅ Encrypt password
+    //     const encryptedPassword = await bcrypt.hash(password, 10);
+    //     // Create user object
+    //     const userData = {
+    //       profile,
+    //       fullName,
+    //       email,
+    //       phone,
+    //       location,
+    //       password: encryptedPassword,
+    //       confirmPassword: encryptedPassword,
+    //       workExperience: experience ? true : false,
+    //       experiences: experience,
+    //       jobRole,
+    //       companyType,
+    //       department,
+    //       workMode,
+    //       jobType,
+    //       resume,
+    //       address,
+    //       education,
+    //       bio,
+    //       country,
+    //       street,
+    //       city,
+    //       state,
+    //       pincode,
+    //       skills ,
+    //       preferredSalary: preferredSalary || { min: 0, max: 0 },
+    //       appliedOn: new Date(),
+    //       online: "Offline",
+    //       isBlock: false,
+    //       isDelete: false
+    //     };
+    //     // Create new user
+    //     const newUser = await userModel.create(userData);
+    //     console.log("User created successfully:", newUser._id);
+    //     console.log("User created successfully yuppp:", userData);
 
   
-        // Send welcome email
-        await send.sendMail(fullName, email, `Welcome to Labor Link!<h3>Thank you!<br>Labor Link Team</h3>`);
+    //     // Send welcome email
+    //     await send.sendMail(fullName, email, `Welcome to Labor Link!<h3>Thank you!<br>Labor Link Team</h3>`);
   
-        return res.status(200).json({ 
-          success: "Successfully registered!",
-          userId: newUser._id ,
-          newUser
-        });
+    //     return res.status(200).json({ 
+    //       success: "Successfully registered!",
+    //       userId: newUser._id ,
+    //       newUser
+    //     });
   
-      } catch (err) {
-        console.error("Error in register function:", err);
-        if (err.name === 'ValidationError') {
-          return res.status(400).json({ 
-            error: "Validation error", 
-            details: Object.values(err.errors).map(e => e.message)
-          });
-        }
-        return res.status(500).json({ error: "Internal server error!" });
-      }
+    //   } catch (err) {
+    //     console.error("Error in register function:", err);
+    //     if (err.name === 'ValidationError') {
+    //       return res.status(400).json({ 
+    //         error: "Validation error", 
+    //         details: Object.values(err.errors).map(e => e.message)
+    //       });
+    //     }
+    //     return res.status(500).json({ error: "Internal server error!" });
+    //   }
+    // } 
+     
+    async register(req, res) {
+  try {
+    const {
+      profile,
+      fullName,
+      email,
+      phone, // This will be used for WhatsApp
+      location,
+      password,
+      confirmPassword,
+      experience,
+      workExperience,
+      jobType,
+      resume,
+      address,
+      education,
+      bio,
+      country,
+      street,
+      city,
+      state,
+      pincode,
+      skills,
+      jobRole,
+      companyType,
+      department,
+      workMode,
+      preferredSalary
+    } = req.body;
+
+    console.log("Incoming request body:", req.body);
+    // ✅ Check if user already exists
+    let userExists = await userModel.findOne({ email, isDelete: false });
+    if (userExists) return res.status(400).json({ error: "Email already exists!" });
+
+    // Parse education if it's a string
+    // let parsedEducation = education;
+    // if (typeof education === 'string') {
+    //   parsedEducation = JSON.parse(education);
+    // }
+
+    userExists = await userModel.findOne({ phone, isDelete: false });
+    if (userExists) return res.status(400).json({ error: "Phone number already exists!" });
+
+    // ✅ Encrypt password
+    const encryptedPassword = await bcrypt.hash(password, 10);
+    // Create user object
+    const userData = {
+      profile,
+      fullName,
+      email,
+      phone,
+      location,
+      password: encryptedPassword,
+      confirmPassword: encryptedPassword,
+      workExperience: experience ? true : false,
+      experiences: experience,
+      jobRole,
+      companyType,
+      department,
+      workMode,
+      jobType,
+      resume,
+      address,
+      education,
+      bio,
+      country,
+      street,
+      city,
+      state,
+      pincode,
+      skills,
+      preferredSalary: preferredSalary || { min: 0, max: 0 },
+      appliedOn: new Date(),
+      online: "Offline",
+      isBlock: false,
+      isDelete: false
+    };
+    // Create new user
+    const newUser = await userModel.create(userData);
+    console.log("User created successfully:", newUser._id);
+    console.log("User created successfully yuppp:", userData);
+
+    // Send welcome email
+    await send.sendMail(fullName, email, `Welcome to Labor Link!<h3>Thank you!<br>Labor Link Team</h3>`);
+
+    // Send welcome WhatsApp message
+    try {
+      await send.sendUserRegisteredWhatsapp({
+        name: fullName,
+        mobile: phone
+      });
+      console.log("WhatsApp welcome message sent successfully");
+    } catch (whatsappError) {
+      console.error("Failed to send WhatsApp message:", whatsappError);
+      // Don't fail the registration if WhatsApp fails
     }
+
+    return res.status(200).json({ 
+      success: "Successfully registered!",
+      userId: newUser._id,
+      newUser
+    });
+
+  } catch (err) {
+    console.error("Error in register function:", err);
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ 
+        error: "Validation error", 
+        details: Object.values(err.errors).map(e => e.message)
+      });
+    }
+    return res.status(500).json({ error: "Internal server error!" });
+  }
+}
 
   async  registerFromResume(req, res) {
     try {
