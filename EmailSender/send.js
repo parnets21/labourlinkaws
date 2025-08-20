@@ -162,18 +162,19 @@ const sendSelectedWhatsapp = async (name,mobile,msg) =>{
   }
 }; 
 
-const sendInterviewDetails = async (name,mobile,msg) =>{  
+const sendInterviewDetails = async (name,mobile,date,time,duration,platform,plink,password,note) =>{  
     try {
 
     const formattedMobile = String(mobile).replace(/\D/g, ''); // Remove all non-digits
     
      const payload = {
-      apiKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4OTMyYzBlZmY4NGRiMGMwZjNlNDg4ZiIsIm5hbWUiOiJMYWJvciBMaW5rIiwiYXBwTmFtZSI6IkFpU2Vuc3kiLCJjbGllbnRJZCI6IjY4OTMyYzBkZmY4NGRiMGMwZjNlNDg4NyIsImFjdGl2ZVBsYW4iOiJCQVNJQ19UUklBTCIsImlhdCI6MTc1NDQ3NTUzNH0.1SEjuYr_EQBgevXcTCP2wMTQ-M_EuznoS_-3XEiEeK4",
-      campaignName: "interviewdtls",
+       apiKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4OTMyYzBlZmY4NGRiMGMwZjNlNDg4ZiIsIm5hbWUiOiJMYWJvciBMaW5rIiwiYXBwTmFtZSI6IkFpU2Vuc3kiLCJjbGllbnRJZCI6IjY4OTMyYzBkZmY4NGRiMGMwZjNlNDg4NyIsImFjdGl2ZVBsYW4iOiJCQVNJQ19UUklBTCIsImlhdCI6MTc1NDQ3NTUzNH0.1SEjuYr_EQBgevXcTCP2wMTQ-M_EuznoS_-3XEiEeK4",
+
+campaignName: "interviewdtls",
       destination: formattedMobile,
       userName: "Labor Link",
-      templateParams: [name, msg],
-      source: "labor-link-system",
+      templateParams: [name, date,time,duration,platform,plink,password,note],
+      source: "new-landing-page form",
       media: {},
       buttons: [],
       carouselCards: [],
@@ -255,7 +256,7 @@ const sendUserRegisteredWhatsapp = async ({ name, mobile }) => {
 
 
 
-
+// sendInterviewDetails("Amit","917238861147","15/08/200","12:00","30 min","zoom","https://zoom.com/2323232","12233","make sure connect on time")
 
 
 module.exports = { 

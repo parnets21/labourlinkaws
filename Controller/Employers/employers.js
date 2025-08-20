@@ -756,7 +756,7 @@
 //          <h3>Thank you,<br>Labor Link Team</h3>`
 //         );
 //       }   
-        
+
 //         if (slotId) {
 //         const slot = await Appointment.findById(slotId);
 //         await send.sendMail(
@@ -789,8 +789,8 @@
 //          <h3>Thank you,<br>Labor Link Team</h3>`
 //         );
 //       }  
-     
-     
+
+
 //     // --- Email Sending ---
 // if (slotId) {
 //   const slot = await Appointment.findById(slotId);
@@ -842,7 +842,7 @@
 //      <h3>Thank you,<br>Labor Link Team</h3>`
 //   );
 
- 
+
 // //   await sendInterviewDetails(
 // //     name,
 // //     mobile,
@@ -872,7 +872,7 @@
 //       });
 //     }
 //   } 
-    
+
 
 //   async getcallinterview(req, res) {
 //     try {
@@ -1129,8 +1129,8 @@
 //         to: email,
 //         subject: 'Your Labor Link new genarated password',
 //         html: `<h1>Hi ${data.name}</h1><p>Seems like you forgot your password for UNIVI. Your password is :</p> <b> ${newPassword}</b>
-     
-     
+
+
 //      <p> If you did not initiate this request, please contact us immediately
 //   at ${process.env.NODE_SENDER_MAIL}</p>
 //   <h3>Thank you <br>Labor Link Team</h3>`,
@@ -1158,7 +1158,7 @@
 //       return res.status(400).json({ error: "Email not Register" })
 //     }
 //   }       
- 
+
 const mongoose = require("mongoose");
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
@@ -1171,7 +1171,7 @@ const userModel = require('../../Model/User/user');
 const intrestedModel = require("../../Model/Employers/intrested");
 const applyModel = require("../../Model/Employers/apply");
 const Appointment = require("../../Model/Admin/slotbook");
-const companyModel = require("../../Model/Employers/company"); 
+const companyModel = require("../../Model/Employers/company");
 
 
 // Utilities
@@ -1208,8 +1208,8 @@ class Employers {
       if (existingEmail) return res.status(400).json({ error: "Email ID already exists!" });
 
       // Password hashing
-      let hashedPassword; 
-      
+      let hashedPassword;
+
       try {
         hashedPassword = await bcrypt.hash(password, 10);
       } catch (hashError) {
@@ -1347,13 +1347,13 @@ class Employers {
   // Edit Profile
   async editProfile(req, res) {
     try {
-      const { userId, hiring, MyCompany, CompanyInd, companyWebsite, companyWebsiteclient, 
-             numberOfemp, CompanydocType, Companydoc, address, EmployerdocType, Employerdoc, 
-             CompanyName, cpassword, country, industry, mobile, age, password, userName, 
-             name, skillSet, email, street, city, state, pincode, gender } = req.body;
-      
+      const { userId, hiring, MyCompany, CompanyInd, companyWebsite, companyWebsiteclient,
+        numberOfemp, CompanydocType, Companydoc, address, EmployerdocType, Employerdoc,
+        CompanyName, cpassword, country, industry, mobile, age, password, userName,
+        name, skillSet, email, street, city, state, pincode, gender } = req.body;
+
       let obj = {};
-      
+
       // Basic validations and field assignments
       if (MyCompany) obj["MyCompany"] = MyCompany;
       if (CompanyInd) obj["CompanyInd"] = CompanyInd;
@@ -1458,11 +1458,11 @@ class Employers {
       }
 
       let updateUser = await employerModel.findOneAndUpdate(
-        { _id: userId }, 
-        { $set: obj }, 
+        { _id: userId },
+        { $set: obj },
         { new: true }
       );
-      
+
       if (!updateUser) return res.status(400).json({ error: "Something went wrong" });
       return res.status(200).json({ msg: "Successfully updated", success: updateUser });
     } catch (err) {
@@ -1478,11 +1478,11 @@ class Employers {
       let obj = { Institue, Course, field, starting, passOut };
 
       let add = await employerModel.findOneAndUpdate(
-        { _id: userId }, 
-        { $push: { education: obj } }, 
+        { _id: userId },
+        { $push: { education: obj } },
         { new: true }
       );
-      
+
       if (!add) return res.status(400).json({ success: "Something went wrong" });
       return res.status(200).json({ success: "Successfully added" });
     } catch (err) {
@@ -1496,13 +1496,13 @@ class Employers {
     try {
       let removeId = req.params.removeId;
       let userId = req.params.userId;
-      
+
       let add = await employerModel.findOneAndUpdate(
-        { _id: userId }, 
-        { $pull: { education: { _id: removeId } } }, 
+        { _id: userId },
+        { $pull: { education: { _id: removeId } } },
         { new: true }
       );
-      
+
       if (!add) return res.status(400).json({ success: "Something went wrong" });
       return res.status(200).json({ success: "Successfully deleted" });
     } catch (err) {
@@ -1516,13 +1516,13 @@ class Employers {
     try {
       const { Company, userId, Period, Skill, Experience } = req.body;
       let obj = { Company, Period, Skill, Experience };
-      
+
       let add = await employerModel.findOneAndUpdate(
-        { _id: userId }, 
-        { $push: { workAndExperience: obj } }, 
+        { _id: userId },
+        { $push: { workAndExperience: obj } },
         { new: true }
       );
-      
+
       if (!add) return res.status(400).json({ success: "Something went wrong" });
       return res.status(200).json({ success: add });
     } catch (err) {
@@ -1536,13 +1536,13 @@ class Employers {
     try {
       let removeId = req.params.removeId;
       let userId = req.params.userId;
-      
+
       let add = await employerModel.findOneAndUpdate(
-        { _id: userId }, 
-        { $pull: { workAndExperience: { _id: removeId } } }, 
+        { _id: userId },
+        { $pull: { workAndExperience: { _id: removeId } } },
         { new: true }
       );
-      
+
       if (!add) return res.status(400).json({ success: "Something went wrong" });
       return res.status(200).json({ success: add });
     } catch (err) {
@@ -1555,7 +1555,7 @@ class Employers {
   async getAllProfile(req, res) {
     try {
       let findData = await employerModel.find().sort({ _id: -1 }).limit(25);
-      
+
       if (findData.length <= 0) return res.status(400).json({ success: "Data not found" });
       return res.status(200).json({ success: findData });
     } catch (err) {
@@ -1601,10 +1601,10 @@ class Employers {
     try {
       const { email, password } = req.body;
       console.log("Login attempt:", email, password);
-      
+
       if (!isValid(email)) return res.status(400).json({ success: "Please enter your email!" });
       if (!isValid(password)) return res.status(400).json({ success: "Please enter your password!" });
-      
+
       let hash;
       if (!phonenumber(email)) {
         hash = await employerModel.findOne({ email: email, isDelete: false });
@@ -1616,13 +1616,13 @@ class Employers {
 
       let compare = await bcrypt.compare(password, hash.password);
       if (!compare) return res.status(400).send({ success: "Invalid password!" });
-      
+
       let updateData = await employerModel.findOneAndUpdate(
-        { _id: hash._id }, 
-        { $set: { online: "online" } }, 
+        { _id: hash._id },
+        { $set: { online: "online" } },
         { new: true }
       );
-      
+
       return res.status(200).json({ msg: "Successfully login", success: updateData });
     } catch (err) {
       console.log(err);
@@ -1634,13 +1634,13 @@ class Employers {
   async deleteProfile(req, res) {
     try {
       const { userId, reasion } = req.body;
-      
+
       let data = await employerModel.findOneAndUpdate(
-        { _id: userId }, 
-        { $set: { reasion: reasion, isDelete: true } }, 
+        { _id: userId },
+        { $set: { reasion: reasion, isDelete: true } },
         { new: true }
       );
-      
+
       if (!data) return res.status(404).json({ success: "data not found" });
 
       let company = await companyModel.find({ employerId: userId });
@@ -1650,7 +1650,7 @@ class Employers {
           await companyModel.deleteOne({ _id: company[i]._id });
         }
       }
-      
+
       await intrestedModel.deleteMany({ employedId: userId });
       return res.status(200).json({ success: "Successfully deleted" });
     } catch (err) {
@@ -1823,97 +1823,97 @@ class Employers {
   //     });
   //   }
   // }
-async callinterview(req, res) {
-  try {
-    const {
-      userId, schedule, slotId, status, employerId, feedback,
-      Position, name, meetingPassword, meetingLink, email,
-      companyId, platform, interviewNotes, duration
-    } = req.body;
+  async callinterview(req, res) {
+    try {
+      const {
+        userId, schedule, slotId, status, employerId, feedback,
+        Position, name, meetingPassword, meetingLink, email,
+        companyId, platform, interviewNotes, duration
+      } = req.body;
 
-    console.log("Request body:", req.body);
+      console.log("Request body:", req.body);
 
-    // Check if slotId exists in request body
-    if (slotId) {
-      console.log("SlotId exists:", slotId);
+      // Check if slotId exists in request body
+      if (slotId) {
+        console.log("SlotId exists:", slotId);
 
-      // Validate required fields when slotId is provided
-      if (!userId || !schedule || !slotId || !employerId || !email || !companyId) {
-        return res.status(400).json({ error: "Missing required fields" });
+        // Validate required fields when slotId is provided
+        if (!userId || !schedule || !slotId || !employerId || !email || !companyId) {
+          return res.status(400).json({ error: "Missing required fields" });
+        }
+
+        const slot = await Appointment.findById(slotId);
+        if (!slot) {
+          return res.status(404).json({ error: "Appointment slot not found" });
+        }
+
+        if (slot.status === "booked") {
+          return res.status(400).json({ error: "Slot already booked" });
+        }
+
+        slot.status = "booked";
+        await slot.save();
+      } else {
+        // Validate required fields when no slotId is provided
+        if (!userId || !schedule || !employerId || !email || !companyId) {
+          return res.status(400).json({ error: "Missing required fields" });
+        }
       }
 
-      const slot = await Appointment.findById(slotId);
-      if (!slot) {
-        return res.status(404).json({ error: "Appointment slot not found" });
+      const companyObjectId = mongoose.Types.ObjectId.isValid(companyId)
+        ? new mongoose.Types.ObjectId(companyId)
+        : companyId;
+
+      const userData = await userModel.findById(userId);
+      if (!userData) {
+        return res.status(404).json({ error: "User not found" });
       }
 
-      if (slot.status === "booked") {
-        return res.status(400).json({ error: "Slot already booked" });
-      }
-
-      slot.status = "booked";
-      await slot.save();
-    } else {
-      // Validate required fields when no slotId is provided
-      if (!userId || !schedule || !employerId || !email || !companyId) {
-        return res.status(400).json({ error: "Missing required fields" });
-      }
-    }
-
-    const companyObjectId = mongoose.Types.ObjectId.isValid(companyId)
-      ? new mongoose.Types.ObjectId(companyId)
-      : companyId;
-
-    const userData = await userModel.findById(userId);
-    if (!userData) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    // Check if the interview call already exists
-    let existingCall = await callModel.findOne({
-      userId,
-      employerId,
-      companyId: companyObjectId
-    });
-
-    if (existingCall) {
-      return res.status(200).json({
-        user: userData,
-        success: "Interview call already scheduled!"
+      // Check if the interview call already exists
+      let existingCall = await callModel.findOne({
+        userId,
+        employerId,
+        companyId: companyObjectId
       });
-    }
 
-    // Create a new interview call
-    let newCall = await callModel.create({
-      employerId,
-      userId,
-      schedule,
-      status: status || "Scheduled", // Default status
-      name,
-      email,
-      companyId: companyObjectId,
-      platform,
-      meetingPassword,
-      meetingLink,
-      interviewNotes,
-      duration: slotId ? (await Appointment.findById(slotId))?.duration || duration : duration,
-      feedback,
-      Position,
-    });
+      if (existingCall) {
+        return res.status(200).json({
+          user: userData,
+          success: "Interview call already scheduled!"
+        });
+      }
 
-    if (!newCall) {
-      return res.status(500).json({ error: "Failed to schedule interview call" });
-    }
+      // Create a new interview call
+      let newCall = await callModel.create({
+        employerId,
+        userId,
+        schedule,
+        status: status || "Scheduled", // Default status
+        name,
+        email,
+        companyId: companyObjectId,
+        platform,
+        meetingPassword,
+        meetingLink,
+        interviewNotes,
+        duration: slotId ? (await Appointment.findById(slotId))?.duration || duration : duration,
+        feedback,
+        Position,
+      });
 
-    console.log("Interview Call Created:", newCall);
+      if (!newCall) {
+        return res.status(500).json({ error: "Failed to schedule interview call" });
+      }
 
-    // Prepare common interview details
-    let interviewDetails = '';
-    let whatsappDetails = '';
+      console.log("Interview Call Created:", newCall);
 
-    if (slotId) {
-      const slot = await Appointment.findById(slotId);
-      interviewDetails = `You are shortlisted for an interview.<br>
+      // Prepare common interview details
+      let interviewDetails = '';
+      let whatsappDetails = {};
+
+      if (slotId) {
+        const slot = await Appointment.findById(slotId);
+        interviewDetails = `You are shortlisted for an interview.<br>
         <strong>Date:</strong> ${slot.date.toDateString()}<br>
         <strong>Time:</strong> ${slot.time}<br>
         <strong>Duration:</strong> ${slot.duration}<br>
@@ -1923,18 +1923,19 @@ async callinterview(req, res) {
         <strong>Note:</strong> ${interviewNotes || "Not Required"}<br>
         <h3>Thank you,<br>Labor Link Team</h3>`;
 
-      whatsappDetails = `You are shortlisted for an interview.
-        Date: ${slot.date.toDateString()}
-        Time: ${slot.time}
-        Duration: ${slot.duration}
-        Platform: ${platform || "Not Specified"}
-        Platform Link: ${meetingLink || "Not Specified"}
-        Platform Password: ${meetingPassword || "Not Required"}
-        Note: ${interviewNotes || "Not Required"}
-        Thank you, Labor Link Team`;
-    } else {
-      const interviewDate = new Date(schedule);
-      interviewDetails = `You are shortlisted for an interview.<br>
+        whatsappDetails = {
+          Date: slot.date.toDateString(),
+          Time: slot.time,
+          Duration: slot.duration,
+          Platform: platform || "Not Specified",
+          Link: meetingLink || "Not Specified",
+          Password: meetingPassword || "Not Required",
+          Note: interviewNotes || "Not Required",
+        }
+
+      } else {
+        const interviewDate = new Date(schedule);
+        interviewDetails = `You are shortlisted for an interview.<br>
         <strong>Date:</strong> ${interviewDate.toDateString()}<br>
         <strong>Time:</strong> ${interviewDate.toTimeString().split(" ")[0]}<br>
         <strong>Duration:</strong> ${duration} minutes<br>
@@ -1944,469 +1945,469 @@ async callinterview(req, res) {
         <strong>Note:</strong> ${interviewNotes || "Not Specified"}<br>
         <h3>Thank you,<br>Labor Link Team</h3>`;
 
-      whatsappDetails = `You are shortlisted for an interview.
-        Date: ${interviewDate.toDateString()}
-        Time: ${interviewDate.toTimeString().split(" ")[0]}
-        Duration: ${duration} minutes
-        Platform: ${platform || "Not Specified"}
-        Platform Link: ${meetingLink || "Not Specified"}
-        Platform Password: ${meetingPassword || "Not Required"}
-        Note: ${interviewNotes || "Not Specified"}
-        Thank you, Labor Link Team`;
-    }
 
-    // Send notifications
-    try {
-      // Send email
-      await send.sendMail(name, email, interviewDetails);
-      
-      // Send WhatsApp if mobile number exists
-      if (userData.phone) {
-        await send.sendInterviewDetails(
-          name,
-          userData.phone,
-          whatsappDetails
-        );
+        whatsappDetails = {
+          Date: interviewDate.toDateString(),
+          Time: interviewDate.toTimeString().split(" ")[0],
+          Duration: `${duration} minutes`,
+          Platform: platform || "Not Specified",
+          Link: meetingLink || "Not Specified",
+          Password: meetingPassword || "Not Required",
+          Note: interviewNotes || "Not Required",
+        }
       }
-    } catch (notificationError) {
-      console.error("Error sending notifications:", notificationError);
-      // Continue even if notifications fail
+        // Send notifications
+        try {
+          // Send email
+          await send.sendMail(name, email, interviewDetails);
+
+          // Send WhatsApp if mobile number exists
+          if (userData.phone) {
+            await send.sendInterviewDetails(
+              name,
+              userData.phone,
+              whatsappDetails?.Date,whatsappDetails?.Time,whatsappDetails?.Duration,whatsappDetails.Platform,whatsappDetails.Link,whatsappDetails?.Password,whatsappDetails?.Note
+            );
+          }
+        } catch (notificationError) {
+          console.error("Error sending notifications:", notificationError);
+          // Continue even if notifications fail
+        }
+
+        return res.status(201).json({
+          success: "Interview scheduled successfully",
+          userData
+        });
+
+      } catch (error) {
+        console.error("Error scheduling interview:", error);
+        return res.status(500).json({
+          message: "Internal Server Error",
+          error: error.message
+        });
+      }
     }
-
-    return res.status(201).json({
-      success: "Interview scheduled successfully",
-      userData
-    });
-
-  } catch (error) {
-    console.error("Error scheduling interview:", error);
-    return res.status(500).json({
-      message: "Internal Server Error",
-      error: error.message
-    });
-  }
-}
   // Get Scheduled Interviews
   async getcallinterview(req, res) {
-    try {
-      const { employerId, companyId } = req.params;
+      try {
+        const { employerId, companyId } = req.params;
 
-      if (!employerId) {
-        return res.status(400).json({ error: "Employer ID is required" });
+        if (!employerId) {
+          return res.status(400).json({ error: "Employer ID is required" });
+        }
+
+        let interviewCalls = await callModel.find({ employerId, companyId }).sort({ _id: -1 });
+
+        if (!interviewCalls.length) {
+          return res.status(404).json({ error: "No interview calls found" });
+        }
+
+        return res.status(200).json({ success: true, data: interviewCalls });
+
+      } catch (error) {
+        console.error("Error fetching interview calls:", error);
+        return res.status(500).json({ error: "Internal Server Error" });
       }
-
-      let interviewCalls = await callModel.find({ employerId, companyId }).sort({ _id: -1 });
-
-      if (!interviewCalls.length) {
-        return res.status(404).json({ error: "No interview calls found" });
-      }
-
-      return res.status(200).json({ success: true, data: interviewCalls });
-
-    } catch (error) {
-      console.error("Error fetching interview calls:", error);
-      return res.status(500).json({ error: "Internal Server Error" });
     }
-  }
 
   // Get All Scheduled Interviews
   async getAllScheduledInterviews(req, res) {
-    try {
-      const interviews = await callModel.find({ status: "Scheduled" })
-        .populate("userId", "name email");
+      try {
+        const interviews = await callModel.find({ status: "Scheduled" })
+          .populate("userId", "name email");
 
-      if (!interviews || interviews.length === 0) {
-        return res.status(404).json({
+        if (!interviews || interviews.length === 0) {
+          return res.status(404).json({
+            success: false,
+            message: "No scheduled interviews found."
+          });
+        }
+
+        res.status(200).json({
+          success: true,
+          interviews,
+        });
+      } catch (error) {
+        console.error("Error fetching scheduled interviews:", error);
+        res.status(500).json({
           success: false,
-          message: "No scheduled interviews found."
+          message: "Internal Server Error",
+          error: error.message,
         });
       }
-
-      res.status(200).json({
-        success: true,
-        interviews,
-      });
-    } catch (error) {
-      console.error("Error fetching scheduled interviews:", error);
-      res.status(500).json({
-        success: false,
-        message: "Internal Server Error",
-        error: error.message,
-      });
     }
-  }
 
   // Update Interview Status
   async updateInterviewStatus(req, res) {
-    try {
-      const { interviewId } = req.params;
-      console.log(interviewId, "this is an interview id ");
-      const { status } = req.body;
+      try {
+        const { interviewId } = req.params;
+        console.log(interviewId, "this is an interview id ");
+        const { status } = req.body;
 
-      // Find and update the interview status
-      const updatedInterview = await applyModel.findByIdAndUpdate(
-        interviewId,
-        { status: status },
-        { new: true }
-      );
+        // Find and update the interview status
+        const updatedInterview = await applyModel.findByIdAndUpdate(
+          interviewId,
+          { status: status },
+          { new: true }
+        );
 
-      if (!updatedInterview) {
-        return res.status(404).json({
+        if (!updatedInterview) {
+          return res.status(404).json({
+            success: false,
+            message: 'Interview not found'
+          });
+        }
+
+        res.status(200).json({
+          success: true,
+          message: 'Interview status updated successfully',
+          data: updatedInterview
+        });
+
+      } catch (error) {
+        console.error('Error updating interview status:', error);
+        res.status(500).json({
           success: false,
-          message: 'Interview not found'
+          message: 'Failed to update interview status',
+          error: error.message
         });
       }
-
-      res.status(200).json({
-        success: true,
-        message: 'Interview status updated successfully',
-        data: updatedInterview
-      });
-
-    } catch (error) {
-      console.error('Error updating interview status:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to update interview status',
-        error: error.message
-      });
     }
-  }
 
   // Get Users by Filter
   async getUserByFilter(req, res) {
-    try {
-      const { skill, Experience, city, category, jobProfile, int1 } = req.body;
-      let obj = {};
-      
-      if (jobProfile) {
-        obj['industry'] = jobProfile;
+      try {
+        const { skill, Experience, city, category, jobProfile, int1 } = req.body;
+        let obj = {};
+
+        if (jobProfile) {
+          obj['industry'] = jobProfile;
+        }
+
+        let findData = await userModel.find(obj).sort({ _id: -1 });
+        if (findData.length <= 0) return res.status(400).json({ success: "Data not found" });
+        return res.status(200).json({ success: findData });
+
+      } catch (err) {
+        console.log(err);
+        return res.status(500).json({ error: "Internal server error" });
       }
-
-      let findData = await userModel.find(obj).sort({ _id: -1 });
-      if (findData.length <= 0) return res.status(400).json({ success: "Data not found" });
-      return res.status(200).json({ success: findData });
-
-    } catch (err) {
-      console.log(err);
-      return res.status(500).json({ error: "Internal server error" });
     }
-  }
 
   // Mark User as Interested
   async MakeIntrestedUser(req, res) {
-    try {
-      const { userId, employedId, userEmail, userName, EmployeName, email, mobile } = req.body;
+      try {
+        const { userId, employedId, userEmail, userName, EmployeName, email, mobile } = req.body;
 
-      let check1 = await intrestedModel.findOne({ userId: userId, employedId: employedId });
-      if (!check1) {
-        let data = await intrestedModel.create({ employedId: employedId, userId: userId });
+        let check1 = await intrestedModel.findOne({ userId: userId, employedId: employedId });
+        if (!check1) {
+          let data = await intrestedModel.create({ employedId: employedId, userId: userId });
 
-        if (!data) return res.status(400).json({ error: "Data not found" });
-        
-        send.sendMail(
-          userName, 
-          userEmail, 
-          `Mr ${EmployeName} is interested in your profile please contact to this ${mobile} and email ${email},
+          if (!data) return res.status(400).json({ error: "Data not found" });
+
+          send.sendMail(
+            userName,
+            userEmail,
+            `Mr ${EmployeName} is interested in your profile please contact to this ${mobile} and email ${email},
           <h3>Thank you <br>Labor Link Team</h3>`
-        );
-        
-        return res.status(200).json({ success: "Successfully send notice" });
-      } else {
-        return res.status(200).json({ success: "Already sent!" });
+          );
+
+          return res.status(200).json({ success: "Successfully send notice" });
+        } else {
+          return res.status(200).json({ success: "Already sent!" });
+        }
+      } catch (err) {
+        console.log(err);
+        return res.status(500).json({ error: "Internal server error" });
       }
-    } catch (err) {
-      console.log(err);
-      return res.status(500).json({ error: "Internal server error" });
     }
-  }
 
   // Verify/Unverify Employer
   async makEverifyUnverify(req, res) {
-    try {
-      const { userId, status, reasion, isDelete } = req.body;
-      let obj = { status };
+      try {
+        const { userId, status, reasion, isDelete } = req.body;
+        let obj = { status };
 
-      obj["reasion"] = reasion;
+        obj["reasion"] = reasion;
 
-      if (isDelete) {
-        obj["isDelete"] = isDelete;
-      }
-      
-      let data = await employerModel.findOneAndUpdate(
-        { _id: userId }, 
-        { $set: obj }, 
-        { new: true }
-      );
-      
-      if (!data) return res.status(400).json({ error: "Something went wrong!" });
-      
-      if (data.status == "Approved") {
-        send.sendMail(
-          data.name, 
-          data.email, 
-          `Your profile is approved now you can post job,
-          <h3>Thank you <br>Labor Link Team</h3>`
+        if (isDelete) {
+          obj["isDelete"] = isDelete;
+        }
+
+        let data = await employerModel.findOneAndUpdate(
+          { _id: userId },
+          { $set: obj },
+          { new: true }
         );
-      } else {
-        send.sendMail(
-          data.name, 
-          data.email, 
-          `Your profile is ${data.status} because ${data.reasion} please complete your profile,
+
+        if (!data) return res.status(400).json({ error: "Something went wrong!" });
+
+        if (data.status == "Approved") {
+          send.sendMail(
+            data.name,
+            data.email,
+            `Your profile is approved now you can post job,
           <h3>Thank you <br>Labor Link Team</h3>`
-        );
+          );
+        } else {
+          send.sendMail(
+            data.name,
+            data.email,
+            `Your profile is ${data.status} because ${data.reasion} please complete your profile,
+          <h3>Thank you <br>Labor Link Team</h3>`
+          );
+        }
+
+        return res.status(200).json({ success: "success" });
+      } catch (error) {
+        console.log(error);
+        return res.status(500).json({ error: "Internal server error" });
       }
-      
-      return res.status(200).json({ success: "success" });
-    } catch (error) {
-      console.log(error);
-      return res.status(500).json({ error: "Internal server error" });
     }
-  }
 
   // Block/Unblock Employer
   async makeBlockUnBlock(req, res) {
-    try {
-      const { userId, reasion, isBlock } = req.body;
-      let obj = { isBlock };
-      obj["reasion"] = reasion;
+      try {
+        const { userId, reasion, isBlock } = req.body;
+        let obj = { isBlock };
+        obj["reasion"] = reasion;
 
-      let data = await employerModel.findOneAndUpdate(
-        { _id: userId }, 
-        { $set: obj }, 
-        { new: true }
-      );
-      
-      if (!data) return res.status(400).json({ error: "Something went wrong!" });
-      
-      if (data.isBlock == false) {
-        send.sendMail(
-          data.name, 
-          data.email, 
-          `Your profile is un-bloked now you can post job,
-          <h3>Thank you <br>Labor Link Team</h3>`
+        let data = await employerModel.findOneAndUpdate(
+          { _id: userId },
+          { $set: obj },
+          { new: true }
         );
-      } else {
-        send.sendMail(
-          data.name, 
-          data.email, 
-          `Your profile is blocked please contact admin,
+
+        if (!data) return res.status(400).json({ error: "Something went wrong!" });
+
+        if (data.isBlock == false) {
+          send.sendMail(
+            data.name,
+            data.email,
+            `Your profile is un-bloked now you can post job,
           <h3>Thank you <br>Labor Link Team</h3>`
-        );
+          );
+        } else {
+          send.sendMail(
+            data.name,
+            data.email,
+            `Your profile is blocked please contact admin,
+          <h3>Thank you <br>Labor Link Team</h3>`
+          );
+        }
+
+        return res.status(200).json({ success: "success" });
+      } catch (error) {
+        console.log(error);
+        return res.status(500).json({ error: "Internal server error" });
       }
-      
-      return res.status(200).json({ success: "success" });
-    } catch (error) {
-      console.log(error);
-      return res.status(500).json({ error: "Internal server error" });
     }
-  }
 
   // Get Interested Users
   async getInterestedUser(req, res) {
-    try {
-      let employerId = req.params.employerId;
-      console.log(employerId);
-      
-      let data = await intrestedModel.find({ employedId: employerId })
-                                    .sort({ _id: -1 })
-                                    .populate("userId");
-                                    
-      if (data.length <= 0) return res.status(400).json({ error: "Data not found" });
-      return res.status(200).json({ success: data });
-    } catch (err) {
-      console.log(err);
-      return res.status(500).json({ error: "Internal server error" });
+      try {
+        let employerId = req.params.employerId;
+        console.log(employerId);
+
+        let data = await intrestedModel.find({ employedId: employerId })
+          .sort({ _id: -1 })
+          .populate("userId");
+
+        if (data.length <= 0) return res.status(400).json({ error: "Data not found" });
+        return res.status(200).json({ success: data });
+      } catch (err) {
+        console.log(err);
+        return res.status(500).json({ error: "Internal server error" });
+      }
     }
-  }
 
   // Get Employer by ID
   async getEmployerById(req, res) {
-    try {
-      let employerId = req.params.employerId;
-      let data = await employerModel.findById(employerId);
-      
-      if (!data) return res.status(400).json({ error: "No data found" });
-      return res.status(200).json({ success: data });
-    } catch (error) {
-      console.log(error);
-      return res.status(500).json({ error: "Internal server error" });
+      try {
+        let employerId = req.params.employerId;
+        let data = await employerModel.findById(employerId);
+
+        if (!data) return res.status(400).json({ error: "No data found" });
+        return res.status(200).json({ success: data });
+      } catch (error) {
+        console.log(error);
+        return res.status(500).json({ error: "Internal server error" });
+      }
     }
-  }
 
   // Delete Interest by ID
   async deleteIntrestById(req, res) {
-    try {
-      let intrestId = req.params.intrestId;
-      let data = await intrestedModel.deleteOne({ _id: intrestId });
-      
-      if (data.deletedCount === 0) return res.status(400).json({ error: "Data not found" });
-      return res.status(200).json({ success: "Successfully deleted" });
-    } catch (error) {
-      console.log(error);
-      return res.status(500).json({ error: "Internal server error" });
+      try {
+        let intrestId = req.params.intrestId;
+        let data = await intrestedModel.deleteOne({ _id: intrestId });
+
+        if (data.deletedCount === 0) return res.status(400).json({ error: "Data not found" });
+        return res.status(200).json({ success: "Successfully deleted" });
+      } catch (error) {
+        console.log(error);
+        return res.status(500).json({ error: "Internal server error" });
+      }
     }
-  }
 
   // Delete Employer Permanently
   async deleteParmanet(req, res) {
-    try {
-      let userId = req.params.userId;
-      let data = await employerModel.deleteOne({ _id: userId });
-      
-      if (data.deletedCount === 0) return res.status(400).json({ error: "Data not found" });
-      return res.status(200).json({ success: "Successfully deleted" });
-    } catch (error) {
-      console.log(error);
-      return res.status(500).json({ error: "Internal server error" });
+      try {
+        let userId = req.params.userId;
+        let data = await employerModel.deleteOne({ _id: userId });
+
+        if (data.deletedCount === 0) return res.status(400).json({ error: "Data not found" });
+        return res.status(200).json({ success: "Successfully deleted" });
+      } catch (error) {
+        console.log(error);
+        return res.status(500).json({ error: "Internal server error" });
+      }
     }
-  }
 
   // Password Reset Email
   async postmail(req, res) {
-    try {
-      let { email } = req.body;
-      if (!isValid(email)) return res.status(400).json({ error: "Please enter email Id!" });
-      
-      let data = await employerModel.findOne({ email: email, isDelete: false });
-      
-      function randomString(length, chars) {
-        var mask = '';
-        if (chars.indexOf('a') > -1) mask += 'abcdefghijklmnopqrstuvwxyz';
-        if (chars.indexOf('A') > -1) mask += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        if (chars.indexOf('#') > -1) mask += '0123456789';
-        if (chars.indexOf('!') > -1) mask += '~`!@#$%^&*()_+-={}[]:";\'<>?,./|\\';
-        var result = '';
-        for (var i = length; i > 0; --i) result += mask[Math.floor(Math.random() * mask.length)];
-        return result;
-      }
-      
-      if (data) {
-        let newPassword = randomString(10, 'aA#');
-        const transporter = nodemailer.createTransport({
-          service: "gmail",
-          auth: {
-            user: "amitparnets@gmail.com",
-            pass: "yzbzpllsthbvrdal",
-          },
-          port: 465,
-          host: "gsmtp.gmail.com",
-        });
+      try {
+        let { email } = req.body;
+        if (!isValid(email)) return res.status(400).json({ error: "Please enter email Id!" });
 
-        const mailOptions = {
-          from: "amitparnets@gmail.com",
-          to: email,
-          subject: 'Your Labor Link new generated password',
-          html: `<h1>Hi ${data.name}</h1><p>Seems like you forgot your password for UNIVI. Your password is :</p> <b> ${newPassword}</b>
+        let data = await employerModel.findOne({ email: email, isDelete: false });
+
+        function randomString(length, chars) {
+          var mask = '';
+          if (chars.indexOf('a') > -1) mask += 'abcdefghijklmnopqrstuvwxyz';
+          if (chars.indexOf('A') > -1) mask += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+          if (chars.indexOf('#') > -1) mask += '0123456789';
+          if (chars.indexOf('!') > -1) mask += '~`!@#$%^&*()_+-={}[]:";\'<>?,./|\\';
+          var result = '';
+          for (var i = length; i > 0; --i) result += mask[Math.floor(Math.random() * mask.length)];
+          return result;
+        }
+
+        if (data) {
+          let newPassword = randomString(10, 'aA#');
+          const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+              user: "amitparnets@gmail.com",
+              pass: "yzbzpllsthbvrdal",
+            },
+            port: 465,
+            host: "gsmtp.gmail.com",
+          });
+
+          const mailOptions = {
+            from: "amitparnets@gmail.com",
+            to: email,
+            subject: 'Your Labor Link new generated password',
+            html: `<h1>Hi ${data.name}</h1><p>Seems like you forgot your password for UNIVI. Your password is :</p> <b> ${newPassword}</b>
          
          
          <p> If you did not initiate this request, please contact us immediately
       at ${process.env.NODE_SENDER_MAIL}</p>
       <h3>Thank you <br>Labor Link Team</h3>`,
-        };
+          };
 
-        newPassword = bcrypt.hashSync(newPassword, 10);
-        
-        let passChange = employerModel.findOneAndUpdate(
-          { email: email }, 
-          { $set: { password: newPassword } }
-        );
-        
-        passChange.exec((err, result) => {
-          if (err) {
-            console.log(err);
-            return res.status(500).json({ error: "Error updating password" });
-          }
-          
-          transporter.sendMail(mailOptions, function (error, info) {
-            if (error) {
-              console.log(error);
-              return res.status(500).json({ error: "Error sending email" });
-            } else {
-              console.log('Email sent: ' + info.response);
-              return res.status(200).json({ success: "mail send" });
+          newPassword = bcrypt.hashSync(newPassword, 10);
+
+          let passChange = employerModel.findOneAndUpdate(
+            { email: email },
+            { $set: { password: newPassword } }
+          );
+
+          passChange.exec((err, result) => {
+            if (err) {
+              console.log(err);
+              return res.status(500).json({ error: "Error updating password" });
             }
+
+            transporter.sendMail(mailOptions, function (error, info) {
+              if (error) {
+                console.log(error);
+                return res.status(500).json({ error: "Error sending email" });
+              } else {
+                console.log('Email sent: ' + info.response);
+                return res.status(200).json({ success: "mail send" });
+              }
+            });
           });
-        });
-      } else {
-        return res.status(400).json({ error: "Email not Register" });
+        } else {
+          return res.status(400).json({ error: "Email not Register" });
+        }
+      } catch (error) {
+        console.log(error);
+        return res.status(500).json({ error: "Internal server error" });
       }
-    } catch (error) {
-      console.log(error);
-      return res.status(500).json({ error: "Internal server error" });
     }
-  }
 
   // Delete Offline Employers
- 
-  async deleteOfline(req, res) {
-    try {
-      let employer = await employerModel.find({ updatedAt: { $lte: new Date(Date.now() - 24 * 60 * 60 * 365 * 1000) } });
-      if (employer.length !== 0) {
-        for (let index = 0; index < employer.length; index++) {
-          await employerModel.deleteOne({ _id: employer[index]._id })
-          let company = await companyModel.find({ employerId: employer[index]._id });
-          if (company.length !== 0) {
-            for (let i = 0; i < company.length; i++) {
-              await applyModel.deleteMany({ companyId: company[i]._id })
-              await companyModel.deleteOne({ _id: company[i]._id })
-            }
-          }
-          console.log("daleted employer name=", employer[index].name)
-        }
-      }
 
-    } catch (error) {
-      console.log(error);
+  async deleteOfline(req, res) {
+      try {
+        let employer = await employerModel.find({ updatedAt: { $lte: new Date(Date.now() - 24 * 60 * 60 * 365 * 1000) } });
+        if (employer.length !== 0) {
+          for (let index = 0; index < employer.length; index++) {
+            await employerModel.deleteOne({ _id: employer[index]._id })
+            let company = await companyModel.find({ employerId: employer[index]._id });
+            if (company.length !== 0) {
+              for (let i = 0; i < company.length; i++) {
+                await applyModel.deleteMany({ companyId: company[i]._id })
+                await companyModel.deleteOne({ _id: company[i]._id })
+              }
+            }
+            console.log("daleted employer name=", employer[index].name)
+          }
+        }
+
+      } catch (error) {
+        console.log(error);
+      }
     }
-  }
 
 
   async checkApprovalStatus(req, res) {
-    const { userId } = req.params; // Extract userId from the request parameters
-    console.log(userId);
+      const { userId } = req.params; // Extract userId from the request parameters
+      console.log(userId);
 
-    try {
-      // Find the user by their ID
-      const user = await employerModel.findById(userId);
+      try {
+        // Find the user by their ID
+        const user = await employerModel.findById(userId);
 
-      if (!user) {
-        return res.status(404).json({
+        if (!user) {
+          return res.status(404).json({
+            success: false,
+            message: 'User not found',
+          });
+        }
+
+        // Check if the user is approved
+        if (user.isApproved) {
+          return res.status(200).json({
+            success: true,
+            isApproved: true,
+            userData: user,
+            message: 'User is approved',
+          });
+        } else {
+          return res.status(200).json({
+            success: true,
+            isApproved: false,
+            message: 'User is not yet approved',
+            userData: user,
+          });
+        }
+      } catch (error) {
+        console.error('Error checking approval status:', error);
+        return res.status(500).json({
           success: false,
-          message: 'User not found',
+          message: 'Internal server error',
         });
       }
-
-      // Check if the user is approved
-      if (user.isApproved) {
-        return res.status(200).json({
-          success: true,
-          isApproved: true,
-          userData: user,
-          message: 'User is approved',
-        });
-      } else {
-        return res.status(200).json({
-          success: true,
-          isApproved: false,
-          message: 'User is not yet approved',
-          userData: user,
-        });
-      }
-    } catch (error) {
-      console.error('Error checking approval status:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-      });
-    }
-  };
+    };
 
 
 
 
-}
+  }
 
-module.exports = new Employers() 
- 
- 
+module.exports = new Employers()
+
+
