@@ -2038,41 +2038,95 @@ class Employers {
     }
 
   // Update Interview Status
-  async updateInterviewStatus(req, res) {
+  // async updateInterviewStatus(req, res) {
+  //     try {
+  //       const { interviewId } = req.params;
+  //       console.log(interviewId, "this is an interview id ");
+  //       const { status } = req.body;
+
+  //       // Find and update the interview status
+  //       const updatedInterview = await applyModel.findByIdAndUpdate(
+  //         interviewId,
+  //         { status: status },
+  //         { new: true }
+  //       );
+
+  //       if (!updatedInterview) {
+  //         return res.status(404).json({
+  //           success: false,
+  //           message: 'Interview not found'
+  //         });
+  //       }
+
+  //       res.status(200).json({
+  //         success: true,
+  //         message: 'Interview status updated successfully',
+  //         data: updatedInterview
+  //       });
+
+  //     } catch (error) {
+  //       console.error('Error updating interview status:', error);
+  //       res.status(500).json({
+  //         success: false,
+  //         message: 'Failed to update interview status',
+  //         error: error.message
+  //       });
+  //     }
+  //   }   
+   
+  // Update Interview Status
+async updateInterviewStatus(req, res) {
+  try {
+    const { interviewId } = req.params;
+    console.log(interviewId, "this is an interview id ");
+    const { status } = req.body;
+
+    // Find and update the interview status
+    const updatedInterview = await applyModel.findByIdAndUpdate(
+      interviewId,
+      { status: status },
+      { new: true }
+    ).populate('userId', 'name','phone'); // Populate user data for WhatsApp
+
+    if (!updatedInterview) {
+      return res.status(404).json({
+        success: false,
+        message: 'Interview not found'
+      });
+    }
+
+    // Send WhatsApp notification if rejected
+    if (status === 'Rejected' || status === 'rejected') {
       try {
-        const { interviewId } = req.params;
-        console.log(interviewId, "this is an interview id ");
-        const { status } = req.body;
-
-        // Find and update the interview status
-        const updatedInterview = await applyModel.findByIdAndUpdate(
-          interviewId,
-          { status: status },
-          { new: true }
+        const user = updatedInterview.userId;
+        const rejectionMessage = `Your application has been rejected. Thank you for your interest.`;
+        
+        await sendRejectedWhatsapp(
+          user.name || 'Applicant',
+          user.phone,
+          rejectionMessage
         );
-
-        if (!updatedInterview) {
-          return res.status(404).json({
-            success: false,
-            message: 'Interview not found'
-          });
-        }
-
-        res.status(200).json({
-          success: true,
-          message: 'Interview status updated successfully',
-          data: updatedInterview
-        });
-
-      } catch (error) {
-        console.error('Error updating interview status:', error);
-        res.status(500).json({
-          success: false,
-          message: 'Failed to update interview status',
-          error: error.message
-        });
+      } catch (whatsappError) {
+        console.error('WhatsApp notification failed:', whatsappError);
+        // Don't fail the whole request if WhatsApp fails
       }
     }
+
+    res.status(200).json({
+      success: true,
+      message: 'Interview status updated successfully',
+      data: updatedInterview
+    });
+
+  } catch (error) {
+    console.error('Error updating interview status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update interview status',
+      error: error.message
+    });
+  }
+}
 
   // Get Users by Filter
   async getUserByFilter(req, res) {
