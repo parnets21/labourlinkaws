@@ -821,7 +821,7 @@ class user {
   }
   async login(req, res) {
     try {
-      const { email, password } = req.body;
+      const { email, password ,fcmToken,deviceId, platform } = req.body;
       // console.log(req.body,"saldjna")
       if(!isValid(email)) return res.status(400).json({error:"Please enter your email!"})
       if(!isValid(password)) return res.status(400).json({error:"Please enter your password!"})
@@ -1129,9 +1129,8 @@ async login1(req, res) {
       res.status(500).json({ message: "Server error" });
     }
   }
-  
 
-//forget password 
+    
 
 async postmail(req, res){
   let { email } = req.body;
