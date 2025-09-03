@@ -696,7 +696,7 @@ async register(req, res) {
 async addShortList(req, res) {
   try {
     const { userId, companyId } = req.body;
-    console.log("Received request with:", userId, companyId);
+    console.log("📥 Received request with:", { userId, companyId });
 
     // Fetch application
     let data = await applyModel
@@ -707,26 +707,30 @@ async addShortList(req, res) {
       .populate("userId")
       .populate("companyId");
 
-    console.log("Query result:", data);
+    console.log("🔎 Query result:", data);
 
     if (!data) {
+      console.log("❌ Application record not found");
       return res.status(404).json({ error: "Application record not found" });
     }
 
     if (data.status === "Shortlisted") {
+      console.log("⚠️ Already shortlisted");
       return res.status(400).json({ message: "Already shortlisted" });
     }
 
     // Update status
+    console.log("🛠 Updating status to Shortlisted...");
     let update = await applyModel.findOneAndUpdate(
       { userId, companyId },
       { $set: { status: "Shortlisted" } },
       { new: true }
     );
 
-    console.log("Updated document:", update);
+    console.log("✅ Updated document:", update);
 
     if (!update) {
+      console.log("❌ Update failed - Something went wrong");
       return res
         .status(400)
         .json({ success: false, message: "Something went wrong" });
@@ -737,39 +741,41 @@ async addShortList(req, res) {
       const { fullName, email, phone } = data.userId;
       const { jobProfile, companyName } = data.companyId;
 
-      // Email
+      console.log("📧 Sending Email to:", email);
       sent.sendMail(
         fullName,
         email,
         `Congratulations! Your profile has been shortlisted for the position of ${jobProfile} in ${companyName}. <h3>Our team will connect with you shortly to discuss the next steps.</h3>`
       );
 
-      // WhatsApp
+      console.log("💬 Sending WhatsApp to:", phone);
       sent.sendWhatsAppShortlisted(
         fullName,
         phone,
         `${jobProfile} in ${companyName}.`
       );
 
-      // SMS
+      console.log("📱 Sending SMS to:", phone);
       sent.sendShortlistedSMS(
         phone, // ✅ only phone goes here
         `Congratulations ${fullName}, you have been shortlisted for ${jobProfile} in ${companyName}.`
       );
     } else {
-      console.log("Missing user or company data, notifications not sent.");
+      console.log("⚠️ Missing user or company data, notifications not sent.");
     }
 
+    console.log("🎉 Successfully shortlisted and notifications sent");
     return res
       .status(200)
       .json({ success: true, message: "Successfully shortlisted" });
   } catch (err) {
-    console.error("Error in addShortList:", err);
+    console.error("🔥 Error in addShortList:", err);
     return res
       .status(500)
       .json({ success: false, error: "Internal server error" });
   }
 }
+
  
  
 async addSelect(req, res) {
