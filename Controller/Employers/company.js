@@ -770,6 +770,14 @@ async addSelect(req, res) {
     data.userId.phone,
     `${data.companyId.jobProfile} in ${data.companyId.companyName}. `
   );
+  console.log("WhatsApp message sent successfully");  
+   
+  //sms 
+    await sent.sendSelectedSMS(
+  
+    data.userId.phone,
+`Hello ${data.userId.fullName}, Congratulations! You have been selected  for the position of ${data.companyId.jobProfile} at  ${data.companyId.companyName} . Please check your offer details for the next steps - Labor Link.`
+  );
   console.log("WhatsApp message sent successfully"); 
     
 

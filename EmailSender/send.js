@@ -250,9 +250,44 @@ const sendShortlistedSMS = async (mobile, msg) => {
     });
     throw err;
   }
+}; 
+ 
+const sendSelectedSMS = async (mobile, msg) => {
+  try {
+    const formattedMobile = String(mobile).replace(/\D/g, ''); 
+
+    const payload = {
+      number: [`91${formattedMobile}`],
+      message: msg,
+      senderId: "LBRLNK",
+      templateId: "1707175671850574302", 
+    };
+
+    const response = await axios.post(
+      "https://smsapi.edumarcsms.com/api/v1/sendsms",
+      payload,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": "ffe14f876d5444038bfe71cddef56f49"
+        }
+      }
+    );
+
+    return response.data;
+  } catch (err) {
+    console.error("SMS API Error:", {
+      status: err.response?.status,
+      data: err.response?.data,
+      config: {
+        url: err.config?.url,
+        data: err.config?.data
+      }
+    });
+    throw err;
+  }
 };
 
-// sendInterviewDetails("Amit","917238861147","15/08/200","12:00","30 min","zoom","https://zoom.com/2323232","12233","make sure connect on time")
 
 const sendRejectedWhatsapp = async (name,mobile,msg) =>{  
     try {
@@ -298,9 +333,8 @@ const sendRejectedWhatsapp = async (name,mobile,msg) =>{
   }
 };  
  
-// sendRejectedWhatsapp("kiran","919902742423","hii") 
- //sendShortlistedSMS("9902742423","Hello Kiran, Congratulations! Your profile has been shortlisted for the position of Software Developer. Our team will connect with you shortly to discuss the next steps. Thank You For Choosing LaborLink")
+
 module.exports = {
   sendMail,
-  sendWhatsAppShortlisted,sendShortlistedSMS,sendSelectedWhatsapp,sendInterviewDetails,sendUserRegisteredWhatsapp,sendRejectedWhatsapp
+  sendWhatsAppShortlisted,sendShortlistedSMS,sendSelectedSMS,sendSelectedWhatsapp,sendInterviewDetails,sendUserRegisteredWhatsapp,sendRejectedWhatsapp
 };
