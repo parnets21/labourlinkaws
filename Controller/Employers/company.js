@@ -75,7 +75,7 @@ async register(req, res) {
       
       // Save the job in DB
       const newJob = await jobModel.create(obj);
-      console.log("✅ New Job Saved:", newJob); // Log saved job details
+      console.log("✅ New Job Saved:", newJob); 
 
       let msg =
           `This is a new ${companyName} company registered post by email id is ${email}
@@ -622,8 +622,10 @@ async register(req, res) {
       return res.status(500).json({ success: false, message: "Internal Server Error" });
   }
   
-}
-
+} 
+ 
+ 
+ 
 
 async addShortList(req, res) {
   try {
@@ -691,6 +693,94 @@ async addShortList(req, res) {
     return res.status(500).json({ success: false, error: "Internal server error" });
   }
 }   
+// async addSelect(req, res) {
+//   console.log(req.body, "this is body");
+
+//   const { userId, companyId } = req.body;
+//   console.log("Received request:", { userId, companyId });
+
+//   // Validate input
+//   if (!userId || !companyId) {
+//     return res.status(400).json({ error: "User ID and Company ID are required" });
+//   }
+//   // Convert to ObjectId safely
+//   let userObjectId, companyObjectId;
+//   try {
+//     userObjectId = new mongoose.Types.ObjectId(userId);
+//     companyObjectId = new mongoose.Types.ObjectId(companyId);
+//   } catch {
+//     return res.status(400).json({ error: "Invalid ObjectId format" });
+//   }
+
+//   // Debug logs
+//   const apps = await applyModel.find({ userId: userObjectId });
+//   console.log("Apps with this userId:", apps);
+
+//   const apps2 = await applyModel.find({ companyId: companyObjectId });
+//   console.log("Apps with this companyId:", apps2);
+
+//   // Fetch application
+//   let data = await applyModel
+//     .findOne({ userId: userObjectId, companyId: companyObjectId })
+//     .populate("userId")
+//     .populate("companyId")
+//     .lean();
+
+//   console.log("Fetched data:", data);
+
+//   if (!data) {
+//     return res.status(404).json({ error: "No application found" });
+//   }
+
+//   // Check if already selected
+//   if (data.status === "Selected") {
+//     return res.status(400).json({ error: "Already selected" });
+//   }
+
+//   // Update status
+//   const update = await applyModel.findOneAndUpdate(
+//     { userId: userObjectId, companyId: companyObjectId },
+//     { $set: { status: "Selected" } },
+//     { new: true }
+//   );
+
+//   if (!update) {
+//     return res.status(400).json({ error: "Something went wrong" });
+//   }
+
+//   console.log("Update successful:", update);
+
+//   // Send Email
+//   await sent.sendMail(
+//     data.userId.fullName,
+//     data.userId.email,
+//     `We are pleased to inform you that you have been selected for the position of ${data.companyId.jobProfile} in ${data.companyId.companyName}. Our HR team will contact you with the joining formalities and offer details. Congratulations once again!<br><br>
+//      <h3>Thank you <br>Labor Link Team</h3>`
+//   );
+//   console.log("Email sent successfully");
+
+//   // Send WhatsApp
+//   await sent.sendSelectedWhatsapp(
+//     data.userId.fullName,
+//     data.userId.phone,
+//     `${data.companyId.jobProfile} in ${data.companyId.companyName}. `
+//   );
+//   console.log("WhatsApp message sent successfully");  
+   
+//   //sms 
+// await sent.sendSelectedSMS(
+  
+//     data.userId.phone,
+// // `Hello ${data.userId.fullName}, Congratulations! You have been selected  for the position of ${data.companyId.jobProfile} at  ${data.companyId.companyName}. Please check your offer details for the next steps - Labor Link.`
+//   `- Congratulations${data.userId.fullName} You have been selected for the role of ${data.companyId.jobProfile} at ${data.companyId.companyName}. Please check your offer details for the next steps - Labor Link`
+// );
+//   console.log("message sent successfully"); 
+    
+
+//   return res.status(200).json({ success: "Successfully Selected" });
+// } 
+ 
+
 async addSelect(req, res) {
   console.log(req.body, "this is body");
 
@@ -701,8 +791,8 @@ async addSelect(req, res) {
   if (!userId || !companyId) {
     return res.status(400).json({ error: "User ID and Company ID are required" });
   }
+  
 
-  // Convert to ObjectId safely
   let userObjectId, companyObjectId;
   try {
     userObjectId = new mongoose.Types.ObjectId(userId);
@@ -731,9 +821,10 @@ async addSelect(req, res) {
     return res.status(404).json({ error: "No application found" });
   }
 
-  // Check if already selected
+  // Check if already selected - OPTION 1: Return success if already selected
   if (data.status === "Selected") {
-    return res.status(400).json({ error: "Already selected" });
+    console.log("User already selected, returning success");
+    return res.status(200).json({ success: "User already selected" });
   }
 
   // Update status
@@ -766,19 +857,18 @@ async addSelect(req, res) {
   );
   console.log("WhatsApp message sent successfully");  
    
-  //sms 
-await sent.sendSelectedSMS(
-  
+  // SMS 
+  await sent.sendSelectedSMS(
     data.userId.phone,
-// `Hello ${data.userId.fullName}, Congratulations! You have been selected  for the position of ${data.companyId.jobProfile} at  ${data.companyId.companyName}. Please check your offer details for the next steps - Labor Link.`
-  `- Congratulations${data.userId.fullName} You have been selected for the role of ${data.companyId.jobProfile} at ${data.companyId.companyName}. Please check your offer details for the next steps - Labor Link`
-);
-  console.log("message sent successfully"); 
-    
+    `Congratulations ${data.userId.fullName} You have been selected for the role of ${data.companyId.jobProfile} at ${data.companyId.companyName}. Please check your offer details for the next steps - Labor Link`
+  );
+  console.log("SMS sent successfully"); 
 
   return res.status(200).json({ success: "Successfully Selected" });
-}
-  async getSelectData(req, res) {
+}    
+ 
+
+async getSelectData(req, res) {
     try {
         // let companyId = new mongoose.Types.ObjectId(req.params.companyId); // Convert to ObjectId
         let companyId = req.params.companyId
@@ -798,6 +888,7 @@ await sent.sendSelectedSMS(
         return res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 }
+
 
 async getShortlistingData(req, res) {
   try {
@@ -844,6 +935,7 @@ async getShortlistingData(req, res) {
   }
 }
 
+
 async AllAplliedDetals(req, res) {
     try {
       let data = await applyModel
@@ -857,6 +949,7 @@ async AllAplliedDetals(req, res) {
       console.log(error);
     }
   }
+
 
 async rejectApply(req, res) {
     try {
@@ -884,7 +977,6 @@ async rejectApply(req, res) {
       console.log(err);
     }
   }
-
 
 async getRejectedApplications(req, res) {
     try {

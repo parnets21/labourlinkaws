@@ -33,8 +33,6 @@ const sendMail = async (name, email, msg) => {
     console.log(err);
   }
 }; 
- 
-
 const sendWhatsAppShortlisted = async (name, mobile, msg) => {
   try {
     // Ensure mobile is a STRING with country code but no + sign
@@ -77,8 +75,7 @@ const sendWhatsAppShortlisted = async (name, mobile, msg) => {
     });
     throw err;
   }
-};
- 
+}; 
 const sendSelectedWhatsapp = async (name,mobile,msg) =>{  
     try {
 
@@ -123,7 +120,6 @@ const sendSelectedWhatsapp = async (name,mobile,msg) =>{
     throw err;
   }
 }; 
-
 const sendInterviewDetails = async (name,mobile,date,time,duration,platform,plink,password,note) =>{  
     try {
 
@@ -169,9 +165,7 @@ const sendInterviewDetails = async (name,mobile,date,time,duration,platform,plin
     });
     throw err;
   }
-};  
-
-
+}; 
 const sendUserRegisteredWhatsapp = async ({ name, mobile }) => {
   try {
     const formattedMobile = String(mobile).replace(/\D/g, ""); // ensure only digits
@@ -214,8 +208,6 @@ const sendUserRegisteredWhatsapp = async ({ name, mobile }) => {
     throw err;
   }
 };
-
-
 const sendShortlistedSMS = async (mobile, msg) => {
   try {
     const formattedMobile = String(mobile).replace(/\D/g, ''); 
@@ -250,8 +242,7 @@ const sendShortlistedSMS = async (mobile, msg) => {
     });
     throw err;
   }
-}; 
- 
+};  
 const sendSelectedSMS = async (mobile, msg) => {
   try {
     const formattedMobile = String(mobile).replace(/\D/g, ''); 
@@ -269,7 +260,7 @@ const sendSelectedSMS = async (mobile, msg) => {
       {
         headers: {
           "Content-Type": "application/json",
-          "apikey": "5e0069bdeb7441cf90c12fe1c33e045c"
+          "apikey": "ffe14f876d5444038bfe71cddef56f49"
         }
       }
     );
@@ -286,9 +277,42 @@ const sendSelectedSMS = async (mobile, msg) => {
     });
     throw err;
   }
-};
+};   
+const sendInterviewDetailsSMS = async (mobile,msg) => {
+  try {
+    const formattedMobile = String(mobile).replace(/\D/g, ''); 
 
+    const payload = {
+      number: [`91${formattedMobile}`],
+      message: msg,
+      senderId: "LBRLNK",
+      templateId: "1707175672187250636", 
+    };
 
+    const response = await axios.post(
+      "https://smsapi.edumarcsms.com/api/v1/sendsms",
+      payload,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": "ffe14f876d5444038bfe71cddef56f49"
+        }
+      }
+    );
+
+    return response.data;
+  } catch (err) {
+    console.error("SMS API Error:", {
+      status: err.response?.status,
+      data: err.response?.data,
+      config: {
+        url: err.config?.url,
+        data: err.config?.data
+      }
+    });
+    throw err;
+  }
+}; 
 const sendRejectedWhatsapp = async (name,mobile,msg) =>{  
     try {
 
@@ -331,11 +355,8 @@ const sendRejectedWhatsapp = async (name,mobile,msg) =>{
     });
     throw err;
   }
-};  
-   
-// sendSelectedSMS("7238861147","- Congratulations kiran You have been selected for the role of developer at parnets. Please check your offer details for the next steps - Labor Link")
-
+}; 
 module.exports = {
   sendMail,
-  sendWhatsAppShortlisted,sendShortlistedSMS,sendSelectedSMS,sendSelectedWhatsapp,sendInterviewDetails,sendUserRegisteredWhatsapp,sendRejectedWhatsapp
+  sendWhatsAppShortlisted,sendShortlistedSMS,sendInterviewDetailsSMS,sendSelectedSMS,sendSelectedWhatsapp,sendInterviewDetails,sendUserRegisteredWhatsapp,sendRejectedWhatsapp
 };
