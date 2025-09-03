@@ -269,7 +269,7 @@ const sendSelectedSMS = async (mobile, msg) => {
       {
         headers: {
           "Content-Type": "application/json",
-          "apikey": "ffe14f876d5444038bfe71cddef56f49"
+          "apikey": "5e0069bdeb7441cf90c12fe1c33e045c"
         }
       }
     );
@@ -332,7 +332,8 @@ const sendRejectedWhatsapp = async (name,mobile,msg) =>{
     throw err;
   }
 };  
- 
+   
+// sendSelectedSMS("7238861147","- Congratulations kiran You have been selected for the role of developer at parnets. Please check your offer details for the next steps - Labor Link")
 
 module.exports = {
   sendMail,

@@ -776,9 +776,10 @@ async addSelect(req, res) {
     await sent.sendSelectedSMS(
   
     data.userId.phone,
-`Hello ${data.userId.fullName}, Congratulations! You have been selected  for the position of ${data.companyId.jobProfile} at  ${data.companyId.companyName} . Please check your offer details for the next steps - Labor Link.`
-  );
-  console.log("WhatsApp message sent successfully"); 
+// `Hello ${data.userId.fullName}, Congratulations! You have been selected  for the position of ${data.companyId.jobProfile} at  ${data.companyId.companyName}. Please check your offer details for the next steps - Labor Link.`
+  - `Congratulations${data.userId.fullName} You have been selected for the role of ${data.companyId.jobProfile} at ${data.companyId.companyName}. Please check your offer details for the next steps - Labor Link`
+);
+  console.log("message sent successfully"); 
     
 
   return res.status(200).json({ success: "Successfully Selected" });
