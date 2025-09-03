@@ -299,7 +299,7 @@ const sendRejectedWhatsapp = async (name,mobile,msg) =>{
 };  
  
 // sendRejectedWhatsapp("kiran","919902742423","hii") 
-// sendShortlistedSMS("9902742423","Hello Kiran, Congratulations! Your profile has been shortlisted for the position of Software Developer. Our team will connect with you shortly to discuss the next steps. Thank You For Choosing LaborLink")
+ //sendShortlistedSMS("9902742423","Hello Kiran, Congratulations! Your profile has been shortlisted for the position of Software Developer. Our team will connect with you shortly to discuss the next steps. Thank You For Choosing LaborLink")
 module.exports = {
   sendMail,
   sendWhatsAppShortlisted,sendShortlistedSMS,sendSelectedWhatsapp,sendInterviewDetails,sendUserRegisteredWhatsapp,sendRejectedWhatsapp
