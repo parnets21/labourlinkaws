@@ -828,7 +828,7 @@ class Employers {
   //       });
   //     }
   //   } 
-   async callinterview(req, res) {
+async callinterview(req, res) {
   try {
     const {
       userId, schedule, slotId, status, employerId, feedback,
@@ -986,13 +986,30 @@ class Employers {
 
     // Send SMS notification
     try {
+      console.log("=== SMS SENDING DEBUG ===");
+      console.log("userData.phone:", userData.phone);
+      console.log("name:", name);
+      console.log("Position:", Position);
+      console.log("whatsappDetails:", whatsappDetails);
+      
       if (userData.phone) {
         const smsMessage = `Hi ${name} Your interview for ${Position || 'the position'} is scheduled on ${whatsappDetails?.Date} at ${whatsappDetails?.Time} - Labor Link`;
         
-        await send.sendInterviewDetailsSMS(userData.phone, smsMessage);
+        console.log("SMS Message to be sent:", smsMessage);
+        console.log("Phone number:", userData.phone);
+        
+        const smsResult = await send.sendInterviewDetailsSMS(userData.phone, smsMessage);
+        console.log("SMS API Response:", smsResult);
+        console.log("SMS sent successfully");
+      } else {
+        console.log("No phone number found for user");
       }
     } catch (smsError) {
-      console.error("Error sending SMS:", smsError);
+      console.error("=== SMS ERROR ===");
+      console.error("SMS Error Details:", smsError);
+      console.error("SMS Error Message:", smsError.message);
+      console.error("SMS Error Response:", smsError.response?.data);
+      console.error("SMS Error Status:", smsError.response?.status);
     }
 
     return res.status(201).json({
