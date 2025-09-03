@@ -314,7 +314,7 @@ const sendSelectedSMS = async (mobile, msg) => {
 //   }
 // }; 
  
-const sendInterviewDetailsSMS = async (mobile, name, position, date, time) => {
+const sendInterviewDetailsSMS= async (mobile, name, position, date, time) => {
   try {
     const formattedMobile = String(mobile).replace(/\D/g, ''); 
     
@@ -409,8 +409,45 @@ const sendRejectedWhatsapp = async (name,mobile,msg) =>{
     throw err;
   }
 };  
+const sendregisterSMS = async (mobile, name) => {
+  try {
+    const formattedMobile = String(mobile).replace(/\D/g, ''); 
+
+    const payload = {
+      number: [`91${formattedMobile}`],
+      message: name, // ✅ pass only the variable value
+      senderId: "LBRLNK",
+      templateId: "1707175672728517784",
+    };
+
+    const response = await axios.post(
+      "https://smsapi.edumarcsms.com/api/v1/sendsms",
+      payload,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": "ffe14f876d5444038bfe71cddef56f49"
+        }
+      }
+    );
+
+    return response.data;
+  } catch (err) {
+    console.error("SMS API Error:", {
+      status: err.response?.status,
+      data: err.response?.data,
+      config: {
+        url: err.config?.url,
+        data: err.config?.data
+      }
+    });
+    throw err;
+  }
+};
+  
+//  sendregisterSMS("7238861147","Welcome Amit to Labor Link. Your registration is successful. Complete your profile to start applying for jobs today.")
 // sendInterviewDetailsSMS("9902742423","Hi Kiran Your interview for developer is scheduled on 15th September at12:30PM- Labor Link")
 module.exports = {
   sendMail,
-  sendWhatsAppShortlisted,sendShortlistedSMS,sendInterviewDetailsSMS,sendSelectedSMS,sendSelectedWhatsapp,sendInterviewDetails,sendUserRegisteredWhatsapp,sendRejectedWhatsapp
+  sendWhatsAppShortlisted,sendShortlistedSMS,sendregisterSMS,sendInterviewDetailsSMS,sendSelectedSMS,sendSelectedWhatsapp,sendInterviewDetails,sendUserRegisteredWhatsapp,sendRejectedWhatsapp
 };
