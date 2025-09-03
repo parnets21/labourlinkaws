@@ -1,9 +1,6 @@
 var nodemailer = require("nodemailer"); 
 const axios = require("axios");
-
-// 	  user: "donotreply@mitrakart.com",
-// pass: "MITRAKART@123",
-// yzbzpllsthbvrdal
+ 
 
 const sendMail = async (name, email, msg) => {
   try {
@@ -38,46 +35,11 @@ const sendMail = async (name, email, msg) => {
 }; 
  
 
-
-// const sendWhatsAppShortlisted = async (name, mobile,msg,) => {
-//   try {
-//     const response = await axios.post(
-//       "https://backend.api-wa.co/campaign/combirds/api/v2",
-//       {
-//         apiKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4OTMyYzBlZmY4NGRiMGMwZjNlNDg4ZiIsIm5hbWUiOiJMYWJvciBMaW5rIiwiYXBwTmFtZSI6IkFpU2Vuc3kiLCJjbGllbnRJZCI6IjY4OTMyYzBkZmY4NGRiMGMwZjNlNDg4NyIsImFjdGl2ZVBsYW4iOiJCQVNJQ1RSSUFMIiwiaWF0IjoxNzU0NDc1NTM0fQ.1SEjuYr_EQBgevXcTCP2wMTQ-M_EuznoS_-3XEiEeK4",
-//         campaignName: "ShortListed Message",
-//         destination: mobile, 
-//         userName: "Labor Link",
-//         templateParams: [name, msg], 
-//         source: "new-landing-page form",
-//         media: {},
-//         buttons: [],
-//         carouselCards: [],
-//         location: {},
-//         attributes: {},
-//         paramsFallbackValue: {
-//           FirstName: "user",
-//         },
-//       },
-//       {
-//         headers: { "Content-Type": "application/json" },
-//       }
-//     );
-
-//     console.log("✅ WhatsApp Shortlist message sent:", response.data);
-//     return response.data;
-//   } catch (err) {
-//     console.error("❌ Error sending WhatsApp Shortlist:", err.message);
-//     throw err;
-//   }
-// };   
- 
 const sendWhatsAppShortlisted = async (name, mobile, msg) => {
   try {
     // Ensure mobile is a STRING with country code but no + sign
-    const formattedMobile = String(mobile).replace(/\D/g, ''); // Remove all non-digits
-    
-    const payload = {
+    const formattedMobile = String(mobile).replace(/\D/g, '');  
+   const payload = {
       apiKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4OTMyYzBlZmY4NGRiMGMwZjNlNDg4ZiIsIm5hbWUiOiJMYWJvciBMaW5rIiwiYXBwTmFtZSI6IkFpU2Vuc3kiLCJjbGllbnRJZCI6IjY4OTMyYzBkZmY4NGRiMGMwZjNlNDg4NyIsImFjdGl2ZVBsYW4iOiJCQVNJQ19UUklBTCIsImlhdCI6MTc1NDQ3NTUzNH0.1SEjuYr_EQBgevXcTCP2wMTQ-M_EuznoS_-3XEiEeK4",
       campaignName: "ShortListed Message",
       destination: formattedMobile, 
@@ -169,8 +131,7 @@ const sendInterviewDetails = async (name,mobile,date,time,duration,platform,plin
     
      const payload = {
        apiKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4OTMyYzBlZmY4NGRiMGMwZjNlNDg4ZiIsIm5hbWUiOiJMYWJvciBMaW5rIiwiYXBwTmFtZSI6IkFpU2Vuc3kiLCJjbGllbnRJZCI6IjY4OTMyYzBkZmY4NGRiMGMwZjNlNDg4NyIsImFjdGl2ZVBsYW4iOiJCQVNJQ19UUklBTCIsImlhdCI6MTc1NDQ3NTUzNH0.1SEjuYr_EQBgevXcTCP2wMTQ-M_EuznoS_-3XEiEeK4",
-
-campaignName: "interviewdtls",
+      campaignName: "interviewdtls",
       destination: formattedMobile,
       userName: "Labor Link",
       templateParams: [name, date,time,duration,platform,plink,password,note],
@@ -255,7 +216,7 @@ const sendUserRegisteredWhatsapp = async ({ name, mobile }) => {
 };
 
 
-const sendSelectedSMS = async (mobile, msg) => {
+const sendShortlistedSMS = async (mobile, msg) => {
   try {
     const formattedMobile = String(mobile).replace(/\D/g, ''); 
 
@@ -291,9 +252,6 @@ const sendSelectedSMS = async (mobile, msg) => {
   }
 };
 
-
-
-
 // sendInterviewDetails("Amit","917238861147","15/08/200","12:00","30 min","zoom","https://zoom.com/2323232","12233","make sure connect on time")
 
 const sendRejectedWhatsapp = async (name,mobile,msg) =>{  
@@ -315,7 +273,6 @@ const sendRejectedWhatsapp = async (name,mobile,msg) =>{
       attributes: {},
       paramsFallbackValue: { FirstName: "user" }
     };
-
     const response = await axios.post(
       "https://backend.api-wa.co/campaign/combirds/api/v2",
       payload,
@@ -342,8 +299,8 @@ const sendRejectedWhatsapp = async (name,mobile,msg) =>{
 };  
  
 // sendRejectedWhatsapp("kiran","919902742423","hii") 
-// sendSelectedSMS("9902742423","Hello Kiran, Congratulations! Your profile has been shortlisted for the position of Software Developer. Our team will connect with you shortly to discuss the next steps. Thank You For Choosing LaborLink")
+// sendShortlistedSMS("9902742423","Hello Kiran, Congratulations! Your profile has been shortlisted for the position of Software Developer. Our team will connect with you shortly to discuss the next steps. Thank You For Choosing LaborLink")
 module.exports = {
   sendMail,
-  sendWhatsAppShortlisted,sendSelectedSMS,sendSelectedWhatsapp,sendInterviewDetails,sendUserRegisteredWhatsapp,sendRejectedWhatsapp
+  sendWhatsAppShortlisted,sendShortlistedSMS,sendSelectedWhatsapp,sendInterviewDetails,sendUserRegisteredWhatsapp,sendRejectedWhatsapp
 };

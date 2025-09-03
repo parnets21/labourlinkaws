@@ -1,6 +1,5 @@
 const moment = require("moment");
 const mongoose = require("mongoose");
-
 const jobModel = require("../../Model/Employers/company");
 const applyModel = require("../../Model/Employers/apply");
 const selectModel = require("../../Model/Employers/selected");
@@ -27,7 +26,7 @@ class company {
 async register(req, res) {
   try {
       console.log("📢 Register API Called");
-      console.log("📝 Request Body:", req.body); // Log incoming request data
+      console.log("📝 Request Body:", req.body); 
 
       const {
           companyName, jobtitle, averageIncentive, openings, address, email, skill, benefits,
@@ -35,7 +34,6 @@ async register(req, res) {
           typeofjob, typeofwork, typeofeducation, education, experiencerequired,
           gendertype, jobProfile, minSalary, maxSalary, period, location, time,
           whatsapp, adminId, employerId, salarytype, interviewername,
-          // Added new fields below
           companywebsite, companymobile, companyindustry, companytype, department,
           companyaddress, requirements, responsibilities, workSchedule, locationDetails,
           preferredQualifications, additionalNotes
@@ -626,18 +624,91 @@ async register(req, res) {
 }
 
 
+// async addShortList(req, res) {
+//   try {
+//     const { userId, companyId } = req.body;
+//     console.log("Received request with the rdfjk:", userId, companyId);
+
+//     let data = await applyModel
+//     .findOne({ userId: mongoose.Types.ObjectId(userId), companyId: mongoose.Types.ObjectId(companyId) })
+//     .populate("userId")
+//       .populate("companyId");
+//       console.log("Query result:", data);  
+//     if (!data) {
+//       return res.status(404).json({ error: "Application record not found" });
+//     }
+//     if (data.status === "Shortlisted") {
+//       return res.status(400).json({ message: "Already shortlisted" });
+//     }
+
+//     let update = await applyModel.findOneAndUpdate(
+//       { userId: userId, companyId: companyId },
+//       { $set: { status: "Shortlisted" } },
+//       { new: true }
+//     );
+
+//     console.log(update, "Updated document");
+
+//     if (!update) {
+//       return res.status(400).json({ success: false, message: "Something went wrong" });
+//     }
+
+// //Email
+//     if (data.userId && data.companyId) {
+//       sent.sendMail(
+//         data.userId.fullName,
+//         data.userId.email,
+//         ` Congratulations! Your profile has been shortlisted for the position of  ${data.companyId.jobProfile} in ${data.companyId.companyName}<h3>Our team will connect with you shortly to discuss the next steps.</h3>`
+//       );
+//     } else {
+//       console.log("Missing user or company data, email not sent.");
+//     } 
+     
+// //whatsapp
+//   if (data.userId && data.companyId) {
+//       sent.sendWhatsAppShortlisted(
+//         data.userId.fullName,
+//         data.userId.phone,
+//         ` ${data.companyId.jobProfile} in ${data.companyId.companyName}.`
+//       );
+//     } else {
+//       console.log("Missing user or company data, email not sent.");
+//     }  
+     
+//     //sms
+//      if (data.userId && data.companyId) {
+//       sent.sendShortlistedSMS(
+//         data.userId.fullName,
+//         data.userId.phone,
+//         ` ${data.companyId.jobProfile} in ${data.companyId.companyName}.`
+//       );
+//     } else {
+//       console.log("Missing user or company data, sms not sent.");
+//     }
+//     return res.status(200).json({ success: true, message: "Successfully shortlisted" });
+//   } catch (err) {
+//     console.error("Error in addShortList:", err);
+//     return res.status(500).json({ success: false, error: "Internal server error" });
+//   }
+// }  
+  
+
 async addShortList(req, res) {
   try {
     const { userId, companyId } = req.body;
-    console.log("Received request with the rdfjk:", userId, companyId);
+    console.log("Received request with:", userId, companyId);
 
+    // Fetch application
     let data = await applyModel
-    .findOne({ userId: mongoose.Types.ObjectId(userId), companyId: mongoose.Types.ObjectId(companyId) })
-    .populate("userId")
+      .findOne({
+        userId: mongoose.Types.ObjectId(userId),
+        companyId: mongoose.Types.ObjectId(companyId),
+      })
+      .populate("userId")
       .populate("companyId");
-      console.log("Query result:", data);  
 
-    // ✅ Check if data exists before accessing properties
+    console.log("Query result:", data);
+
     if (!data) {
       return res.status(404).json({ error: "Application record not found" });
     }
@@ -646,153 +717,64 @@ async addShortList(req, res) {
       return res.status(400).json({ message: "Already shortlisted" });
     }
 
+    // Update status
     let update = await applyModel.findOneAndUpdate(
-      { userId: userId, companyId: companyId },
+      { userId, companyId },
       { $set: { status: "Shortlisted" } },
       { new: true }
     );
 
-    console.log(update, "Updated document");
+    console.log("Updated document:", update);
 
     if (!update) {
-      return res.status(400).json({ success: false, message: "Something went wrong" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Something went wrong" });
     }
 
-//whatsapp 
+    // Notifications
     if (data.userId && data.companyId) {
+      const { fullName, email, phone } = data.userId;
+      const { jobProfile, companyName } = data.companyId;
+
+      // Email
       sent.sendMail(
-        data.userId.fullName,
-        data.userId.email,
-        ` Congratulations! Your profile has been shortlisted for the position of  ${data.companyId.jobProfile} in ${data.companyId.companyName}<h3>Our team will connect with you shortly to discuss the next steps.</h3>`
+        fullName,
+        email,
+        `Congratulations! Your profile has been shortlisted for the position of ${jobProfile} in ${companyName}. <h3>Our team will connect with you shortly to discuss the next steps.</h3>`
       );
-    } else {
-      console.log("Missing user or company data, email not sent.");
-    }
-  if (data.userId && data.companyId) {
+
+      // WhatsApp
       sent.sendWhatsAppShortlisted(
-        data.userId.fullName,
-        data.userId.phone,
-        ` ${data.companyId.jobProfile} in ${data.companyId.companyName}.`
+        fullName,
+        phone,
+        `${jobProfile} in ${companyName}.`
+      );
+
+      // SMS
+      sent.sendShortlistedSMS(
+        phone, // ✅ only phone goes here
+        `Congratulations ${fullName}, you have been shortlisted for ${jobProfile} in ${companyName}.`
       );
     } else {
-      console.log("Missing user or company data, email not sent.");
+      console.log("Missing user or company data, notifications not sent.");
     }
-    return res.status(200).json({ success: true, message: "Successfully shortlisted" });
+
+    return res
+      .status(200)
+      .json({ success: true, message: "Successfully shortlisted" });
   } catch (err) {
     console.error("Error in addShortList:", err);
-    return res.status(500).json({ success: false, error: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, error: "Internal server error" });
   }
 }
-
-
-
-// async  addSelect(req, res) {
-//   try {
-//       console.log(req.body, "this is body");
-
-//       const { userId, companyId } = req.body;
-//       console.log("Received request:", { userId, companyId });
-
-//       // Validate input
-//       if (!userId || !companyId) {
-//           return res.status(400).json({ error: "User ID and Company ID are required" });
-//       }
-
-//       // Convert to ObjectId
-//       let userObjectId, companyObjectId;
-//       try {
-//           userObjectId = new mongoose.Types.ObjectId(userId);
-//           companyObjectId = new mongoose.Types.ObjectId(companyId);
-//       } catch (err) {
-//           return res.status(400).json({ error: "Invalid ObjectId format" });
-//       }
-
-//       // Debug logs (optional)
-//       const apps = await applyModel.find({ userId: userObjectId });
-//       console.log("Apps with this userId:", apps);
-
-//       const apps2 = await applyModel.find({ companyId: companyObjectId });
-//       console.log("Apps with this companyId:", apps2);
-
-//       // Fetch the application
-//       let data = await applyModel
-//           .findOne({ userId: userObjectId, companyId: companyObjectId })
-//           .populate("userId")
-//           .populate("companyId")
-//           .lean();
-
-//       console.log("Fetched data:", data);
-
-//       if (!data) {
-//           console.log("No application found");
-//           return res.status(404).json({ error: "No application found" });
-//       }
-
-//       // Check if already selected
-//       console.log("Current Status:", data.status);
-//       if (data.status === "Selected") {
-//           console.log("Already selected condition met! Returning error...");
-//           return res.status(400).json({ error: "Already selected" });
-//       }
-
-//       // Update application status
-//       let update;
-//       try {
-//           console.log("Updating application status...");
-
-//           update = await applyModel.findOneAndUpdate(
-//               { userId: userObjectId, companyId: companyObjectId },
-//               { $set: { status: "Selected" } },
-//               { new: true }
-//           );
-
-//           if (!update) {
-//               console.log("No matching document found for update");
-//               return res.status(400).json({ error: "Something went wrong" });
-//           }
-
-//           console.log("Update successful:", update);
-//       } catch (error) {
-//           console.error("Error updating document:", error);
-//           return res.status(500).json({ error: "Database update failed" });
-//       }
-
-    
-//       try {
-//           await sent.sendMail(
-//               data.userId.fullName,
-//               data.userId.email,
-//               `We are pleased to inform you that you have been selected for the position of ${data.companyId.jobProfile} in ${data.companyId.companyName}Our HR team will contact you with the joining formalities and offer details. Congratulations once again!
-// .
-//               <h3>Thank you <br>Labor Link Team</h3>`
-//           );
-//           console.log("Email sent successfully");
-//       } catch (emailError) {
-//           console.error("Error sending email:", emailError);
-//       } 
-       
-//         try {
-//            sent.sendSelectedWhatsapp(
-//               data.userId.fullName,
-//               data.userId.phone,
-//               `We are pleased to inform you that you have been selected for the position of ${data.companyId.jobProfile} in ${data.companyId.companyName}Our HR team will contact you with the joining formalities and offer details. Congratulations once again!
-// .
-//               <h3>Thank you <br>Labor Link Team</h3>`
-//           );
-//           console.log("Email sent successfully");
-//       } catch (emailError) {
-//           console.error("Error sending email:", emailError);
-//       }
-
-//       return res.status(200).json({ success: "Successfully Selected" });
-
-//   } catch (err) {
-//       console.error("Unexpected error:", err);
-//       return res.status(500).json({ error: "Internal server error" });
-//   }
-// }   
-  
+ 
+ 
 async addSelect(req, res) {
+ 
+
   console.log(req.body, "this is body");
 
   const { userId, companyId } = req.body;
@@ -866,27 +848,18 @@ async addSelect(req, res) {
     `${data.companyId.jobProfile} in ${data.companyId.companyName}. `
   );
   console.log("WhatsApp message sent successfully"); 
-    await sent.sendSelectedSMS(
-    data.userId.fullName,
-    data.userId.phone,
-    `${data.companyId.jobProfile} in ${data.companyId.companyName}. `
-  );
-  console.log("WhatsApp message sent successfully");
+    
 
   return res.status(200).json({ success: "Successfully Selected" });
 }
-
-
   async getSelectData(req, res) {
     try {
         // let companyId = new mongoose.Types.ObjectId(req.params.companyId); // Convert to ObjectId
         let companyId = req.params.companyId
         console.log(companyId,"this is company id")
         const hash = await applyModel 
-        .find({ companyId, status: "Selected" })  // ✅ Correct field name
+        .find({ companyId, status: "Selected" }) 
         .populate("userId");
-    
-
         console.log(hash, "this is hash");
 
         // if (hash.length <= 0) {
@@ -899,7 +872,6 @@ async addSelect(req, res) {
         return res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 }
-
 
 async getShortlistingData(req, res) {
   try {
@@ -1257,7 +1229,7 @@ async getShortlistingData(req, res) {
         }
       };
       
-      // Function to extract job roles from user experiences
+
       async searchJobsByUserRole(req, res) {
         try {
           const { userId } = req.params;
@@ -1301,7 +1273,7 @@ async getShortlistingData(req, res) {
       
       
 
-      // POST Controllers
+
 
 
       async addCompanyType(req, res) {
@@ -1351,33 +1323,7 @@ async getShortlistingData(req, res) {
                 details: error.message
             });
         }
-    }
-    
-
-    
-
-      // async addIndustry(req, res) {
-      //   try {
-      //     const { industryName } = req.body;
-      //     if (!industryName) {
-      //       return res.status(400).json({ error: "Industry name is required" });
-      //     }
-
-      //     const newIndustry = await Industry.create({ 
-      //       industryName, 
-      //       action: true 
-      //     });
-
-      //     return res.status(201).json({
-      //       success: true,
-      //       data: newIndustry
-      //     });
-      //   } catch (error) {
-      //     console.error("Error adding industry:", error);
-      //     return res.status(500).json({ error: "Internal server error" });
-      //   }
-      // }
-      
+    }      
       async addIndustry (req, res){
         try {
           const { id, industryName } = req.body;
@@ -1442,8 +1388,6 @@ async getShortlistingData(req, res) {
           });
         }
       };
-
-
       async addDepartment(req, res) {
         try {
             const { departmentName } = req.body;
@@ -1485,8 +1429,6 @@ async getShortlistingData(req, res) {
             });
         }
     }
-    
-
       async addJobRole(req, res) {
         try {
           const { jobRole } = req.body;
@@ -1508,7 +1450,6 @@ async getShortlistingData(req, res) {
           return res.status(500).json({ error: "Internal server error" });
         }
       }
-
       async  addJobRole (req, res)  {
         try {
           const { id, jobRole } = req.body;
@@ -1539,7 +1480,6 @@ async getShortlistingData(req, res) {
           return res.status(500).json({ error: 'Internal server error' });
         }
       };
-
       async addWorkMode(req, res) {
         try {
             const { workMode } = req.body;
@@ -1576,7 +1516,6 @@ async getShortlistingData(req, res) {
         }
     }
     
-
       async addEducation(req, res) {
         const education = new Education({
           qualification: req.body.qualification,
@@ -1589,7 +1528,6 @@ async getShortlistingData(req, res) {
           res.status(400).json({ message: error.message });
         }
       }
-
       async addSkill(req, res) {
         try {
           console.log("Received body:", req.body); // Debugging step ✅
@@ -1677,8 +1615,7 @@ async getShortlistingData(req, res) {
             details: error.message,
           });
         }
-      }
-      
+      }      
       async addCuisine(req, res) {
     try {
         console.log("Received body:", req.body);
@@ -1716,10 +1653,7 @@ async getShortlistingData(req, res) {
         });
     }
 }
-
-
-      // GET Controllers
-      async getCompanyTypes(req, res) {
+async getCompanyTypes(req, res) {
         try {
             const companyTypes = await CompanyType.find({ action: true })
                 .select('_id type typeId')  // ✅ Add typeId
@@ -1738,24 +1672,7 @@ async getShortlistingData(req, res) {
             });
         }
     }
-    
-
-      // async getIndustries(req, res) {
-      //   try {
-      //     const industries = await Industry.find({ action: true })
-      //       .select('industryName -_id')
-      //       .sort({ industryName: 1 });
-          
-      //     return res.status(200).json({
-      //       success: true,
-      //       data: industries.map(ind => ind.industryName)
-      //     });
-      //   } catch (error) {
-      //     console.error("Error fetching industries:", error);
-      //     return res.status(500).json({ error: "Internal server error" });
-      //   }
-      // }
-      async getIndustries  (req, res)  {
+ async getIndustries  (req, res)  {
         try {
           const industries = await Industry.find({}).sort({ industryName: 1 }); // Fetch all industries from the database
           res.status(200).json({
@@ -1770,8 +1687,7 @@ async getShortlistingData(req, res) {
           });
         }
       };
-
-      async getDepartments(req, res) {
+async getDepartments(req, res) {
         try {
             const departments = await Department.find({ action: true })
                 .select('_id departmentName departmentId')  // ✅ Include departmentId
@@ -1790,9 +1706,7 @@ async getShortlistingData(req, res) {
             });
         }
     }
-    
-
-    async getJobRoles  (req, res)  {
+  async getJobRoles  (req, res)  {
       try {
         const roles = await JobRole.find({}).sort({ jobRole: 1 });;
         console.log(roles,"sdsd")
@@ -1803,7 +1717,7 @@ async getShortlistingData(req, res) {
       }
     };
 
-    async getWorkModes(req, res) {
+async getWorkModes(req, res) {
       try {
           const workModes = await WorkMode.find({ action: true })
               .select('_id workMode') // Include _id and workMode
@@ -1821,7 +1735,7 @@ async getShortlistingData(req, res) {
   }
   
 
-   async getEducations(req, res) {
+async getEducations(req, res) {
         try {
           const educations = await Education.find().sort({ qualification: 1 });;
           res.json(educations);
@@ -1829,8 +1743,6 @@ async getShortlistingData(req, res) {
           res.status(500).json({ message: error.message });
         }
       };
-      
-
       async getSkills(req, res) {
         try {
           const skills = await Skill.find({ action: true })
@@ -1850,9 +1762,7 @@ async getShortlistingData(req, res) {
           });
         }
       }
-      
-
-   async getChefs(req, res) {
+async getChefs(req, res) {
   try {
     const chefs = await Chefs.find({ action: true })
       .select('_id chefCategory chefId') // include chefId for sorting
@@ -1891,10 +1801,7 @@ async getCuisine(req, res) {
     });
   }
 }
-
-
-      // Edit functions
-      async editCompanyType(req, res) {
+async editCompanyType(req, res) {
         try {
           const { id } = req.params;
           const { type, action } = req.body;
@@ -1950,8 +1857,7 @@ async getCuisine(req, res) {
           });
         }
       }
-
-      async editIndustry  (req, res) {
+async editIndustry  (req, res) {
         try {
           const { id } = req.params;
           const { industryName } = req.body;
@@ -2006,9 +1912,7 @@ async getCuisine(req, res) {
           });
         }
       };
-      
-
-      async editDepartment(req, res) {
+async editDepartment(req, res) {
         try {
             const { id } = req.params;
             const { departmentName, action } = req.body;
@@ -2064,9 +1968,7 @@ async getCuisine(req, res) {
             });
         }
     }
-    
-
-      async editJobRole(req, res) {
+async editJobRole(req, res) {
         try {
           const { id } = req.params;
           const { jobRole, action } = req.body;
@@ -2094,8 +1996,7 @@ async getCuisine(req, res) {
           return res.status(500).json({ error: "Internal server error" });
         }
       }
-
-      async editWorkMode(req, res) {
+async editWorkMode(req, res) {
         try {
           const { id } = req.params;
           const { workMode, action } = req.body;
@@ -2123,8 +2024,7 @@ async getCuisine(req, res) {
           return res.status(500).json({ error: "Internal server error" });
         }
       }
-
-      async editEducation(req, res) {
+async editEducation(req, res) {
         try {
           const education = await Education.findByIdAndUpdate(req.params.id, req.body, { new: true });
           res.json(education);
@@ -2133,7 +2033,7 @@ async getCuisine(req, res) {
         }
       };
       
-      async editSkill(req, res) {
+async editSkill(req, res) {
         try {
             const { id } = req.params;
             const { skillName, action } = req.body;
