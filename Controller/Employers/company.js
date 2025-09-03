@@ -690,13 +690,7 @@ async addShortList(req, res) {
     console.error("Error in addShortList:", err);
     return res.status(500).json({ success: false, error: "Internal server error" });
   }
-}  
-  
-
- 
- 
- 
-
+}   
 async addSelect(req, res) {
   console.log(req.body, "this is body");
 
@@ -773,11 +767,11 @@ async addSelect(req, res) {
   console.log("WhatsApp message sent successfully");  
    
   //sms 
-    await sent.sendSelectedSMS(
+await sent.sendSelectedSMS(
   
     data.userId.phone,
 // `Hello ${data.userId.fullName}, Congratulations! You have been selected  for the position of ${data.companyId.jobProfile} at  ${data.companyId.companyName}. Please check your offer details for the next steps - Labor Link.`
-  - `Congratulations${data.userId.fullName} You have been selected for the role of ${data.companyId.jobProfile} at ${data.companyId.companyName}. Please check your offer details for the next steps - Labor Link`
+  `- Congratulations${data.userId.fullName} You have been selected for the role of ${data.companyId.jobProfile} at ${data.companyId.companyName}. Please check your offer details for the next steps - Labor Link`
 );
   console.log("message sent successfully"); 
     
@@ -850,7 +844,7 @@ async getShortlistingData(req, res) {
   }
 }
 
-  async AllAplliedDetals(req, res) {
+async AllAplliedDetals(req, res) {
     try {
       let data = await applyModel
         .find()
@@ -864,7 +858,7 @@ async getShortlistingData(req, res) {
     }
   }
 
-  async rejectApply(req, res) {
+async rejectApply(req, res) {
     try {
       const { userId, companyId } = req.body;
       console.log(companyId,"lililili")
@@ -892,7 +886,7 @@ async getShortlistingData(req, res) {
   }
 
 
-  async getRejectedApplications(req, res) {
+async getRejectedApplications(req, res) {
     try {
         const { companyId } = req.params; // Get companyId from URL params
         console.log("Received companyId:", companyId); // Debugging
@@ -924,8 +918,7 @@ async getShortlistingData(req, res) {
     }
 }
 
-
-  async deleteApply(req,res){
+async deleteApply(req,res){
     try {
       let applyId=req.params.applyId;
       let data=await applyModel.deleteOne({_id:applyId});
