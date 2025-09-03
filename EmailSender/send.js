@@ -166,17 +166,61 @@ const sendInterviewDetails = async (name,mobile,date,time,duration,platform,plin
     throw err;
   }
 }; 
+// const sendUserRegisteredWhatsapp = async ({ name, mobile }) => {
+//   try {
+//     const formattedMobile = String(mobile).replace(/\D/g, ""); // ensure only digits
+
+//     const payload = {
+//       apiKey:
+//         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4OTMyYzBlZmY4NGRiMGMwZjNlNDg4ZiIsIm5hbWUiOiJMYWJvciBMaW5rIiwiYXBwTmFtZSI6IkFpU2Vuc3kiLCJjbGllbnRJZCI6IjY4OTMyYzBkZmY4NGRiMGMwZjNlNDg4NyIsImFjdGl2ZVBsYW4iOiJCQVNJQ19UUklBTCIsImlhdCI6MTc1NDQ3NTUzNH0.1SEjuYr_EQBgevXcTCP2wMTQ-M_EuznoS_-3XEiEeK4",
+//       campaignName: "register",
+//       destination: formattedMobile,
+//       userName: `${name}`,
+//       templateParams: [name, mobile], 
+//       source: "new-landing-page form",
+//       media: {},
+//       buttons: [],
+//       carouselCards: [],
+//       location: {},
+//       attributes: {},
+//       paramsFallbackValue: {
+//         FirstName: name || "user" // inject name here
+//       }
+//     };
+
+//     const response = await axios.post(
+//       "https://backend.api-wa.co/campaign/combirds/api/v2",
+//       payload,
+//       {
+//         headers: {
+//           "Content-Type": "application/json",
+//           Accept: "application/json"
+//         }
+//       }
+//     );
+
+//     return response.data;
+//   } catch (err) {
+//     console.error("WhatsApp API Error (Register):", {
+//       status: err.response?.status,
+//       data: err.response?.data
+//     });
+//     throw err;
+//   }
+// };
 const sendUserRegisteredWhatsapp = async ({ name, mobile }) => {
   try {
-    const formattedMobile = String(mobile).replace(/\D/g, ""); // ensure only digits
+    let formattedMobile = String(mobile).replace(/\D/g, ""); // remove non-digits
+    if (!formattedMobile.startsWith("91")) {
+      formattedMobile = `91${formattedMobile}`; // ensure country code
+    }
 
     const payload = {
-      apiKey:
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4OTMyYzBlZmY4NGRiMGMwZjNlNDg4ZiIsIm5hbWUiOiJMYWJvciBMaW5rIiwiYXBwTmFtZSI6IkFpU2Vuc3kiLCJjbGllbnRJZCI6IjY4OTMyYzBkZmY4NGRiMGMwZjNlNDg4NyIsImFjdGl2ZVBsYW4iOiJCQVNJQ19UUklBTCIsImlhdCI6MTc1NDQ3NTUzNH0.1SEjuYr_EQBgevXcTCP2wMTQ-M_EuznoS_-3XEiEeK4",
+    apiKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4OTMyYzBlZmY4NGRiMGMwZjNlNDg4ZiIsIm5hbWUiOiJMYWJvciBMaW5rIiwiYXBwTmFtZSI6IkFpU2Vuc3kiLCJjbGllbnRJZCI6IjY4OTMyYzBkZmY4NGRiMGMwZjNlNDg4NyIsImFjdGl2ZVBsYW4iOiJCQVNJQ19UUklBTCIsImlhdCI6MTc1NDQ3NTUzNH0.1SEjuYr_EQBgevXcTCP2wMTQ-M_EuznoS_-3XEiEeK4",
       campaignName: "register",
       destination: formattedMobile,
       userName: "Labor Link",
-      templateParams: ["$FirstName"], // must be same as template param
+      templateParams: [name],
       source: "new-landing-page form",
       media: {},
       buttons: [],
@@ -184,7 +228,7 @@ const sendUserRegisteredWhatsapp = async ({ name, mobile }) => {
       location: {},
       attributes: {},
       paramsFallbackValue: {
-        FirstName: name || "user" // inject name here
+        FirstName: name || "user"
       }
     };
 
@@ -208,6 +252,7 @@ const sendUserRegisteredWhatsapp = async ({ name, mobile }) => {
     throw err;
   }
 };
+ 
 const sendShortlistedSMS = async (mobile, msg) => {
   try {
     const formattedMobile = String(mobile).replace(/\D/g, ''); 
