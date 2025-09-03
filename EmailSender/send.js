@@ -278,16 +278,67 @@ const sendSelectedSMS = async (mobile, msg) => {
     throw err;
   }
 };   
-const sendInterviewDetailsSMS = async (mobile,msg) => {
+// const sendInterviewDetailsSMS = async (mobile,msg) => {
+//   try {
+//     const formattedMobile = String(mobile).replace(/\D/g, ''); 
+
+//     const payload = {
+//       number: [`91${formattedMobile}`],
+//       message: msg,
+//       senderId: "LBRLNK",
+//       templateId: "1707175672187250636", 
+//     };
+
+//     const response = await axios.post(
+//       "https://smsapi.edumarcsms.com/api/v1/sendsms",
+//       payload,
+//       {
+//         headers: {
+//           "Content-Type": "application/json",
+//           "apikey": "5e0069bdeb7441cf90c12fe1c33e045c"
+//         }
+//       }
+//     );
+
+//     return response.data;
+//   } catch (err) {
+//     console.error("SMS API Error:", {
+//       status: err.response?.status,
+//       data: err.response?.data,
+//       config: {
+//         url: err.config?.url,
+//         data: err.config?.data
+//       }
+//     });
+//     throw err;
+//   }
+// }; 
+ 
+const sendInterviewDetailsSMS = async (mobile, name, position, date, time) => {
   try {
     const formattedMobile = String(mobile).replace(/\D/g, ''); 
+    
+    // Format the message to match your template exactly
+    // Template: Hi{#var#} Your interview for{#var#} is scheduled on{#var#} at{#var#} - Labor Link
+    const message = `Hi ${name} Your interview for ${position} is scheduled on ${date} at ${time} - Labor Link`;
+
+    console.log("=== SMS PAYLOAD DEBUG ===");
+    console.log("Formatted Mobile:", formattedMobile);
+    console.log("Template Variables:");
+    console.log("- Name:", name);
+    console.log("- Position:", position);
+    console.log("- Date:", date);
+    console.log("- Time:", time);
+    console.log("Final Message:", message);
 
     const payload = {
       number: [`91${formattedMobile}`],
-      message: msg,
+      message: message,
       senderId: "LBRLNK",
       templateId: "1707175672187250636", 
     };
+
+    console.log("SMS API Payload:", JSON.stringify(payload, null, 2));
 
     const response = await axios.post(
       "https://smsapi.edumarcsms.com/api/v1/sendsms",
@@ -300,19 +351,21 @@ const sendInterviewDetailsSMS = async (mobile,msg) => {
       }
     );
 
+    console.log("SMS API Full Response:", response.data);
     return response.data;
   } catch (err) {
-    console.error("SMS API Error:", {
-      status: err.response?.status,
-      data: err.response?.data,
-      config: {
-        url: err.config?.url,
-        data: err.config?.data
-      }
+    console.error("=== SMS API DETAILED ERROR ===");
+    console.error("Error Status:", err.response?.status);
+    console.error("Error Data:", err.response?.data);
+    console.error("Error Headers:", err.response?.headers);
+    console.error("Request Config:", {
+      url: err.config?.url,
+      data: err.config?.data,
+      headers: err.config?.headers
     });
     throw err;
   }
-}; 
+};
 const sendRejectedWhatsapp = async (name,mobile,msg) =>{  
     try {
 
@@ -355,7 +408,8 @@ const sendRejectedWhatsapp = async (name,mobile,msg) =>{
     });
     throw err;
   }
-}; 
+};  
+// sendInterviewDetailsSMS("9902742423","Hi Kiran Your interview for developer is scheduled on 15th September at12:30PM- Labor Link")
 module.exports = {
   sendMail,
   sendWhatsAppShortlisted,sendShortlistedSMS,sendInterviewDetailsSMS,sendSelectedSMS,sendSelectedWhatsapp,sendInterviewDetails,sendUserRegisteredWhatsapp,sendRejectedWhatsapp
