@@ -670,8 +670,7 @@ class Employers {
         console.log("SMS Message to be sent:", smsMessage);
         console.log("Phone number:", userData.phone);
         
-        const smsResult = await send.sendInterviewDetailsSMS(userData.phone,name,Position,whatsappDetails?.Date,
-          whatsappDetails?.Time,);
+        const smsResult = await send.sendInterviewDetailsSMS(userData.phone,name,userData.Position,whatsappDetails?.Date,whatsappDetails?.Time,);
         console.log("SMS API Response:", smsResult);
         console.log("SMS sent successfully");
       } else {
