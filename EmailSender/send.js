@@ -491,7 +491,7 @@ const sendregisterSMS = async (mobile, name) => {
 };
   
 //  sendregisterSMS("7238861147","Welcome Amit to Labor Link. Your registration is successful. Complete your profile to start applying for jobs today.")
-// sendInterviewDetailsSMS("9902742423","Hi Kiran Your interview for developer is scheduled on 15th September at12:30PM- Labor Link")
+//sendInterviewDetailsSMS("7238861147","amit","developer","14thsep","3:30PM")
 module.exports = {
   sendMail,
   sendWhatsAppShortlisted,sendShortlistedSMS,sendregisterSMS,sendInterviewDetailsSMS,sendSelectedSMS,sendSelectedWhatsapp,sendInterviewDetails,sendUserRegisteredWhatsapp,sendRejectedWhatsapp

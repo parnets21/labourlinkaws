@@ -998,7 +998,7 @@ async callinterview(req, res) {
         console.log("SMS Message to be sent:", smsMessage);
         console.log("Phone number:", userData.phone);
         
-        const smsResult = await send.sendInterviewDetailsSMS(userData.phone, smsMessage);
+        const smsResult = await send.sendInterviewDetailsSMS(userData.phone,name,Position, );
         console.log("SMS API Response:", smsResult);
         console.log("SMS sent successfully");
       } else {
