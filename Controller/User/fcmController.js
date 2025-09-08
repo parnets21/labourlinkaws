@@ -51,7 +51,6 @@ exports.updateFCMToken =  async(req,res) => {
         })
     }
 }
-
 exports.sendNotificationToEmployee = async(req,res) => {
      const { token, title, body } = req.body;
 
@@ -69,7 +68,6 @@ exports.sendNotificationToEmployee = async(req,res) => {
       type: 'employee_notification',
     },
   };
-
   try {
     const response = await admin.messaging().send(message);
     res.status(200).json({ success: true, response });

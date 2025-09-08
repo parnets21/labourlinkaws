@@ -837,8 +837,6 @@ async updateInterviewStatus(req, res) {
     });
   }
 }
-
-  // Get Users by Filter
   async getUserByFilter(req, res) {
       try {
         const { skill, Experience, city, category, jobProfile, int1 } = req.body;

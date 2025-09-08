@@ -15,6 +15,7 @@ const jwt = require("jsonwebtoken");
 const multer = require("multer");
 const path = require("path");
 const { uploadFile2, deleteFile } = require("../../middileware/aws");
+const FCMtoken = require("../../Model/User/FCMtoken");
 
 class user {
   async register(req, res) {
@@ -552,33 +553,217 @@ try {
       console.log(err);
     }
   }
-  async login(req, res) {
-    try {
-      const { email, password ,fcmToken,deviceId, platform } = req.body;
-      // console.log(req.body,"saldjna")
-      if(!isValid(email)) return res.status(400).json({error:"Please enter your email!"})
-      if(!isValid(password)) return res.status(400).json({error:"Please enter your password!"})
-      let hash;
-       if(!phonenumber(email)){
-             hash = await userModel.findOne({ email: email ,isDelete:false});
-            }else{
-                  hash=  await userModel.findOne({mobile:email ,isDelete:false})
-            }
+
+ 
+// async login(req, res) {
+//   try {
+//     const { email, password, fcmToken, deviceId, platform } = req.body;
+    
+//     if (!isValid(email)) return res.status(400).json({error: "Please enter your email!"});
+//     if (!isValid(password)) return res.status(400).json({error: "Please enter your password!"});
+    
+//     let hash;
+//     if (!phonenumber(email)) {
+//       hash = await userModel.findOne({ email: email, isDelete: false });
+//     } else {
+//       hash = await userModel.findOne({ mobile: email, isDelete: false });
+//     }
         
-      if (!hash)
-        return res.status(400).json({ error: "Please enter register Id!" });
-      let compare = await bcrypt
-        .compare(password, hash.password)
-        .then((res) => {
-          return res;
-        });
+//     if (!hash)
+//       return res.status(400).json({ error: "Please enter register Id!" });
+      
+//     let compare = await bcrypt
+//       .compare(password, hash.password)
+//       .then((res) => {
+//         return res;
+//       });
+      
+//     if (!compare) {
+//       return res.status(400).send({ alert: "Invalid password!" });
+//     }   
+
+//     let updateData = await userModel.findOneAndUpdate(
+//       { _id: hash._id }, 
+//       { $set: { online: "online" } }, 
+//       { new: true }
+//     );
+
+//     // Save/update FCM token if provided
+//     if (fcmToken && deviceId && platform) {
+//       await FCMtoken.findOneAndUpdate(
+//         { employeeId: hash._id },
+//         {
+//           fcmToken,
+//           deviceId,
+//           platform,
+//           isActive: true,
+//           lastUpdated: new Date()
+//         },
+//         { upsert: true, new: true }
+//       );
+      
+//       console.log("Saving FCM Token:", { fcmToken, deviceId, platform, employeeId: hash._id });
+//     }
+
+//     return res.status(200).json({ 
+//       msg: "Successfully login", 
+//       success: updateData, 
+//       token: updateData.token, 
+//       fcmToken 
+//     });
+//   } catch (err) {     
+//     console.log(err);
+//     return res.status(500).json({ message: err.message });
+//   }
+// }
+ async login(req, res) {
+    try {
+      const { email, password, fcmToken, deviceId, platform } = req.body;
+      
+      console.log("Login attempt with:", { email, hasFCMToken: !!fcmToken, deviceId, platform });
+      
+      if (!isValid(email)) return res.status(400).json({ error: "Please enter your email!" });
+      if (!isValid(password)) return res.status(400).json({ error: "Please enter your password!" });
+      
+      let hash;
+      if (!phonenumber(email)) {
+        hash = await userModel.findOne({ email: email, isDelete: false });
+      } else {
+        hash = await userModel.findOne({ mobile: email, isDelete: false });
+      }
+          
+      if (!hash) return res.status(400).json({ error: "Please enter register Id!" });
+          
+      let compare = await bcrypt.compare(password, hash.password);
       if (!compare) {
         return res.status(400).send({ alert: "Invalid password!" });
+      }   
+
+      let updateData = await userModel.findOneAndUpdate(
+        { _id: hash._id }, 
+        { $set: { online: "online" } }, 
+        { new: true }
+      );
+
+      // Save/update FCM token if provided - with enhanced error handling
+      if (fcmToken && deviceId && platform) {
+        try {
+          const fcmData = {
+            fcmToken,
+            deviceId,
+            platform,
+            isActive: true,
+            lastUpdated: new Date()
+          };
+
+          console.log("Saving FCM Token data:", { ...fcmData, employeeId: hash._id });
+
+          const result = await FCMtoken.findOneAndUpdate(
+            { employeeId: hash._id },
+            fcmData,
+            { upsert: true, new: true, runValidators: true }
+          );
+
+          console.log("FCM Token saved successfully:", result);
+        } catch (fcmError) {
+          console.error("Failed to save FCM token:", fcmError);
+          // Don't fail login if FCM token saving fails
+        }
+      } else {
+        console.log("FCM token not provided or incomplete:", { fcmToken, deviceId, platform });
       }
-      let updateData= await userModel.findOneAndUpdate({_id:hash._id},{$set:{online:"online"}},{new:true})
-      return res.status(200).json({ msg: "Successfully login", success: updateData });
+
+      return res.status(200).json({ 
+        msg: "Successfully login", 
+        success: updateData, 
+        token: updateData.token,
+        userId: updateData._id
+      });
+    } catch (err) {     
+      console.error("Login error:", err);
+      return res.status(500).json({ message: err.message });
+    }
+  }
+
+  async updateFCMToken(req, res) {
+    try {
+      const { userId, fcmToken, deviceId, platform } = req.body;
+
+      console.log("Update FCM Token request:", { userId, fcmToken, deviceId, platform });
+
+      if (!userId || !fcmToken || !deviceId || !platform) {
+        return res.status(400).json({
+          error: "Missing required fields: userId, fcmToken, deviceId, platform"
+        });
+      }
+
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ error: "Invalid user ID format" });
+      }
+
+      // Verify user exists
+      const userExists = await userModel.findById(userId);
+      if (!userExists) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const fcmData = {
+        fcmToken,
+        deviceId,
+        platform,
+        isActive: true,
+        lastUpdated: new Date()
+      };
+
+      const result = await FCMtoken.findOneAndUpdate(
+        { employeeId: userId },
+        fcmData,
+        { upsert: true, new: true, runValidators: true }
+      );
+
+      console.log("FCM Token updated successfully:", result);
+
+      return res.status(200).json({
+        success: true,
+        message: "FCM token updated successfully",
+        data: result
+      });
     } catch (err) {
-      console.log(err);
+      console.error("FCM token update error:", err);
+      return res.status(500).json({ 
+        error: "Failed to update FCM token",
+        message: err.message 
+      });
+    }
+  }
+
+  async getFCMToken(req, res) {
+    try {
+      const { userId } = req.params;
+
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ error: "Invalid user ID format" });
+      }
+
+      const fcmData = await FCMtoken.findOne({ employeeId: userId });
+      
+      if (!fcmData) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "FCM token not found for this user" 
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: fcmData
+      });
+    } catch (err) {
+      console.error("Get FCM token error:", err);
+      return res.status(500).json({ 
+        error: "Failed to get FCM token",
+        message: err.message 
+      });
     }
   }
 
