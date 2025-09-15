@@ -20,7 +20,10 @@ const Skill = require("../../Model/Admin/jobmanagment/Skill");
 const { uploadFile2, deleteFile } = require("../../middileware/aws");
 const Chefs = require("../../Model/Admin/jobmanagment/Chefs");
 const Cuisines = require("../../Model/Admin/jobmanagment/Cuisines");
-const user = require("../../Model/User/user");
+const user = require("../../Model/User/user"); 
+const admin = require("../../utils/firebase");
+const FCMtoken = require("../../Model/User/FCMtoken");
+
 
 class company {
   
@@ -627,16 +630,88 @@ async register(req, res) {
  
  
 
+// async addShortList(req, res) {
+//   try {
+//     const { userId, companyId } = req.body;
+//     console.log("Received request with the rdfjk:", userId, companyId);
+
+//     let data = await applyModel
+//     .findOne({ userId: mongoose.Types.ObjectId(userId), companyId: mongoose.Types.ObjectId(companyId) })
+//     .populate("userId")
+//       .populate("companyId");
+//       console.log("Query result:", data);  
+//     if (!data) {
+//       return res.status(404).json({ error: "Application record not found" });
+//     }
+//     if (data.status === "Shortlisted") {
+//       return res.status(400).json({ message: "Already shortlisted" });
+//     }
+
+//     let update = await applyModel.findOneAndUpdate(
+//       { userId: userId, companyId: companyId },
+//       { $set: { status: "Shortlisted" } },
+//       { new: true }
+//     );
+
+//     console.log(update, "Updated document");
+
+//     if (!update) {
+//       return res.status(400).json({ success: false, message: "Something went wrong" });
+//     }
+
+// //Email
+//     if (data.userId && data.companyId) {
+//       sent.sendMail(
+//         data.userId.fullName,
+//         data.userId.email,
+//         ` Congratulations! Your profile has been shortlisted for the position of  ${data.companyId.jobProfile} in ${data.companyId.companyName}<h3>Our team will connect with you shortly to discuss the next steps.</h3>`
+//       );
+//     } else {
+//       console.log("Missing user or company data, email not sent.");
+//     } 
+     
+// //whatsapp
+//   if (data.userId && data.companyId) {
+//       sent.sendWhatsAppShortlisted(
+//         data.userId.fullName,
+//         data.userId.phone,
+//         ` ${data.companyId.jobProfile} in ${data.companyId.companyName}.`
+//       );
+//     } else {
+//       console.log("Missing user or company data, email not sent.");
+//     }  
+     
+//     //sms
+//      if (data.userId && data.companyId) {
+//       sent.sendShortlistedSMS(
+//           data.userId.phone,
+// `Hello ${data.userId.fullName}, Congratulations! Your profile has been shortlisted for the position of ${data.companyId.jobProfile}. Our team will connect with you shortly to discuss the next steps. Thank You For Choosing LaborLink`
+//       );
+//     } else {
+//       console.log("Missing user or company data, sms not sent.");
+//     }
+//     return res.status(200).json({ success: true, message: "Successfully shortlisted" });
+//   } catch (err) {
+//     console.error("Error in addShortList:", err);
+//     return res.status(500).json({ success: false, error: "Internal server error" });
+//   }
+// }   
+ 
+  
+
+
+
+
 async addShortList(req, res) {
   try {
     const { userId, companyId } = req.body;
-    console.log("Received request with the rdfjk:", userId, companyId);
+    console.log("Received request:", userId, companyId);
 
     let data = await applyModel
-    .findOne({ userId: mongoose.Types.ObjectId(userId), companyId: mongoose.Types.ObjectId(companyId) })
-    .populate("userId")
+      .findOne({ userId: mongoose.Types.ObjectId(userId), companyId: mongoose.Types.ObjectId(companyId) })
+      .populate("userId")
       .populate("companyId");
-      console.log("Query result:", data);  
+
     if (!data) {
       return res.status(404).json({ error: "Application record not found" });
     }
@@ -645,141 +720,84 @@ async addShortList(req, res) {
     }
 
     let update = await applyModel.findOneAndUpdate(
-      { userId: userId, companyId: companyId },
+      { userId, companyId },
       { $set: { status: "Shortlisted" } },
       { new: true }
     );
-
-    console.log(update, "Updated document");
 
     if (!update) {
       return res.status(400).json({ success: false, message: "Something went wrong" });
     }
 
-//Email
+    // ✅ Email
     if (data.userId && data.companyId) {
       sent.sendMail(
         data.userId.fullName,
         data.userId.email,
-        ` Congratulations! Your profile has been shortlisted for the position of  ${data.companyId.jobProfile} in ${data.companyId.companyName}<h3>Our team will connect with you shortly to discuss the next steps.</h3>`
+        `Congratulations! Your profile has been shortlisted for the position of ${data.companyId.jobProfile} in ${data.companyId.companyName}<h3>Our team will connect with you shortly to discuss the next steps.</h3>`
       );
-    } else {
-      console.log("Missing user or company data, email not sent.");
-    } 
-     
-//whatsapp
-  if (data.userId && data.companyId) {
+    }
+
+    // ✅ WhatsApp
+    if (data.userId && data.companyId) {
       sent.sendWhatsAppShortlisted(
         data.userId.fullName,
         data.userId.phone,
-        ` ${data.companyId.jobProfile} in ${data.companyId.companyName}.`
+        `${data.companyId.jobProfile} in ${data.companyId.companyName}.`
       );
-    } else {
-      console.log("Missing user or company data, email not sent.");
-    }  
-     
-    //sms
-     if (data.userId && data.companyId) {
-      sent.sendShortlistedSMS(
-          data.userId.phone,
-`Hello ${data.userId.fullName}, Congratulations! Your profile has been shortlisted for the position of ${data.companyId.jobProfile}. Our team will connect with you shortly to discuss the next steps. Thank You For Choosing LaborLink`
-      );
-    } else {
-      console.log("Missing user or company data, sms not sent.");
     }
+
+    // ✅ SMS
+    if (data.userId && data.companyId) {
+      sent.sendShortlistedSMS(
+        data.userId.phone,
+        `Hello ${data.userId.fullName}, Congratulations! Your profile has been shortlisted for the position of ${data.companyId.jobProfile}. Our team will connect with you shortly to discuss the next steps. Thank You For Choosing LaborLink`
+      );
+    }
+
+    // ✅ Push Notification (FCM)
+    const fcmRecords = await FCMtoken.find({
+      employeeId: data.userId._id,
+      isActive: true
+    });
+
+    if (fcmRecords.length > 0) {
+      const tokens = fcmRecords.map(r => r.fcmToken).filter(Boolean); 
+      console.log("tokenssssssss",tokens)
+
+      if (tokens.length > 0) {
+        const message = {
+          notification: {
+            title: "🎉 Shortlisted!",
+            body: `Hi ${data.userId.fullName}, you’ve been shortlisted for ${data.companyId.jobProfile} at ${data.companyId.companyName}.`,
+          },
+          data: {
+            type: "shortlist",
+            userId: String(userId),
+            companyId: String(companyId),
+          },
+          tokens, // 👈 send to multiple devices
+        };
+
+        try {
+          const response = await admin.messaging().sendEachForMulticast(message);
+          console.log(`✅ Firebase  Notification sent: ${response.successCount} success, ${response.failureCount} failed`);
+        } catch (fcmError) {
+          console.error("❌ FCM Notification Error:", fcmError);
+        }
+      }
+    } else {
+      console.log("⚠️ No active FCM token found for this employee");
+    }
+
     return res.status(200).json({ success: true, message: "Successfully shortlisted" });
   } catch (err) {
     console.error("Error in addShortList:", err);
     return res.status(500).json({ success: false, error: "Internal server error" });
   }
-}   
-// async addSelect(req, res) {
-//   console.log(req.body, "this is body");
+}
 
-//   const { userId, companyId } = req.body;
-//   console.log("Received request:", { userId, companyId });
 
-//   // Validate input
-//   if (!userId || !companyId) {
-//     return res.status(400).json({ error: "User ID and Company ID are required" });
-//   }
-//   // Convert to ObjectId safely
-//   let userObjectId, companyObjectId;
-//   try {
-//     userObjectId = new mongoose.Types.ObjectId(userId);
-//     companyObjectId = new mongoose.Types.ObjectId(companyId);
-//   } catch {
-//     return res.status(400).json({ error: "Invalid ObjectId format" });
-//   }
-
-//   // Debug logs
-//   const apps = await applyModel.find({ userId: userObjectId });
-//   console.log("Apps with this userId:", apps);
-
-//   const apps2 = await applyModel.find({ companyId: companyObjectId });
-//   console.log("Apps with this companyId:", apps2);
-
-//   // Fetch application
-//   let data = await applyModel
-//     .findOne({ userId: userObjectId, companyId: companyObjectId })
-//     .populate("userId")
-//     .populate("companyId")
-//     .lean();
-
-//   console.log("Fetched data:", data);
-
-//   if (!data) {
-//     return res.status(404).json({ error: "No application found" });
-//   }
-
-//   // Check if already selected
-//   if (data.status === "Selected") {
-//     return res.status(400).json({ error: "Already selected" });
-//   }
-
-//   // Update status
-//   const update = await applyModel.findOneAndUpdate(
-//     { userId: userObjectId, companyId: companyObjectId },
-//     { $set: { status: "Selected" } },
-//     { new: true }
-//   );
-
-//   if (!update) {
-//     return res.status(400).json({ error: "Something went wrong" });
-//   }
-
-//   console.log("Update successful:", update);
-
-//   // Send Email
-//   await sent.sendMail(
-//     data.userId.fullName,
-//     data.userId.email,
-//     `We are pleased to inform you that you have been selected for the position of ${data.companyId.jobProfile} in ${data.companyId.companyName}. Our HR team will contact you with the joining formalities and offer details. Congratulations once again!<br><br>
-//      <h3>Thank you <br>Labor Link Team</h3>`
-//   );
-//   console.log("Email sent successfully");
-
-//   // Send WhatsApp
-//   await sent.sendSelectedWhatsapp(
-//     data.userId.fullName,
-//     data.userId.phone,
-//     `${data.companyId.jobProfile} in ${data.companyId.companyName}. `
-//   );
-//   console.log("WhatsApp message sent successfully");  
-   
-//   //sms 
-// await sent.sendSelectedSMS(
-  
-//     data.userId.phone,
-// // `Hello ${data.userId.fullName}, Congratulations! You have been selected  for the position of ${data.companyId.jobProfile} at  ${data.companyId.companyName}. Please check your offer details for the next steps - Labor Link.`
-//   `- Congratulations${data.userId.fullName} You have been selected for the role of ${data.companyId.jobProfile} at ${data.companyId.companyName}. Please check your offer details for the next steps - Labor Link`
-// );
-//   console.log("message sent successfully"); 
-    
-
-//   return res.status(200).json({ success: "Successfully Selected" });
-// } 
- 
 
 async addSelect(req, res) {
   console.log(req.body, "this is body");
