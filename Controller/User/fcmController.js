@@ -1,9 +1,13 @@
 const FCMtoken = require("../../Model/User/FCMtoken")
 const User = require("../../Model/User/user")
-const admin = require('../../utils/firebase');
+const admin = require("firebase-admin");
 const serviceAccount = require('../../serviceAccountKey.json');
 
-
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+}
 
 
 exports.updateFCMToken =  async(req,res) => {
