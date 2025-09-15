@@ -21,7 +21,7 @@ const { uploadFile2, deleteFile } = require("../../middileware/aws");
 const Chefs = require("../../Model/Admin/jobmanagment/Chefs");
 const Cuisines = require("../../Model/Admin/jobmanagment/Cuisines");
 const user = require("../../Model/User/user"); 
-const admin = require("../../utils/firebase");
+const admin = require("firebase-admin");
 const FCMtoken = require("../../Model/User/FCMtoken");
 
 
