@@ -52,7 +52,9 @@ exports.updateFCMToken =  async(req,res) => {
             message:"Internal server error"
         })
     }
-}
+} 
+  
+
 exports.sendNotificationToEmployee = async(req,res) => {
      const { token, title, body } = req.body;
 
@@ -79,7 +81,7 @@ exports.sendNotificationToEmployee = async(req,res) => {
   }
 }
 
-// Send notification to multiple device tokens
+
 exports.sendBulkNotification = async (req, res) => {
   const { employeeIds, title, body } = req.body;
 
