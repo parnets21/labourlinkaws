@@ -1,13 +1,6 @@
-// const transactionModel = require("../../Modal/User/phonepayModel");
+const transactionModel = require("../Model/PhonepeModel");
 const axios = require("axios");
 const crypto = require('crypto');
-
-// const MERCHANT_ID = "M22IJ7E10A8LQ";
-// const SECRET_KEY = "323bd89f-a6c5-402f-a659-043df2b7b3c9";  
-// const PHONEPE_API_URL = "https://api.phonepe.com/apis/hermes/pg/v1/pay"; 
-// const CALLBACK_URL = "https://sbwears.com";  
-
-const transactionModel = require("../Model/PhonepeModel");
 
 const {
   StandardCheckoutClient,
@@ -17,13 +10,10 @@ const {
   CreateSdkOrderRequest
 } = require("pg-sdk-node");
 
-
 const clientId = "SU2507161930264407071571";
 const clientSecret = "7c7a1bd9-bba1-4e67-9764-45172e2e4100";
 const clientVersion = 1;
 const env = Env.PRODUCTION;
-
-
 
 const client = StandardCheckoutClient.getInstance(
   clientId,
@@ -34,30 +24,29 @@ const client = StandardCheckoutClient.getInstance(
 
 class Transaction {
 
+  // SDK-based payment for web integration
   async addPaymentPhone(req, res) {
-
     try {
-      const { userId, username, Mobile, orderId, amount, config,successUrl,failedUrl } = req.body;
+      const { userId, username, Mobile, orderId, amount, config, successUrl, failedUrl } = req.body;
        
-       const data = await transactionModel.create({
+      const data = await transactionModel.create({
         userId,
         username,
         Mobile,
         orderId,
         amount,
         config,
-        successUrl,failedUrl
+        successUrl,
+        failedUrl
       });
 
       if (!data)
         return res.status(400).json({ error: "Something went wrong" });
 
-      const merchantOrderId = data._id.toString(); // Use DB _id as unique order ID
+      const merchantOrderId = data._id.toString();
+      const redirectUrl = successUrl || `https://sbwears.com/PaymentSuccess?transactionId=${data._id}&userID=${userId}`;
 
-      const redirectUrl = `https://sbwears.com/PaymentSuccess?transactionId=${data._id}&userID=${userId}`;
-      // const redirectUrl = `https://sbwears.com/`;
-
-      // Build the payment request
+      // Build the payment request for web
       const paymentRequest = CreateSdkOrderRequest.StandardCheckoutBuilder()
         .merchantOrderId(merchantOrderId)
         .amount(amount * 100) // Convert to paise
@@ -66,9 +55,9 @@ class Transaction {
 
       // Send payment request to PhonePe
       const response = await client.pay(paymentRequest);
-      console.log("response", response)
+      console.log("PhonePe SDK response:", response);
+      
       const checkoutUrl = response.redirectUrl;
-
 
       if (!checkoutUrl) {
         console.error("Invalid PhonePe response:", response);
@@ -86,12 +75,13 @@ class Transaction {
     }
   }
 
+  // Mobile SDK integration - returns checksum for native app
   async addPaymentMobile(req, res) {
-    let transaction; // Declare transaction here to fix the ReferenceError
+    let transaction;
 
     try {
       // Validate input
-      const { userId, username, Mobile, orderId, amount } = req.body;
+      const { userId, username, Mobile, orderId, amount, config } = req.body;
       if (!userId || !username || !Mobile || !amount) {
         return res.status(400).json({ error: "Missing required fields" });
       }
@@ -103,43 +93,49 @@ class Transaction {
         Mobile,
         orderId: orderId || `ORD_${Date.now()}`,
         amount,
+        config,
         status: 'INITIATED'
-      })
+      });
 
-      // Prepare payment payload
+      const merchantTransactionId = transaction._id.toString();
+
+      // Prepare payment payload for mobile SDK
       const paymentPayload = {
-        merchantId: "M22IJ7E10A8LQ",
-        merchantTransactionId: transaction._id.toString(),
+        merchantId: clientId,
+        merchantTransactionId: merchantTransactionId,
         merchantUserId: userId,
         amount: amount * 100, // Convert to paise
         redirectUrl: `https://sbwears.com/PaymentSuccess?transactionId=${transaction._id}&userID=${userId}`,
-
-
-        callbackUrl: "https://sbwears.com/api/user/checkPayment/" + transaction._id + "/" + userId,
-
+        callbackUrl: `https://sbwears.com/api/user/checkPayment/${transaction._id}/${userId}`,
         mobileNumber: Mobile,
         paymentInstrument: {
           type: "PAY_PAGE"
         }
       };
 
-      // Generate signature
+      console.log("Payment payload:", paymentPayload);
+
+      // Generate base64 encoded payload
       const base64Payload = Buffer.from(JSON.stringify(paymentPayload)).toString('base64');
+      
+      // Generate checksum for mobile SDK
       const stringToHash = base64Payload + '/pg/v1/pay' + clientSecret;
-      const sha256Hash = crypto.createHash('sha256').update(stringToHash).digest('hex')+'###' + 1;
-      const signature = sha256Hash + '###' + clientSecret;
+      const sha256Hash = crypto.createHash('sha256').update(stringToHash).digest('hex');
+      const checksum = sha256Hash + '###' + clientVersion;
+
+      console.log("Generated checksum:", checksum);
 
       res.status(200).json({
         success: true,
         data: {
           transactionBody: base64Payload,
-          checksum: sha256Hash,
+          checksum: checksum,
           transactionId: transaction._id,
         },
       });
 
     } catch (error) {
-      console.error("Payment Error:", error.message);
+      console.error("Mobile Payment Error:", error.message);
 
       // Update transaction status if it was created
       if (transaction) {
@@ -156,92 +152,134 @@ class Transaction {
     }
   }
 
+  // Update payment status
   async updateStatuspayment(req, res) {
     try {
       let id = req.params.id;
       let data = await transactionModel.findById(id);
       if (!data) return res.status(400).json({ error: "Data not found" });
-      data.status = "Completed";
-      data.save();
+      
+      data.status = "COMPLETED";
+      await data.save();
+      
       return res.status(200).json({ success: "Successfully Completed" });
     } catch (error) {
-      console.log(error);
+      console.error("Update status error:", error);
+      return res.status(500).json({ error: "Failed to update status" });
     }
   }
 
+  // Check payment status
   async checkPayment(req, res) {
     try {
-
       let id = req.params.id;
-      let userId = req.params.userId
+      let userId = req.params.userId;
+      
       let data = await transactionModel.findById(id);
-      if (!data) return res.status(400).json({ error: "Payment Id not found!" })
+      if (!data) {
+        return res.status(400).json({ error: "Payment Id not found!" });
+      }
+
+      // Check status with PhonePe
       client.getOrderStatus(id).then(async (response) => {
+        console.log("PhonePe status response:", response);
+        
         const state = response.state;
-        if (state == "COMPLETED") {
-          if (data.config) {
-            await axios(JSON.parse(data.config))
-            data.config = null
+        
+        // Execute config if payment completed
+        if (state === "COMPLETED" && data.config) {
+          try {
+            const configData = JSON.parse(data.config);
+            await axios(configData);
+            data.config = null; // Clear config after execution
+          } catch (configError) {
+            console.error("Config execution error:", configError);
           }
         }
+        
         data.status = state;
-        data = await data.save()
-        return res.status(200).json({ success: data })
+        data = await data.save();
+        
+        return res.status(200).json({ success: data });
+        
       }).catch((error) => {
-        return res.status(400).json({ error: error })
+        console.error("PhonePe status check error:", error);
+        
+        // Return current data if PhonePe check fails
+        return res.status(200).json({ 
+          success: data,
+          note: "PhonePe status check failed, returning cached status"
+        });
       });
 
     } catch (error) {
-      console.log(error)
-      return res.status(400).json({ error: error.message })
+      console.error("Check payment error:", error);
+      return res.status(400).json({ error: error.message });
     }
   }
 
+  // Payment callback handler
   async paymentcallback(req, res) {
-    const { response } = req.body;
+    try {
+      const { response } = req.body;
 
-    const decodedStr = Buffer.from(response, 'base64').toString('utf-8');
-
-    // Parse JSON
-    const responseJson = JSON.parse(decodedStr);
-    console.log(responseJson?.data);
-    const { merchantTransactionId, state } = responseJson?.data;
-
-    // Log the callback data for debugging
-    console.log(`Callback received: Transaction ${merchantTransactionId}, Status: ${state}`);
-    let data = await transactionModel.findById(merchantTransactionId);
-    if (data) {
-      data.status = state;
-      if (state === 'COMPLETED') {
-        await axios(JSON.parse(data.config))
+      if (!response) {
+        return res.status(400).json({ error: "No response data" });
       }
-      await data.save()
+
+      // Decode the response
+      const decodedStr = Buffer.from(response, 'base64').toString('utf-8');
+      const responseJson = JSON.parse(decodedStr);
+      
+      console.log('Payment callback data:', responseJson);
+      
+      const { merchantTransactionId, state } = responseJson?.data || {};
+
+      if (!merchantTransactionId) {
+        return res.status(400).json({ error: "No merchant transaction ID" });
+      }
+
+      // Find and update transaction
+      let data = await transactionModel.findById(merchantTransactionId);
+      
+      if (data) {
+        data.status = state;
+        
+        // Execute config if payment completed
+        if (state === 'COMPLETED' && data.config) {
+          try {
+            const configData = JSON.parse(data.config);
+            await axios(configData);
+            data.config = null; // Clear config after execution
+          } catch (configError) {
+            console.error("Config execution error:", configError);
+          }
+        }
+        
+        await data.save();
+        console.log(`Transaction ${merchantTransactionId} updated to ${state}`);
+      }
+
+      res.status(200).send('Callback processed successfully');
+      
+    } catch (error) {
+      console.error("Callback processing error:", error);
+      res.status(500).send('Callback processing failed');
     }
-    // Update transaction status in your database
-    if (state === 'COMPLETED') {
-
-
-      // Mark the transaction as successful
-      // Update relevant database records
-      console.log(`Transaction ${merchantTransactionId} was successful.`);
-    } else {
-      // Handle failure or pending status
-      console.log(`Transaction ${merchantTransactionId} failed or is pending.`);
-    }
-
-    // Send a response back to the payment gateway
-    res.status(200).send('Callback processed');
   }
 
+  // Get all payments
   async getallpayment(req, res) {
     try {
       let data = await transactionModel.find({}).sort({ _id: -1 });
       return res.status(200).json({ success: data });
     } catch (error) {
-      console.log(error)
+      console.error("Get all payments error:", error);
+      return res.status(500).json({ error: "Failed to fetch payments" });
     }
   }
 
+  // Legacy payment method (for backward compatibility)
   async makepayment(req, res) {
     let {
       amount,
@@ -265,11 +303,11 @@ class Transaction {
     }
 
     const paymentDetails = {
-      merchantId: MERCHANT_ID,
+      merchantId: clientId,
       merchantTransactionId: merchantTransactionId,
       merchantUserId: merchantUserId,
       amount: amount,
-      redirectUrl: CALLBACK_URL,
+      redirectUrl: redirectUrl || "https://sbwears.com",
       redirectMode: "POST",
       callbackUrl: callbackUrl,
       mobileNumber: mobileNumber,
@@ -280,15 +318,13 @@ class Transaction {
 
     const payload = JSON.stringify(paymentDetails);
     let objJsonB64 = Buffer.from(payload).toString("base64");
-    const saltKey = SECRET_KEY; //test key
+    const saltKey = clientSecret;
     const saltIndex = 1;
     const signature = generateSignature(payload, saltKey, saltIndex);
 
     try {
       const response = await axios.post(
         "https://api.phonepe.com/apis/hermes/pg/v1/pay",
-
-        // "https://api-preprod.phonepe.com/apis/pg-sandbox/pg/v1/pay",
         {
           request: objJsonB64,
         },
@@ -303,11 +339,10 @@ class Transaction {
         url: response.data?.data.instrumentResponse?.redirectInfo,
       });
     } catch (error) {
-      console.error("Payment Error:", error);
+      console.error("Legacy Payment Error:", error);
+      return res.status(500).json({ error: "Payment processing failed" });
     }
   }
-
 }
 
 module.exports = new Transaction();
-
