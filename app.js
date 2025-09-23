@@ -42,7 +42,8 @@ const subadmin=require("./Routes/Admin/subadmin");
 const offer=require("./Routes/offerRoutes")
 const subscription = require("./Routes/subscription")
 const offertemplate = require("./Routes/template") 
-const fcm = require("./Routes/User/fcmRoutes")
+const fcm = require("./Routes/User/fcmRoutes") 
+const phonepe = require("./Routes/PhonepeRoutes")
 
 
 
@@ -76,8 +77,8 @@ app.use("/api/admin",subadmin);
 app.use("/api/offers",offer)
 app.use("/api/subscription", subscription)
 app.use("/api/templates", offertemplate)  
-app.use("/api/user",fcm)
-// app.use("/api/fcm",fcm)
+app.use("/api/user",fcm) 
+app.use("/api/user",phonepe)
 
 const employerController=require("./Controller/Employers/employers");
 const employeeController=require("./Controller/User/user");
@@ -92,5 +93,5 @@ app.get("*", (req, res) => {
 });
 const PORT = process.env.PORT || 8500;
 app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+console.log(`Server running at http://localhost:${PORT}`);
 });
