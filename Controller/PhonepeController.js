@@ -170,53 +170,59 @@ class Transaction {
   }
 
   // Check payment status
-  async checkPayment(req, res) {
-    try {
-      let id = req.params.id;
-      let userId = req.params.userId;
-      
-      let data = await transactionModel.findById(id);
-      if (!data) {
-        return res.status(400).json({ error: "Payment Id not found!" });
+async checkPayment(req, res) {
+  try {
+    let id = req.params.id;       // This is PhonePe orderId (e.g. OMO...)
+    let userId = req.params.userId;
+
+    // 🔎 Find transaction by merchantTransactionId instead of _id
+    let data = await transactionModel.findOne({
+      merchantTransactionId: id,
+      merchantUserId: userId
+    });
+
+    if (!data) {
+      return res.status(400).json({ error: "Payment Id not found!" });
+    }
+
+    // ✅ Check status with PhonePe
+    client.getOrderStatus(id).then(async (response) => {
+      console.log("PhonePe status response:", response);
+
+      const state = response.state;
+
+      // Execute config if payment completed
+      if (state === "COMPLETED" && data.config) {
+        try {
+          const configData = JSON.parse(data.config);
+          await axios(configData);
+          data.config = null; // Clear config after execution
+        } catch (configError) {
+          console.error("Config execution error:", configError);
+        }
       }
 
-      // Check status with PhonePe
-      client.getOrderStatus(id).then(async (response) => {
-        console.log("PhonePe status response:", response);
-        
-        const state = response.state;
-        
-        // Execute config if payment completed
-        if (state === "COMPLETED" && data.config) {
-          try {
-            const configData = JSON.parse(data.config);
-            await axios(configData);
-            data.config = null; // Clear config after execution
-          } catch (configError) {
-            console.error("Config execution error:", configError);
-          }
-        }
-        
-        data.status = state;
-        data = await data.save();
-        
-        return res.status(200).json({ success: data });
-        
-      }).catch((error) => {
-        console.error("PhonePe status check error:", error);
-        
-        // Return current data if PhonePe check fails
-        return res.status(200).json({ 
-          success: data,
-          note: "PhonePe status check failed, returning cached status"
-        });
-      });
+      data.status = state;
+      data = await data.save();
 
-    } catch (error) {
-      console.error("Check payment error:", error);
-      return res.status(400).json({ error: error.message });
-    }
+      return res.status(200).json({ success: data });
+
+    }).catch((error) => {
+      console.error("PhonePe status check error:", error);
+
+      // Return current data if PhonePe check fails
+      return res.status(200).json({ 
+        success: data,
+        note: "PhonePe status check failed, returning cached status"
+      });
+    });
+
+  } catch (error) {
+    console.error("Check payment error:", error);
+    return res.status(400).json({ error: error.message });
   }
+}
+
 
   // Payment callback handler
   async paymentcallback(req, res) {
