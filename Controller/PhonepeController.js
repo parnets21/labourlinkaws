@@ -2,45 +2,111 @@ const transactionModel = require("../Model/PhonepeModel");
 const axios = require("axios");
 const crypto = require('crypto');
 
+const {
+  StandardCheckoutClient,
+  Env,
+  StandardCheckoutPayRequest,
+  MetaInfo,
+  CreateSdkOrderRequest
+} = require("pg-sdk-node");
+
 const clientId = "SU2509221900139808161172";
 const clientSecret = "2d5ea2d9-8043-4d9c-bd52-c586cfa1de5d";
+const clientVersion = 1;
+const env = Env.PRODUCTION;
+
+const client = StandardCheckoutClient.getInstance(
+  clientId,
+  clientSecret,
+  clientVersion,
+  env
+);
 
 class Transaction {
 
-  // Single payment method for both web and mobile (web URL only)
+
   async addPaymentPhone(req, res) {
     try {
       const { userId, username, Mobile, orderId, amount, config, successUrl, failedUrl } = req.body;
        
-      // Create transaction record
       const data = await transactionModel.create({
+        userId,
+        username,
+        Mobile,
+        orderId,
+        amount,
+        config,
+        successUrl,
+        failedUrl
+      });
+
+      if (!data)
+        return res.status(400).json({ error: "Something went wrong" });
+
+      const merchantOrderId = data._id.toString();
+      const redirectUrl = successUrl || `https://sbwears.com/PaymentSuccess?transactionId=${data._id}&userID=${userId}`;
+
+      // Build the payment request for web
+      const paymentRequest = CreateSdkOrderRequest.StandardCheckoutBuilder()
+        .merchantOrderId(merchantOrderId)
+        .amount(amount * 100) // Convert to paise
+        .redirectUrl(redirectUrl)
+        .build();
+
+      // Send payment request to PhonePe
+      const response = await client.pay(paymentRequest);
+      console.log("PhonePe SDK response:", response);
+      
+      const checkoutUrl = response.redirectUrl;
+
+      if (!checkoutUrl) {
+        console.error("Invalid PhonePe response:", response);
+        return res.status(500).json({ error: "PhonePe did not return a URL" });
+      }
+
+      return res.status(200).json({
+        orderId: response.orderId,
+        merchantID: merchantOrderId,
+        url: checkoutUrl,
+      });
+    } catch (error) {
+      console.error("Payment Error:", error);
+      return res.status(500).json({ error: "Payment processing failed" });
+    }
+  }
+
+  // Mobile SDK integration - returns checksum for native app
+  async addPaymentMobile(req, res) {
+    let transaction;
+
+    try {
+      // Validate input
+      const { userId, username, Mobile, orderId, amount, config } = req.body;
+      if (!userId || !username || !Mobile || !amount) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      // Create transaction record
+      transaction = await transactionModel.create({
         userId,
         username,
         Mobile,
         orderId: orderId || `ORD_${Date.now()}`,
         amount,
         config,
-        successUrl,
-        failedUrl,
         status: 'INITIATED'
       });
 
-      if (!data) {
-        return res.status(400).json({ error: "Something went wrong" });
-      }
+      const merchantTransactionId = transaction._id.toString();
 
-      const merchantTransactionId = data._id.toString();
-      const redirectUrl = successUrl || `https://laborlink.co.in/PaymentSuccess?transactionId=${data._id}&userID=${userId}`;
-
-      // Payment payload for PhonePe API
+      
       const paymentPayload = {
         merchantId: clientId,
         merchantTransactionId: merchantTransactionId,
         merchantUserId: userId,
-        amount: amount * 100, // Convert to paise
-        redirectUrl: redirectUrl,
-        redirectMode: "REDIRECT",
-        callbackUrl: `https://laborlink.co.in/api/user/paymentcallback`,
+        amount: amount * 100, 
+        redirectUrl: `https://laborlink.co.in/PaymentSuccess?transactionId=${transaction._id}&userID=${userId}`,
+        callbackUrl: `https://laborlink.co.in/api/user/checkPayment/${transaction._id}/${userId}`,
         mobileNumber: Mobile,
         paymentInstrument: {
           type: "PAY_PAGE"
@@ -49,47 +115,39 @@ class Transaction {
 
       console.log("Payment payload:", paymentPayload);
 
-      // Generate signature
-      const payload = JSON.stringify(paymentPayload);
-      const base64Payload = Buffer.from(payload).toString('base64');
+      // Generate base64 encoded payload
+      const base64Payload = Buffer.from(JSON.stringify(paymentPayload)).toString('base64');
+      
+      // Generate checksum for mobile SDK
       const stringToHash = base64Payload + '/pg/v1/pay' + clientSecret;
       const sha256Hash = crypto.createHash('sha256').update(stringToHash).digest('hex');
-      const signature = sha256Hash + '###1';
+      const checksum = sha256Hash + '###' + clientVersion;
 
-      // Make API call to PhonePe
-      const response = await axios.post(
-        "https://api.phonepe.com/apis/hermes/pg/v1/pay",
-        {
-          request: base64Payload,
+      console.log("Generated checksum:", checksum);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          transactionBody: base64Payload,
+          checksum: checksum,
+          transactionId: transaction._id,
         },
-        {
-          headers: {
-            "X-VERIFY": signature,
-            "Content-Type": "application/json"
-          },
-        }
-      );
-
-      console.log("PhonePe API response:", response.data);
-
-      if (response.data.success && response.data.data) {
-        const checkoutUrl = response.data.data.instrumentResponse.redirectInfo.url;
-
-        return res.status(200).json({
-          orderId: response.data.data.merchantTransactionId,
-          merchantID: merchantTransactionId,
-          url: checkoutUrl,
-        });
-      } else {
-        console.error("PhonePe API error:", response.data);
-        return res.status(500).json({ error: "PhonePe payment initiation failed" });
-      }
+      });
 
     } catch (error) {
-      console.error("Payment Error:", error.response?.data || error.message);
-      return res.status(500).json({ 
-        error: "Payment processing failed",
-        details: error.response?.data?.message || error.message
+      console.error("Mobile Payment Error:", error.message);
+
+      // Update transaction status if it was created
+      if (transaction) {
+        await transactionModel.findByIdAndUpdate(transaction._id, {
+          status: 'FAILED',
+          error: error.response?.data?.message || error.message
+        });
+      }
+
+      return res.status(500).json({
+        error: "Payment processing error",
+        details: error.response?.data || error.message
       });
     }
   }
@@ -122,61 +180,37 @@ class Transaction {
         return res.status(400).json({ error: "Payment Id not found!" });
       }
 
-      // Check status with PhonePe API
-      const merchantTransactionId = data._id.toString();
-      const stringToHash = `/pg/v1/status/${clientId}/${merchantTransactionId}` + clientSecret;
-      const sha256Hash = crypto.createHash('sha256').update(stringToHash).digest('hex');
-      const signature = sha256Hash + '###1';
-
-      try {
-        const statusResponse = await axios.get(
-          `https://api.phonepe.com/apis/hermes/pg/v1/status/${clientId}/${merchantTransactionId}`,
-          {
-            headers: {
-              "X-VERIFY": signature,
-              "X-MERCHANT-ID": clientId
-            }
-          }
-        );
-
-        console.log("PhonePe status response:", statusResponse.data);
+      // Check status with PhonePe
+      client.getOrderStatus(id).then(async (response) => {
+        console.log("PhonePe status response:", response);
         
-        if (statusResponse.data.success && statusResponse.data.data) {
-          const paymentState = statusResponse.data.data.state;
-          
-          // Execute config if payment completed and not already executed
-          if (paymentState === "COMPLETED" && data.config && data.status !== "COMPLETED") {
-            try {
-              const configData = JSON.parse(data.config);
-              await axios(configData);
-              console.log("Config executed successfully");
-              data.config = null; // Clear config after execution
-            } catch (configError) {
-              console.error("Config execution error:", configError);
-            }
+        const state = response.state;
+        
+        // Execute config if payment completed
+        if (state === "COMPLETED" && data.config) {
+          try {
+            const configData = JSON.parse(data.config);
+            await axios(configData);
+            data.config = null; // Clear config after execution
+          } catch (configError) {
+            console.error("Config execution error:", configError);
           }
-          
-          data.status = paymentState;
-          data = await data.save();
-          
-          return res.status(200).json({ success: data });
-        } else {
-          console.log("PhonePe status check failed, returning cached status");
-          return res.status(200).json({ 
-            success: data,
-            note: "PhonePe status check failed, returning cached status"
-          });
         }
         
-      } catch (statusError) {
-        console.error("PhonePe status API error:", statusError.response?.data || statusError.message);
+        data.status = state;
+        data = await data.save();
+        
+        return res.status(200).json({ success: data });
+        
+      }).catch((error) => {
+        console.error("PhonePe status check error:", error);
         
         // Return current data if PhonePe check fails
         return res.status(200).json({ 
           success: data,
           note: "PhonePe status check failed, returning cached status"
         });
-      }
+      });
 
     } catch (error) {
       console.error("Check payment error:", error);
@@ -209,15 +243,13 @@ class Transaction {
       let data = await transactionModel.findById(merchantTransactionId);
       
       if (data) {
-        const previousStatus = data.status;
         data.status = state;
         
-        // Execute config if payment completed and not already executed
-        if (state === 'COMPLETED' && data.config && previousStatus !== 'COMPLETED') {
+        // Execute config if payment completed
+        if (state === 'COMPLETED' && data.config) {
           try {
             const configData = JSON.parse(data.config);
             await axios(configData);
-            console.log("Config executed via callback");
             data.config = null; // Clear config after execution
           } catch (configError) {
             console.error("Config execution error:", configError);
@@ -247,7 +279,7 @@ class Transaction {
     }
   }
 
-  // Legacy payment method (kept for backward compatibility)
+  // Legacy payment method (for backward compatibility)
   async makepayment(req, res) {
     let {
       amount,
@@ -275,7 +307,7 @@ class Transaction {
       merchantTransactionId: merchantTransactionId,
       merchantUserId: merchantUserId,
       amount: amount,
-      redirectUrl: redirectUrl,
+      redirectUrl: redirectUrl ,
       redirectMode: "POST",
       callbackUrl: callbackUrl,
       mobileNumber: mobileNumber,
@@ -304,7 +336,7 @@ class Transaction {
       );
 
       return res.status(200).json({
-        url: response.data?.data.instrumentResponse?.redirectInfo?.url,
+        url: response.data?.data.instrumentResponse?.redirectInfo,
       });
     } catch (error) {
       console.error("Legacy Payment Error:", error);
