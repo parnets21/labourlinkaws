@@ -10,8 +10,8 @@ const {
   CreateSdkOrderRequest
 } = require("pg-sdk-node");
 
-const clientId = "SU2507161930264407071571";
-const clientSecret = "7c7a1bd9-bba1-4e67-9764-45172e2e4100";
+const clientId = "SU2509221900139808161172";
+const clientSecret = "2d5ea2d9-8043-4d9c-bd52-c586cfa1de5d";
 const clientVersion = 1;
 const env = Env.PRODUCTION;
 
