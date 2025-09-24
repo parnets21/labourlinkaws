@@ -106,7 +106,7 @@ class Transaction {
         merchantUserId: userId,
         amount: amount * 100, 
         redirectUrl: `https://laborlink.co.in/PaymentSuccess?transactionId=${transaction._id}&userID=${userId}`,
-        callbackUrl: `https://laborlink.co.in/api/user/checkPayment/${transaction._id}/${userId}`,
+        callbackUrl: `https://laborlink.co.in/api/user/checkPayment/${_id}/${userId}`,
         mobileNumber: Mobile,
         paymentInstrument: {
           type: "PAY_PAGE"
