@@ -24,7 +24,7 @@ const client = StandardCheckoutClient.getInstance(
 
 class Transaction {
 
-  // SDK-based payment for web integration
+
   async addPaymentPhone(req, res) {
     try {
       const { userId, username, Mobile, orderId, amount, config, successUrl, failedUrl } = req.body;
@@ -105,8 +105,8 @@ class Transaction {
         merchantTransactionId: merchantTransactionId,
         merchantUserId: userId,
         amount: amount * 100, // Convert to paise
-        redirectUrl: `https://sbwears.com/PaymentSuccess?transactionId=${transaction._id}&userID=${userId}`,
-        callbackUrl: `https://sbwears.com/api/user/checkPayment/${transaction._id}/${userId}`,
+        redirectUrl: `https://laborlink.co.in/PaymentSuccess?transactionId=${transaction._id}&userID=${userId}`,
+        callbackUrl: `https://laborlink.co.in/api/user/checkPayment/${transaction._id}/${userId}`,
         mobileNumber: Mobile,
         paymentInstrument: {
           type: "PAY_PAGE"
@@ -307,7 +307,7 @@ class Transaction {
       merchantTransactionId: merchantTransactionId,
       merchantUserId: merchantUserId,
       amount: amount,
-      redirectUrl: redirectUrl || "https://sbwears.com",
+      redirectUrl: redirectUrl ,
       redirectMode: "POST",
       callbackUrl: callbackUrl,
       mobileNumber: mobileNumber,

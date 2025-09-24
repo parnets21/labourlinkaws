@@ -3,8 +3,6 @@ const router = express.Router();
 const employerController=require("../../Controller/Employers/employers")
 const multer = require("multer");
 
-// Use memory storage for S3 uploads
-
 
 const upload = multer();
 router.post("/registerEmployer", employerController.registerEmployer);
