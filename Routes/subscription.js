@@ -24,6 +24,15 @@ router.post('/', subscriptionController.createSubscription);
 // GET /api/subscriptions - Get all subscriptions
 router.get('/', subscriptionController.getSubscriptions);
 
+// GET /api/subscriptions/featured - Get featured subscriptions
+router.get('/featured', subscriptionController.getFeaturedSubscriptions);
+
+// GET /api/subscriptions/analytics - Get subscription analytics
+router.get('/analytics', subscriptionController.getSubscriptionAnalytics);
+
+// GET /api/subscriptions/compare - Compare subscriptions
+router.get('/compare', subscriptionController.compareSubscriptions);
+
 // GET /api/subscriptions/:id - Get single subscription
 router.get('/:id', subscriptionController.getSubscription);
 

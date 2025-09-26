@@ -279,6 +279,89 @@ class Transaction {
     }
   }
 
+  // Get transaction history for a specific user
+  async getUserTransactionHistory(req, res) {
+    try {
+      const { userId } = req.params;
+      const { limit = 10, offset = 0 } = req.query;
+
+      if (!userId) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "User ID is required" 
+        });
+      }
+
+      // Get transactions for the user
+      const transactions = await transactionModel
+        .find({ userId })
+        .sort({ createdAt: -1 })
+        .limit(parseInt(limit))
+        .skip(parseInt(offset))
+        .lean();
+
+      // Map transactions to include plan information
+      const mappedTransactions = transactions.map(tx => {
+        let planName = 'Subscription Plan';
+        
+        // Try to extract plan name from config
+        if (tx.config) {
+          try {
+            const config = JSON.parse(tx.config);
+            planName = config.data?.planName || planName;
+          } catch (e) {
+            // Ignore parsing errors
+          }
+        }
+
+        return {
+          _id: tx._id,
+          orderId: tx.orderId,
+          amount: tx.amount,
+          status: this.mapStatusToStandard(tx.status),
+          planName: planName,
+          paymentMethod: 'PhonePe',
+          createdAt: tx.createdAt,
+          updatedAt: tx.updatedAt
+        };
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: mappedTransactions,
+        pagination: {
+          limit: parseInt(limit),
+          offset: parseInt(offset),
+          total: mappedTransactions.length
+        }
+      });
+
+    } catch (error) {
+      console.error("Get user transaction history error:", error);
+      return res.status(500).json({ 
+        success: false, 
+        error: "Failed to fetch transaction history" 
+      });
+    }
+  }
+
+  // Helper method to map old status to standard format
+  mapStatusToStandard(oldStatus) {
+    const statusMap = {
+      'InProgress': 'PENDING',
+      'Completed': 'COMPLETED',
+      'SUCCESS': 'COMPLETED',
+      'Failed': 'FAILED',
+      'FAILED': 'FAILED',
+      'Cancelled': 'CANCELLED',
+      'CANCELLED': 'CANCELLED',
+      'CR': 'COMPLETED',
+      'DR': 'FAILED'
+    };
+    
+    return statusMap[oldStatus] || 'PENDING';
+  }
+
   // Legacy payment method (for backward compatibility)
   async makepayment(req, res) {
     let {

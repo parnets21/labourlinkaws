@@ -170,7 +170,7 @@ exports.createSubscription = async (req, res) => {
   }
 };
 
-// Get all subscriptions
+// Get all subscriptions with enhanced features
 exports.getSubscriptions = async (req, res) => {
   try {
     const {
@@ -179,7 +179,9 @@ exports.getSubscriptions = async (req, res) => {
       duration,
       minPrice,
       maxPrice,
-      sort = 'price'
+      sort = 'price',
+      limit = 50,
+      offset = 0
     } = req.query;
 
     // Build filter object
@@ -194,24 +196,74 @@ exports.getSubscriptions = async (req, res) => {
       if (maxPrice !== undefined) filter.price.$lte = Number(maxPrice);
     }
 
-    // Build sort object
+    // Build sort object with enhanced options
     let sortObj = {};
-    if (sort === 'price') {
-      sortObj.price = 1;
-    } else if (sort === '-price') {
-      sortObj.price = -1;
-    } else if (sort === 'name') {
-      sortObj.name = 1;
-    } else if (sort === '-name') {
-      sortObj.name = -1;
+    switch (sort) {
+      case 'price':
+        sortObj.price = 1;
+        break;
+      case '-price':
+        sortObj.price = -1;
+        break;
+      case 'name':
+        sortObj.displayName = 1;
+        break;
+      case '-name':
+        sortObj.displayName = -1;
+        break;
+      case 'popular':
+        sortObj.isPopular = -1;
+        sortObj.price = 1;
+        break;
+      case 'created':
+        sortObj.createdAt = -1;
+        break;
+      default:
+        // Default sort: popular first, then by price
+        sortObj.isPopular = -1;
+        sortObj.price = 1;
     }
 
+    // Get total count for pagination
+    const totalCount = await Subscription.countDocuments(filter);
+
+    // Fetch subscriptions with pagination
     const subscriptions = await Subscription.find(filter)
       .sort(sortObj)
-      .select('-__v');
+      .limit(parseInt(limit))
+      .skip(parseInt(offset))
+      .select('-__v')
+      .lean();
 
-    // Group subscriptions by type
-    const grouped = subscriptions.reduce((acc, sub) => {
+    // Enhance subscription data
+    const enhancedSubscriptions = subscriptions.map(sub => {
+      // Calculate savings for yearly plans
+      let savings = null;
+      if (sub.duration === 'yearly' && sub.monthlyEquivalent) {
+        savings = {
+          amount: (sub.monthlyEquivalent * 12) - sub.price,
+          percentage: Math.round(((sub.monthlyEquivalent * 12 - sub.price) / (sub.monthlyEquivalent * 12)) * 100)
+        };
+      }
+
+      // Add popularity score based on various factors
+      let popularityScore = 0;
+      if (sub.isPopular) popularityScore += 100;
+      if (sub.isMostPurchased) popularityScore += 50;
+      if (sub.price > 0 && sub.price < 1000) popularityScore += 25; // Sweet spot pricing
+      
+      return {
+        ...sub,
+        savings,
+        popularityScore,
+        isRecommended: sub.isPopular || popularityScore > 75,
+        formattedPrice: formatCurrency(sub.price),
+        featureCount: sub.highlightedFeatures?.length || 0
+      };
+    });
+
+    // Group subscriptions by type with enhanced data
+    const grouped = enhancedSubscriptions.reduce((acc, sub) => {
       if (!acc[sub.type]) {
         acc[sub.type] = [];
       }
@@ -219,15 +271,42 @@ exports.getSubscriptions = async (req, res) => {
       return acc;
     }, {});
 
+    // Add type-specific metadata
+    Object.keys(grouped).forEach(type => {
+      grouped[type] = {
+        plans: grouped[type],
+        count: grouped[type].length,
+        priceRange: {
+          min: Math.min(...grouped[type].map(p => p.price)),
+          max: Math.max(...grouped[type].map(p => p.price))
+        },
+        hasFreePlan: grouped[type].some(p => p.price === 0),
+        recommendedPlan: grouped[type].find(p => p.isRecommended) || grouped[type][0]
+      };
+    });
+
     res.status(200).json({
       success: true,
-      count: subscriptions.length,
+      count: enhancedSubscriptions.length,
+      totalCount,
+      pagination: {
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        hasMore: (parseInt(offset) + enhancedSubscriptions.length) < totalCount
+      },
       data: {
-        all: subscriptions,
+        all: enhancedSubscriptions,
         grouped
+      },
+      meta: {
+        filters: { type, isActive, duration, minPrice, maxPrice },
+        sort,
+        totalPlans: totalCount,
+        planTypes: Object.keys(grouped)
       }
     });
   } catch (err) {
+    console.error('Error fetching subscriptions:', err);
     res.status(500).json({
       success: false,
       message: 'Error fetching subscriptions',
@@ -235,6 +314,19 @@ exports.getSubscriptions = async (req, res) => {
     });
   }
 };
+
+// Helper function to format currency
+function formatCurrency(amount) {
+  if (amount === 0) return 'Free';
+  
+  const formatter = new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0
+  });
+  
+  return formatter.format(amount);
+}
 
 // Get single subscription
 exports.getSubscription = async (req, res) => {
@@ -466,6 +558,218 @@ exports.compareSubscriptions = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error comparing subscriptions',
+      error: err.message
+    });
+  }
+};
+
+// Get featured/recommended subscriptions
+exports.getFeaturedSubscriptions = async (req, res) => {
+  try {
+    const { type, limit = 3 } = req.query;
+    
+    const filter = { isActive: true };
+    if (type) filter.type = type;
+    
+    const featuredSubscriptions = await Subscription.find(filter)
+      .sort({ isPopular: -1, isFeatured: -1, price: 1 })
+      .limit(parseInt(limit))
+      .select('-__v')
+      .lean();
+
+    const enhancedSubscriptions = featuredSubscriptions.map(sub => ({
+      ...sub,
+      formattedPrice: formatCurrency(sub.price),
+      isRecommended: sub.isPopular || sub.isFeatured,
+      featureCount: sub.highlightedFeatures?.length || 0
+    }));
+
+    res.status(200).json({
+      success: true,
+      count: enhancedSubscriptions.length,
+      data: enhancedSubscriptions,
+      meta: {
+        type: type || 'all',
+        limit: parseInt(limit)
+      }
+    });
+  } catch (err) {
+    console.error('Error fetching featured subscriptions:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching featured subscriptions',
+      error: err.message
+    });
+  }
+};
+
+// Get subscription analytics
+exports.getSubscriptionAnalytics = async (req, res) => {
+  try {
+    const { type, period = '30d' } = req.query;
+    
+    const filter = {};
+    if (type) filter.type = type;
+
+    // Date range for trends
+    const now = new Date();
+    const periodDays = period === '7d' ? 7 : period === '30d' ? 30 : 90;
+    const startDate = new Date(now.getTime() - (periodDays * 24 * 60 * 60 * 1000));
+
+    // Get basic stats
+    const totalPlans = await Subscription.countDocuments(filter);
+    const activePlans = await Subscription.countDocuments({ ...filter, isActive: true });
+    const freePlans = await Subscription.countDocuments({ ...filter, price: 0 });
+    
+    // Get price analytics
+    const priceStats = await Subscription.aggregate([
+      { $match: { ...filter, isActive: true } },
+      {
+        $group: {
+          _id: null,
+          avgPrice: { $avg: '$price' },
+          minPrice: { $min: '$price' },
+          maxPrice: { $max: '$price' },
+          totalRevenuePotential: { $sum: '$price' }
+        }
+      }
+    ]);
+
+    // Get plans by duration
+    const plansByDuration = await Subscription.aggregate([
+      { $match: { ...filter, isActive: true } },
+      {
+        $group: {
+          _id: '$duration',
+          count: { $sum: 1 },
+          avgPrice: { $avg: '$price' }
+        }
+      },
+      { $sort: { count: -1 } }
+    ]);
+
+    // Get plans by type distribution
+    const plansByType = await Subscription.aggregate([
+      { $match: { ...filter, isActive: true } },
+      {
+        $group: {
+          _id: '$type',
+          count: { $sum: 1 },
+          avgPrice: { $avg: '$price' },
+          totalRevenue: { $sum: '$price' }
+        }
+      },
+      { $sort: { count: -1 } }
+    ]);
+
+    // Get recent activity trend (if createdAt exists)
+    let recentTrend = [];
+    try {
+      recentTrend = await Subscription.aggregate([
+        { 
+          $match: { 
+            ...filter, 
+            createdAt: { $gte: startDate }
+          } 
+        },
+        {
+          $group: {
+            _id: {
+              $dateToString: { 
+                format: "%Y-%m-%d", 
+                date: "$createdAt" 
+              }
+            },
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { _id: 1 } }
+      ]);
+    } catch (error) {
+      console.log('Recent trend data not available (createdAt field may not exist)');
+    }
+
+    // Get popular features (if features field exists)
+    let popularFeatures = [];
+    try {
+      popularFeatures = await Subscription.aggregate([
+        { $match: { ...filter, isActive: true, features: { $exists: true, $ne: [] } } },
+        { $unwind: '$features' },
+        {
+          $group: {
+            _id: '$features',
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { count: -1 } },
+        { $limit: 5 }
+      ]);
+    } catch (error) {
+      console.log('Popular features data not available');
+    }
+
+    const pricing = priceStats[0] || {
+      avgPrice: 0,
+      minPrice: 0,
+      maxPrice: 0,
+      totalRevenuePotential: 0
+    };
+
+    // Round pricing values for better display
+    pricing.avgPrice = Math.round(pricing.avgPrice || 0);
+    pricing.minPrice = Math.round(pricing.minPrice || 0);
+    pricing.maxPrice = Math.round(pricing.maxPrice || 0);
+    pricing.totalRevenuePotential = Math.round(pricing.totalRevenuePotential || 0);
+
+    // Calculate health metrics
+    const healthMetrics = {
+      activeRatio: totalPlans > 0 ? Math.round((activePlans / totalPlans) * 100) : 0,
+      freeRatio: totalPlans > 0 ? Math.round((freePlans / totalPlans) * 100) : 0,
+      paidRatio: totalPlans > 0 ? Math.round(((totalPlans - freePlans) / totalPlans) * 100) : 0,
+      avgRevenuePerPlan: activePlans > 0 ? Math.round(pricing.totalRevenuePotential / activePlans) : 0
+    };
+
+    res.status(200).json({
+      success: true,
+      data: {
+        overview: {
+          totalPlans,
+          activePlans,
+          freePlans,
+          paidPlans: totalPlans - freePlans,
+          activePercentage: healthMetrics.activeRatio
+        },
+        pricing,
+        distribution: {
+          byDuration: plansByDuration,
+          byType: plansByType
+        },
+        trends: {
+          period: period,
+          recentActivity: recentTrend,
+          popularFeatures: popularFeatures,
+          growthRate: recentTrend.length > 1 ? 
+            Math.round(((recentTrend[recentTrend.length - 1]?.count || 0) / 
+            (recentTrend[0]?.count || 1) - 1) * 100) : 0
+        },
+        health: healthMetrics
+      },
+      meta: {
+        type: type || 'all',
+        period: period,
+        generatedAt: new Date().toISOString(),
+        dataPoints: {
+          subscriptions: totalPlans,
+          trends: recentTrend.length,
+          features: popularFeatures.length
+        }
+      }
+    });
+  } catch (err) {
+    console.error('Error fetching subscription analytics:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching subscription analytics',
       error: err.message
     });
   }

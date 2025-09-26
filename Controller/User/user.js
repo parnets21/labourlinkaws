@@ -1421,6 +1421,81 @@ async makEverifyUnverify(req,res){
       });
     }
   }
+  // Get user subscriptions
+  async getUserSubscriptions(req, res) {
+    try {
+      const { userId } = req.params;
+      
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          message: "User ID is required"
+        });
+      }
+
+      // Import user subscription model
+      const UserSubscription = require("../../Model/User/userSubscription");
+      
+      // Get user subscriptions with populated plan details
+      const userSubscriptions = await UserSubscription.find({ userId })
+        .populate('subscriptionId')
+        .sort({ createdAt: -1 })
+        .lean();
+
+      // Process subscriptions to add computed fields
+      const now = new Date();
+      const processedSubscriptions = userSubscriptions.map(sub => {
+        const subscription = {
+          _id: sub._id,
+          userId: sub.userId,
+          subscriptionId: sub.subscriptionId,
+          planName: sub.subscriptionId?.displayName || sub.subscriptionId?.name || 'Unknown Plan',
+          planType: sub.subscriptionId?.type || 'employee',
+          price: sub.subscriptionId?.price || 0,
+          duration: sub.subscriptionId?.duration || '1 month',
+          features: sub.subscriptionId?.features || [],
+          status: sub.status || 'active',
+          startDate: sub.startDate || sub.createdAt,
+          endDate: sub.endDate,
+          paymentId: sub.paymentId,
+          orderId: sub.orderId,
+          createdAt: sub.createdAt,
+          updatedAt: sub.updatedAt
+        };
+
+        // Check if subscription is expired
+        if (subscription.endDate && new Date(subscription.endDate) <= now) {
+          subscription.isExpired = true;
+          subscription.daysOverdue = Math.floor((now - new Date(subscription.endDate)) / (1000 * 60 * 60 * 24));
+        } else {
+          subscription.isExpired = false;
+          subscription.daysRemaining = subscription.endDate ? 
+            Math.floor((new Date(subscription.endDate) - now) / (1000 * 60 * 60 * 24)) : null;
+        }
+
+        return subscription;
+      });
+
+      res.status(200).json({
+        success: true,
+        data: processedSubscriptions,
+        meta: {
+          total: processedSubscriptions.length,
+          active: processedSubscriptions.filter(sub => !sub.isExpired && sub.status === 'active').length,
+          expired: processedSubscriptions.filter(sub => sub.isExpired).length,
+          inactive: processedSubscriptions.filter(sub => sub.status !== 'active').length
+        }
+      });
+
+    } catch (error) {
+      console.error("Get user subscriptions error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch user subscriptions",
+        error: error.message
+      });
+    }
+  }
 }
 
 module.exports = new user();
