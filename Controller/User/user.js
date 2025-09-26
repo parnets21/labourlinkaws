@@ -1290,7 +1290,7 @@ async makEverifyUnverify(req,res){
   // Update user subscription (for payment completion)
   async updateSubscription(req, res) {
     try {
-      const { userId, subscriptionId, transactionId, amount, status = 'active' } = req.body;
+      const { userId, subscriptionId, transactionId, amount, status = 'active', planName, paymentMethod = 'PhonePe' } = req.body;
 
       console.log('Updating subscription:', req.body);
 
@@ -1301,9 +1301,34 @@ async makEverifyUnverify(req,res){
         });
       }
 
+      // Validate subscriptionId if provided
+      const mongoose = require('mongoose');
+      if (subscriptionId && !mongoose.Types.ObjectId.isValid(subscriptionId)) {
+        console.warn('Invalid subscriptionId provided:', subscriptionId, 'Attempting to create new subscription instead');
+        
+        // If subscriptionId is invalid but we have planName, try to activate a new subscription
+        if (planName) {
+          return this.activateSubscription({
+            body: {
+              userId,
+              subscriptionId: null, // Let activateSubscription handle finding a default
+              planName,
+              amount,
+              paymentMethod,
+              transactionId
+            }
+          }, res);
+        }
+        
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid subscription ID format and no plan name provided'
+        });
+      }
+
       const UserSubscription = require('../../Model/User/userSubscription');
       
-      // Find subscription by transaction ID or user ID
+      // Find subscription by transaction ID first
       let userSubscription;
       if (transactionId) {
         userSubscription = await UserSubscription.findOne({ 
@@ -1312,6 +1337,7 @@ async makEverifyUnverify(req,res){
         });
       }
       
+      // If not found and we have a valid subscriptionId, try to find by subscriptionId
       if (!userSubscription && subscriptionId) {
         userSubscription = await UserSubscription.findOne({ 
           userId, 
@@ -1321,16 +1347,32 @@ async makEverifyUnverify(req,res){
       }
 
       if (!userSubscription) {
+        // If no existing subscription found, try to create a new one if we have enough data
+        if (subscriptionId && planName) {
+          console.log('No existing subscription found, creating new one');
+          return this.activateSubscription({
+            body: {
+              userId,
+              subscriptionId,
+              planName,
+              amount,
+              paymentMethod,
+              transactionId
+            }
+          }, res);
+        }
+        
         return res.status(404).json({
           success: false,
-          error: 'User subscription not found'
+          error: 'User subscription not found and insufficient data to create new subscription'
         });
       }
 
-      // Update subscription
+      // Update existing subscription
       userSubscription.status = status;
       if (transactionId) userSubscription.transactionId = transactionId;
       if (amount) userSubscription.amount = amount;
+      if (paymentMethod) userSubscription.paymentMethod = paymentMethod;
       
       await userSubscription.save();
 

@@ -2,6 +2,25 @@ const transactionModel = require("../Model/PhonepeModel");
 const axios = require("axios");
 const crypto = require('crypto');
 
+// Configuration for URL handling
+const getCorrectApiUrl = (url) => {
+  if (!url) return url;
+  
+  // Determine if we're running locally
+  const port = process.env.PORT || 8500;
+  const isLocalServer = port === 8500 || port === '8500';
+  const isProductionUrl = url.includes('https://laborlink.co.in');
+  
+  // If we're running locally but URL points to production, redirect to local
+  if (isLocalServer && isProductionUrl) {
+    const localUrl = url.replace('https://laborlink.co.in', `http://localhost:${port}`);
+    console.log(`Redirecting production URL to local: ${url} -> ${localUrl}`);
+    return localUrl;
+  }
+  
+  return url;
+};
+
 const {
   StandardCheckoutClient,
   Env,
@@ -190,10 +209,55 @@ class Transaction {
         if (state === "COMPLETED" && data.config) {
           try {
             const configData = JSON.parse(data.config);
+            
+            // Fix URL if it's pointing to production but should be local
+            const originalUrl = configData.url;
+            configData.url = getCorrectApiUrl(configData.url);
+            if (originalUrl !== configData.url) {
+              console.log('Fixed config URL from:', originalUrl, 'to:', configData.url);
+            }
+            
             await axios(configData);
             data.config = null; // Clear config after execution
           } catch (configError) {
             console.error("Config execution error:", configError);
+            // Try direct activation as fallback
+            try {
+              console.log("Attempting direct subscription activation...");
+              const userController = require("./User/user");
+              const userControllerInstance = new userController();
+              
+              // Ensure we have the required data for activation
+              const activationData = {
+                ...configData.data,
+                transactionId: id, // Use the current transaction ID
+                paymentMethod: 'PhonePe'
+              };
+              
+              await userControllerInstance.activateSubscription({
+                body: activationData
+              }, {
+                status: (code) => ({
+                  json: (data) => {
+                    console.log("Direct activation result:", code, data);
+                    return data;
+                  }
+                })
+              });
+              console.log("Direct activation successful");
+            } catch (directError) {
+              console.error("Direct activation also failed:", directError);
+              console.log("Payment successful but subscription activation failed. Manual activation may be required.");
+              
+              // Log the transaction for manual processing
+              console.log("Transaction details for manual processing:", {
+                transactionId: id,
+                userId: data.userId,
+                amount: data.amount,
+                status: state,
+                config: configData
+              });
+            }
           }
         }
         
@@ -249,10 +313,55 @@ class Transaction {
         if (state === 'COMPLETED' && data.config) {
           try {
             const configData = JSON.parse(data.config);
+            
+            // Fix URL if it's pointing to production but should be local
+            const originalUrl = configData.url;
+            configData.url = getCorrectApiUrl(configData.url);
+            if (originalUrl !== configData.url) {
+              console.log('Fixed config URL from:', originalUrl, 'to:', configData.url);
+            }
+            
             await axios(configData);
             data.config = null; // Clear config after execution
           } catch (configError) {
             console.error("Config execution error:", configError);
+            // Try direct activation as fallback
+            try {
+              console.log("Attempting direct subscription activation...");
+              const userController = require("./User/user");
+              const userControllerInstance = new userController();
+              
+              // Ensure we have the required data for activation
+              const activationData = {
+                ...configData.data,
+                transactionId: id, // Use the current transaction ID
+                paymentMethod: 'PhonePe'
+              };
+              
+              await userControllerInstance.activateSubscription({
+                body: activationData
+              }, {
+                status: (code) => ({
+                  json: (data) => {
+                    console.log("Direct activation result:", code, data);
+                    return data;
+                  }
+                })
+              });
+              console.log("Direct activation successful");
+            } catch (directError) {
+              console.error("Direct activation also failed:", directError);
+              console.log("Payment successful but subscription activation failed. Manual activation may be required.");
+              
+              // Log the transaction for manual processing
+              console.log("Transaction details for manual processing:", {
+                transactionId: id,
+                userId: data.userId,
+                amount: data.amount,
+                status: state,
+                config: configData
+              });
+            }
           }
         }
         
