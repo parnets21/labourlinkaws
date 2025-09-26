@@ -206,9 +206,10 @@ class Transaction {
         const state = response.state;
         
         // Execute config if payment completed
+        let configData = null; // Declare in outer scope
         if (state === "COMPLETED" && data.config) {
           try {
-            const configData = JSON.parse(data.config);
+            configData = JSON.parse(data.config);
             
             // Fix URL if it's pointing to production but should be local
             const originalUrl = configData.url;
@@ -225,22 +226,27 @@ class Transaction {
             try {
               console.log("Attempting direct subscription activation...");
               const userController = require("./User/user");
-              const userControllerInstance = new userController();
               
               // Ensure we have the required data for activation
-              const activationData = {
+              const activationData = configData && configData.data ? {
                 ...configData.data,
                 transactionId: id, // Use the current transaction ID
                 paymentMethod: 'PhonePe'
+              } : {
+                userId: data.userId,
+                transactionId: id,
+                amount: data.amount,
+                paymentMethod: 'PhonePe'
               };
               
-              await userControllerInstance.activateSubscription({
+              // Call the activation method directly (userController is already an instance)
+              await userController.activateSubscription({
                 body: activationData
               }, {
                 status: (code) => ({
-                  json: (data) => {
-                    console.log("Direct activation result:", code, data);
-                    return data;
+                  json: (responseData) => {
+                    console.log("Direct activation result:", code, responseData);
+                    return responseData;
                   }
                 })
               });
@@ -255,7 +261,7 @@ class Transaction {
                 userId: data.userId,
                 amount: data.amount,
                 status: state,
-                config: configData
+                config: configData || data.config
               });
             }
           }
@@ -310,9 +316,10 @@ class Transaction {
         data.status = state;
         
         // Execute config if payment completed
+        let configData = null; // Declare in outer scope
         if (state === 'COMPLETED' && data.config) {
           try {
-            const configData = JSON.parse(data.config);
+            configData = JSON.parse(data.config);
             
             // Fix URL if it's pointing to production but should be local
             const originalUrl = configData.url;
@@ -328,23 +335,29 @@ class Transaction {
             // Try direct activation as fallback
             try {
               console.log("Attempting direct subscription activation...");
-              const userController = require("./User/user");
-              const userControllerInstance = new userController();
+              const UserController = require("./User/user");
               
               // Ensure we have the required data for activation
-              const activationData = {
+              const activationData = configData && configData.data ? {
                 ...configData.data,
-                transactionId: id, // Use the current transaction ID
+                transactionId: merchantTransactionId, // Use the current transaction ID
+                paymentMethod: 'PhonePe'
+              } : {
+                userId: data.userId,
+                transactionId: merchantTransactionId,
+                amount: data.amount,
                 paymentMethod: 'PhonePe'
               };
               
-              await userControllerInstance.activateSubscription({
+              // Call the activation method directly
+              const userController = new UserController();
+              await userController.activateSubscription({
                 body: activationData
               }, {
                 status: (code) => ({
-                  json: (data) => {
-                    console.log("Direct activation result:", code, data);
-                    return data;
+                  json: (responseData) => {
+                    console.log("Direct activation result:", code, responseData);
+                    return responseData;
                   }
                 })
               });
@@ -355,11 +368,11 @@ class Transaction {
               
               // Log the transaction for manual processing
               console.log("Transaction details for manual processing:", {
-                transactionId: id,
+                transactionId: merchantTransactionId,
                 userId: data.userId,
                 amount: data.amount,
                 status: state,
-                config: configData
+                config: configData || data.config
               });
             }
           }
