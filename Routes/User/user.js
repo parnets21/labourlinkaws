@@ -76,4 +76,10 @@ router.put('/messages/:id/read', messageController.markAsRead);
 // Delete a message (Only for the receiver)
 router.delete('/messages/:id', messageController.deleteMessage);
 
+// Subscription routes
+router.post('/activateSubscription', userController.activateSubscription);
+router.post('/updateSubscription', userController.updateSubscription);
+router.get('/subscriptions/:userId', userController.getUserSubscriptions);
+router.get('/checkSubscription/:userId', userController.checkUserSubscription);
+
 module.exports = router;

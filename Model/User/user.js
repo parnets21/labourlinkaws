@@ -15,6 +15,13 @@ const userSchema = new Schema(
     location: { type: String },
     password: { type: String },
     confirmPassword: { type: String },
+    
+    // User type for subscription management
+    userType: {
+      type: String,
+      enum: ['employee', 'employer'],
+      default: 'employee'
+    },
 
     //admin 
     jobRole: { type: String },

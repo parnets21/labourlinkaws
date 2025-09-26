@@ -1180,7 +1180,247 @@ async makEverifyUnverify(req,res){
 
     //matching card 
 
-  // Update user's matching profile
+    // Update user's matching profile
+    // (This section can be expanded later)
+
+    // Activate user subscription after payment
+    async activateSubscription(req, res) {
+    try {
+      const { userId, subscriptionId, planName, amount, paymentMethod = 'PhonePe', transactionId } = req.body;
+
+      console.log('Activating subscription:', req.body);
+
+      // Validate required fields
+      if (!userId || !subscriptionId || !planName) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required fields: userId, subscriptionId, planName'
+        });
+      }
+
+      // Validate user exists
+      const user = await userModel.findById(userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: 'User not found'
+        });
+      }
+
+      // Get subscription details
+      const Subscription = require('../../Model/subscription');
+      const subscription = await Subscription.findById(subscriptionId);
+      if (!subscription) {
+        return res.status(404).json({
+          success: false,
+          error: 'Subscription plan not found'
+        });
+      }
+
+      // Check if subscription type matches user type
+      let userType = user.userType || 'employee'; // Use userType field or default to employee
+      
+      // Fallback: determine type based on user's profile data if userType is not set
+      if (!user.userType && (user.companyType || user.department)) {
+        userType = 'employer';
+        // Update user's userType for future reference
+        await userModel.findByIdAndUpdate(userId, { userType: 'employer' });
+      }
+
+      if (subscription.type !== userType) {
+        return res.status(400).json({
+          success: false,
+          error: `Subscription type ${subscription.type} does not match user type ${userType}. Please select a ${userType} subscription plan.`
+        });
+      }
+
+      // Deactivate any existing active subscriptions of the same type
+      const UserSubscription = require('../../Model/User/userSubscription');
+      await UserSubscription.updateMany(
+        {
+          userId,
+          type: subscription.type,
+          status: 'active'
+        },
+        {
+          status: 'inactive',
+          cancellationDate: new Date(),
+          cancellationReason: 'Replaced by new subscription'
+        }
+      );
+
+      // Create new user subscription
+      const userSubscription = await UserSubscription.create({
+        userId,
+        subscriptionId,
+        planName: planName || subscription.displayName,
+        type: subscription.type,
+        amount: amount || subscription.price,
+        paymentMethod,
+        transactionId,
+        status: 'active',
+        startDate: new Date()
+      });
+
+      console.log('Subscription activated successfully:', userSubscription._id);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Subscription activated successfully',
+        data: {
+          subscriptionId: userSubscription._id,
+          planName: userSubscription.planName,
+          type: userSubscription.type,
+          status: userSubscription.status,
+          startDate: userSubscription.startDate,
+          endDate: userSubscription.endDate
+        }
+      });
+
+    } catch (error) {
+      console.error('Error activating subscription:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to activate subscription',
+        details: error.message
+      });
+    }
+  }
+
+  // Update user subscription (for payment completion)
+  async updateSubscription(req, res) {
+    try {
+      const { userId, subscriptionId, transactionId, amount, status = 'active' } = req.body;
+
+      console.log('Updating subscription:', req.body);
+
+      if (!userId || !transactionId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required fields: userId, transactionId'
+        });
+      }
+
+      const UserSubscription = require('../../Model/User/userSubscription');
+      
+      // Find subscription by transaction ID or user ID
+      let userSubscription;
+      if (transactionId) {
+        userSubscription = await UserSubscription.findOne({ 
+          userId, 
+          transactionId 
+        });
+      }
+      
+      if (!userSubscription && subscriptionId) {
+        userSubscription = await UserSubscription.findOne({ 
+          userId, 
+          subscriptionId,
+          status: { $in: ['active', 'inactive'] }
+        });
+      }
+
+      if (!userSubscription) {
+        return res.status(404).json({
+          success: false,
+          error: 'User subscription not found'
+        });
+      }
+
+      // Update subscription
+      userSubscription.status = status;
+      if (transactionId) userSubscription.transactionId = transactionId;
+      if (amount) userSubscription.amount = amount;
+      
+      await userSubscription.save();
+
+      return res.status(200).json({
+        success: true,
+        message: 'Subscription updated successfully',
+        data: userSubscription
+      });
+
+    } catch (error) {
+      console.error('Error updating subscription:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to update subscription',
+        details: error.message
+      });
+    }
+  }
+
+  // Get user's active subscriptions
+  async getUserSubscriptions(req, res) {
+    try {
+      const { userId } = req.params;
+      const { type, status = 'active' } = req.query;
+
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          error: 'User ID is required'
+        });
+      }
+
+      const UserSubscription = require('../../Model/User/userSubscription');
+      
+      const query = { userId };
+      if (type) query.type = type;
+      if (status) query.status = status;
+
+      const subscriptions = await UserSubscription.find(query)
+        .populate('subscriptionId')
+        .sort({ startDate: -1 });
+
+      return res.status(200).json({
+        success: true,
+        count: subscriptions.length,
+        data: subscriptions
+      });
+
+    } catch (error) {
+      console.error('Error fetching user subscriptions:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to fetch subscriptions',
+        details: error.message
+      });
+    }
+  }
+
+  // Check if user has active subscription
+  async checkUserSubscription(req, res) {
+    try {
+      const { userId } = req.params;
+      const { type } = req.query;
+
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          error: 'User ID is required'
+        });
+      }
+
+      const UserSubscription = require('../../Model/User/userSubscription');
+      const hasActive = await UserSubscription.hasActiveSubscription(userId, type);
+      const activeSubscription = await UserSubscription.getActiveSubscription(userId, type);
+
+      return res.status(200).json({
+        success: true,
+        hasActiveSubscription: hasActive,
+        subscription: activeSubscription
+      });
+
+    } catch (error) {
+      console.error('Error checking user subscription:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to check subscription',
+        details: error.message
+      });
+    }
+  }
 }
 
 module.exports = new user();

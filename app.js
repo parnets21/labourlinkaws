@@ -4,23 +4,27 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 require("dotenv").config();
 const morgan = require("morgan");
-const path = require('path')
+const path = require('path');
 const locationRoutes = require('./Routes/User/location');
+const { connectDB, setupConnectionEvents } = require('./Config/database');
 
 var cookieParser = require("cookie-parser");
-//Db Connection
-app.use(cookieParser());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
+// Set mongoose options
 mongoose.set('strictQuery', false);
-mongoose
-  .connect(process.env.DB, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log("Database Connected........."))
-  .catch((err) => console.log("Database Not Connected !!!"));
+
+// Database Connection
+console.log('🚀 Starting LaborLink Server...');
+console.log('📡 Connecting to MongoDB...');
+
+// Setup connection events and connect to database
+setupConnectionEvents();
+connectDB();
+
+// Middleware
+app.use(cookieParser());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 //import route
 const user = require("./Routes/User/user");
@@ -41,6 +45,7 @@ const ourclient=require("./Routes/Admin/ourclien");
 const subadmin=require("./Routes/Admin/subadmin");
 const offer=require("./Routes/offerRoutes")
 const subscription = require("./Routes/subscription")
+
 const offertemplate = require("./Routes/template") 
 const fcm = require("./Routes/User/fcmRoutes") 
 const phonepe = require("./Routes/PhonepeRoutes")
@@ -48,6 +53,22 @@ const phonepe = require("./Routes/PhonepeRoutes")
 
 
 app.use('/api/user', locationRoutes);
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  const { getConnectionInfo } = require('./Config/database');
+  const dbInfo = getConnectionInfo();
+  
+  res.json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    database: dbInfo,
+    server: {
+      port: process.env.PORT || 8500,
+      environment: process.env.NODE_ENV || 'development'
+    }
+  });
+});
 
 //middleware
 app.use(morgan("dev"));
@@ -76,6 +97,7 @@ app.use("/api/user", resume);
 app.use("/api/admin",subadmin);
 app.use("/api/offers",offer)
 app.use("/api/subscription", subscription)
+
 app.use("/api/templates", offertemplate)  
 app.use("/api/user",fcm) 
 app.use("/api/user",phonepe)
