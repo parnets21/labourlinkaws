@@ -1190,11 +1190,11 @@ async makEverifyUnverify(req,res){
 
       console.log('Activating subscription:', req.body);
 
-      // Validate required fields
-      if (!userId || !subscriptionId || !planName) {
+      // Validate required fields - subscriptionId is not always required, we can find it
+      if (!userId) {
         return res.status(400).json({
           success: false,
-          error: 'Missing required fields: userId, subscriptionId, planName'
+          error: 'Missing required field: userId'
         });
       }
 
@@ -1207,13 +1207,64 @@ async makEverifyUnverify(req,res){
         });
       }
 
-      // Get subscription details
+      // Get subscription details - find by ID or by planName and userType
       const Subscription = require('../../Model/subscription');
-      const subscription = await Subscription.findById(subscriptionId);
+      let subscription;
+      
+      if (subscriptionId) {
+        subscription = await Subscription.findById(subscriptionId);
+      }
+      
+      // If no subscription found by ID or no ID provided, try to find by planName
+      if (!subscription && planName) {
+        // Determine user type first
+        let userType = user.userType || 'employee';
+        if (!user.userType && (user.companyType || user.department)) {
+          userType = 'employer';
+        }
+        
+        subscription = await Subscription.findOne({
+          $or: [
+            { name: planName, type: userType },
+            { displayName: planName, type: userType }
+          ]
+        });
+        
+        // If still not found, try without type restriction
+        if (!subscription) {
+          subscription = await Subscription.findOne({
+            $or: [
+              { name: planName },
+              { displayName: planName }
+            ]
+          });
+        }
+      }
+      
+      // If still no subscription found, get default for user type
+      if (!subscription) {
+        let userType = user.userType || 'employee';
+        if (!user.userType && (user.companyType || user.department)) {
+          userType = 'employer';
+        }
+        
+        subscription = await Subscription.findOne({ 
+          type: userType,
+          isDefault: true 
+        }).sort({ price: 1 });
+        
+        // If no default, get the cheapest plan for user type
+        if (!subscription) {
+          subscription = await Subscription.findOne({ 
+            type: userType 
+          }).sort({ price: 1 });
+        }
+      }
+      
       if (!subscription) {
         return res.status(404).json({
           success: false,
-          error: 'Subscription plan not found'
+          error: 'No suitable subscription plan found. Please contact support.'
         });
       }
 
@@ -1290,7 +1341,7 @@ async makEverifyUnverify(req,res){
   // Update user subscription (for payment completion)
   async updateSubscription(req, res) {
     try {
-      const { userId, subscriptionId, transactionId, amount, status = 'active', planName, paymentMethod = 'PhonePe' } = req.body;
+      const { userId, subscriptionId, transactionId, amount, status = 'active', planName, paymentMethod = 'PhonePe', userType } = req.body;
 
       console.log('Updating subscription:', req.body);
 
@@ -1301,28 +1352,12 @@ async makEverifyUnverify(req,res){
         });
       }
 
-      // Validate subscriptionId if provided
-      const mongoose = require('mongoose');
-      if (subscriptionId && !mongoose.Types.ObjectId.isValid(subscriptionId)) {
-        console.warn('Invalid subscriptionId provided:', subscriptionId, 'Attempting to create new subscription instead');
-        
-        // If subscriptionId is invalid but we have planName, try to activate a new subscription
-        if (planName) {
-          return this.activateSubscription({
-            body: {
-              userId,
-              subscriptionId: null, // Let activateSubscription handle finding a default
-              planName,
-              amount,
-              paymentMethod,
-              transactionId
-            }
-          }, res);
-        }
-        
-        return res.status(400).json({
+      // Validate user exists
+      const user = await userModel.findById(userId);
+      if (!user) {
+        return res.status(404).json({
           success: false,
-          error: 'Invalid subscription ID format and no plan name provided'
+          error: 'User not found'
         });
       }
 
@@ -1338,7 +1373,8 @@ async makEverifyUnverify(req,res){
       }
       
       // If not found and we have a valid subscriptionId, try to find by subscriptionId
-      if (!userSubscription && subscriptionId) {
+      const mongoose = require('mongoose');
+      if (!userSubscription && subscriptionId && mongoose.Types.ObjectId.isValid(subscriptionId)) {
         userSubscription = await UserSubscription.findOne({ 
           userId, 
           subscriptionId,
@@ -1347,25 +1383,70 @@ async makEverifyUnverify(req,res){
       }
 
       if (!userSubscription) {
-        // If no existing subscription found, try to create a new one if we have enough data
-        if (subscriptionId && planName) {
-          console.log('No existing subscription found, creating new one');
-          return this.activateSubscription({
-            body: {
-              userId,
-              subscriptionId,
-              planName,
-              amount,
-              paymentMethod,
-              transactionId
-            }
-          }, res);
+        // No existing subscription found, try to create a new one
+        console.log('No existing subscription found, attempting to create new subscription');
+        
+        let finalSubscriptionId = subscriptionId;
+        
+        // If no valid subscriptionId provided, try to find a default subscription based on planName and userType
+        if (!finalSubscriptionId || !mongoose.Types.ObjectId.isValid(finalSubscriptionId)) {
+          const Subscription = require('../../Model/subscription');
+          
+          // Determine user type
+          let finalUserType = userType || user.userType || 'employee';
+          if (!user.userType && (user.companyType || user.department)) {
+            finalUserType = 'employer';
+            // Update user's userType for future reference
+            await userModel.findByIdAndUpdate(userId, { userType: 'employer' });
+          }
+          
+          // Try to find subscription by planName and type
+          let subscription;
+          if (planName) {
+            subscription = await Subscription.findOne({
+              $or: [
+                { name: planName, type: finalUserType },
+                { displayName: planName, type: finalUserType }
+              ]
+            });
+          }
+          
+          if (!subscription) {
+            // Get default subscription for user type
+            subscription = await Subscription.findOne({ 
+              type: finalUserType,
+              isDefault: true 
+            }).sort({ price: 1 }); // Get cheapest if no default
+          }
+          
+          if (!subscription) {
+            // Get any subscription for user type
+            subscription = await Subscription.findOne({ 
+              type: finalUserType 
+            }).sort({ price: 1 });
+          }
+          
+          if (subscription) {
+            finalSubscriptionId = subscription._id;
+          } else {
+            return res.status(400).json({
+              success: false,
+              error: `No subscription plan found for user type: ${finalUserType}`
+            });
+          }
         }
         
-        return res.status(404).json({
-          success: false,
-          error: 'User subscription not found and insufficient data to create new subscription'
-        });
+        // Create new subscription using activateSubscription
+        return this.activateSubscription({
+          body: {
+            userId,
+            subscriptionId: finalSubscriptionId,
+            planName: planName || 'Premium Plan',
+            amount,
+            paymentMethod,
+            transactionId
+          }
+        }, res);
       }
 
       // Update existing subscription
@@ -1373,6 +1454,7 @@ async makEverifyUnverify(req,res){
       if (transactionId) userSubscription.transactionId = transactionId;
       if (amount) userSubscription.amount = amount;
       if (paymentMethod) userSubscription.paymentMethod = paymentMethod;
+      if (planName) userSubscription.planName = planName;
       
       await userSubscription.save();
 
