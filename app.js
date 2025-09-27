@@ -16,6 +16,8 @@ mongoose.set('strictQuery', false);
 // Database Connection
 console.log('🚀 Starting LaborLink Server...');
 console.log('📡 Connecting to MongoDB...');
+console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
+console.log('🔧 Production mode:', process.env.PRODUCTION || 'false');
 
 // Setup connection events and connect to database
 setupConnectionEvents();

@@ -80,6 +80,9 @@ router.delete('/messages/:id', messageController.deleteMessage);
 router.post('/activateSubscription', userController.activateSubscription);
 router.post('/updateSubscription', userController.updateSubscription);
 router.get('/subscriptions/:userId', userController.getUserSubscriptions);
+
+// Debug routes
+router.get('/debug/:userId', userController.debugUser);
 router.get('/checkSubscription/:userId', userController.checkUserSubscription);
 
 module.exports = router;

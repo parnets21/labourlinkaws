@@ -1198,14 +1198,69 @@ async makEverifyUnverify(req,res){
         });
       }
 
-      // Validate user exists
-      const user = await userModel.findById(userId);
-      if (!user) {
-        return res.status(404).json({
+      // Validate user exists - check both employee and employer schemas
+      console.log('Looking for user with ID:', userId);
+      
+      // Validate ObjectId format first
+      const mongoose = require('mongoose');
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        console.error('Invalid user ID format:', userId);
+        return res.status(400).json({
           success: false,
-          error: 'User not found'
+          error: 'Invalid user ID format'
         });
       }
+      
+      // Try to find user in employee schema first
+      let user = await userModel.findById(userId);
+      let userType = 'employee';
+      let userSchema = 'user';
+      
+      // If not found in employee schema, check employer schema
+      if (!user) {
+        const EmployerModel = require('../../Model/Employers/employers');
+        user = await EmployerModel.findById(userId);
+        if (user) {
+          userType = 'employer';
+          userSchema = 'employer';
+        }
+      }
+      
+      if (!user) {
+        console.error('User not found in both employee and employer schemas:', userId);
+        
+        // Debug information
+        const userCount = await userModel.countDocuments();
+        const EmployerModel = require('../../Model/Employers/employers');
+        const employerCount = await EmployerModel.countDocuments();
+        console.log(`Total employees in database: ${userCount}`);
+        console.log(`Total employers in database: ${employerCount}`);
+        
+        // Check if user exists but is marked as deleted in either schema
+        const deletedEmployee = await userModel.findOne({ _id: userId, isDelete: true });
+        const deletedEmployer = await EmployerModel.findOne({ _id: userId, isDelete: true });
+        
+        if (deletedEmployee || deletedEmployer) {
+          console.log('User found but marked as deleted in', deletedEmployee ? 'employee' : 'employer', 'schema');
+          return res.status(404).json({
+            success: false,
+            error: 'User account is deactivated'
+          });
+        }
+        
+        return res.status(404).json({
+          success: false,
+          error: 'User not found in employee or employer database'
+        });
+      }
+      
+      console.log('User found:', { 
+        id: user._id, 
+        email: user.email, 
+        userType: userType,
+        schema: userSchema,
+        name: user.fullName || user.name
+      });
 
       // Get subscription details - find by ID or by planName and userType
       const Subscription = require('../../Model/subscription');
@@ -1217,11 +1272,7 @@ async makEverifyUnverify(req,res){
       
       // If no subscription found by ID or no ID provided, try to find by planName
       if (!subscription && planName) {
-        // Determine user type first
-        let userType = user.userType || 'employee';
-        if (!user.userType && (user.companyType || user.department)) {
-          userType = 'employer';
-        }
+        // Use the userType we already determined from schema lookup
         
         subscription = await Subscription.findOne({
           $or: [
@@ -1243,10 +1294,7 @@ async makEverifyUnverify(req,res){
       
       // If still no subscription found, get default for user type
       if (!subscription) {
-        let userType = user.userType || 'employee';
-        if (!user.userType && (user.companyType || user.department)) {
-          userType = 'employer';
-        }
+        // Use the userType we already determined from schema lookup
         
         subscription = await Subscription.findOne({ 
           type: userType,
@@ -1269,14 +1317,7 @@ async makEverifyUnverify(req,res){
       }
 
       // Check if subscription type matches user type
-      let userType = user.userType || 'employee'; // Use userType field or default to employee
-      
-      // Fallback: determine type based on user's profile data if userType is not set
-      if (!user.userType && (user.companyType || user.department)) {
-        userType = 'employer';
-        // Update user's userType for future reference
-        await userModel.findByIdAndUpdate(userId, { userType: 'employer' });
-      }
+      // We already have the correct userType from schema detection above
 
       if (subscription.type !== userType) {
         return res.status(400).json({
@@ -1352,14 +1393,39 @@ async makEverifyUnverify(req,res){
         });
       }
 
-      // Validate user exists
-      const user = await userModel.findById(userId);
+      // Validate user exists - check both employee and employer schemas
+      console.log('UpdateSubscription: Looking for user with ID:', userId);
+      
+      // Try to find user in employee schema first
+      let user = await userModel.findById(userId);
+      let detectedUserType = 'employee';
+      let userSchema = 'user';
+      
+      // If not found in employee schema, check employer schema
       if (!user) {
+        const EmployerModel = require('../../Model/Employers/employers');
+        user = await EmployerModel.findById(userId);
+        if (user) {
+          detectedUserType = 'employer';
+          userSchema = 'employer';
+        }
+      }
+      
+      if (!user) {
+        console.error('UpdateSubscription: User not found in both schemas:', userId);
         return res.status(404).json({
           success: false,
           error: 'User not found'
         });
       }
+      
+      console.log('UpdateSubscription: User found:', { 
+        id: user._id, 
+        email: user.email, 
+        userType: detectedUserType,
+        schema: userSchema,
+        name: user.fullName || user.name
+      });
 
       const UserSubscription = require('../../Model/User/userSubscription');
       
@@ -1392,13 +1458,8 @@ async makEverifyUnverify(req,res){
         if (!finalSubscriptionId || !mongoose.Types.ObjectId.isValid(finalSubscriptionId)) {
           const Subscription = require('../../Model/subscription');
           
-          // Determine user type
-          let finalUserType = userType || user.userType || 'employee';
-          if (!user.userType && (user.companyType || user.department)) {
-            finalUserType = 'employer';
-            // Update user's userType for future reference
-            await userModel.findByIdAndUpdate(userId, { userType: 'employer' });
-          }
+          // Use the detected user type from schema lookup
+          let finalUserType = userType || detectedUserType;
           
           // Try to find subscription by planName and type
           let subscription;
@@ -1469,6 +1530,71 @@ async makEverifyUnverify(req,res){
       return res.status(500).json({
         success: false,
         error: 'Failed to update subscription',
+        details: error.message
+      });
+    }
+  }
+
+  // Debug endpoint to check if user exists
+  async debugUser(req, res) {
+    try {
+      const { userId } = req.params;
+      
+      console.log('Debug user lookup for ID:', userId);
+      
+      // Check if it's a valid ObjectId
+      const mongoose = require('mongoose');
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid user ID format',
+          userId: userId
+        });
+      }
+      
+      // Try to find user in both schemas
+      const employee = await userModel.findById(userId);
+      const employeeDeleted = await userModel.findOne({ _id: userId, isDelete: true });
+      
+      const EmployerModel = require('../../Model/Employers/employers');
+      const employer = await EmployerModel.findById(userId);
+      const employerDeleted = await EmployerModel.findOne({ _id: userId, isDelete: true });
+      
+      const totalEmployees = await userModel.countDocuments();
+      const totalEmployers = await EmployerModel.countDocuments();
+      
+      const user = employee || employer;
+      const userType = employee ? 'employee' : (employer ? 'employer' : 'unknown');
+      const userSchema = employee ? 'user' : (employer ? 'employer' : 'none');
+      
+      return res.status(200).json({
+        success: true,
+        data: {
+          userId: userId,
+          userFound: !!user,
+          userType: userType,
+          userSchema: userSchema,
+          userDetails: user ? {
+            id: user._id,
+            email: user.email,
+            fullName: user.fullName || user.name,
+            userType: userType,
+            isDelete: user.isDelete
+          } : null,
+          employeeFound: !!employee,
+          employerFound: !!employer,
+          deletedEmployeeFound: !!employeeDeleted,
+          deletedEmployerFound: !!employerDeleted,
+          totalEmployeesInDB: totalEmployees,
+          totalEmployersInDB: totalEmployers
+        }
+      });
+      
+    } catch (error) {
+      console.error('Debug user error:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Debug failed',
         details: error.message
       });
     }

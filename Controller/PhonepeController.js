@@ -6,13 +6,26 @@ const crypto = require('crypto');
 const getCorrectApiUrl = (url) => {
   if (!url) return url;
   
-  // Determine if we're running locally
+  // Check if we're running in production or development
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.PRODUCTION === 'true';
+  
+  // If we're in production, always use production URLs
+  if (isProduction) {
+    if (url.includes('http://localhost') || url.includes('http://192.168')) {
+      const productionUrl = url.replace(/http:\/\/(localhost|192\.168\.[0-9]+\.[0-9]+)(:[0-9]+)?/, 'https://laborlink.co.in');
+      console.log(`Converting local URL to production: ${url} -> ${productionUrl}`);
+      return productionUrl;
+    }
+    return url;
+  }
+  
+  // For development, check if we should redirect production URLs to local
   const port = process.env.PORT || 8500;
   const isLocalServer = port === 8500 || port === '8500';
   const isProductionUrl = url.includes('https://laborlink.co.in');
   
-  // If we're running locally but URL points to production, redirect to local
-  if (isLocalServer && isProductionUrl) {
+  // Only redirect to local if explicitly in development mode
+  if (isLocalServer && isProductionUrl && process.env.NODE_ENV === 'development') {
     const localUrl = url.replace('https://laborlink.co.in', `http://localhost:${port}`);
     console.log(`Redirecting production URL to local: ${url} -> ${localUrl}`);
     return localUrl;
