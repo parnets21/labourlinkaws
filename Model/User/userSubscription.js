@@ -3,8 +3,9 @@ const mongoose = require('mongoose');
 const userSubscriptionSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'user',
-    required: [true, 'User ID is required']
+    required: [true, 'User ID is required'],
+    // Note: This can reference either 'user' (employee) or 'Employer' model
+    // We don't set a static ref here to allow flexibility
   },
   subscriptionId: {
     type: mongoose.Schema.Types.ObjectId,

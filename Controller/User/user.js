@@ -17,6 +17,30 @@ const path = require("path");
 const { uploadFile2, deleteFile } = require("../../middileware/aws");
 const FCMtoken = require("../../Model/User/FCMtoken");
 
+// Helper function to calculate subscription end date
+const calculateSubscriptionEndDate = (startDate, duration) => {
+  let endDate = new Date(startDate);
+  
+  switch (duration) {
+    case 'monthly':
+      endDate.setMonth(endDate.getMonth() + 1);
+      break;
+    case 'quarterly':
+      endDate.setMonth(endDate.getMonth() + 3);
+      break;
+    case 'yearly':
+      endDate.setFullYear(endDate.getFullYear() + 1);
+      break;
+    case 'lifetime':
+      endDate.setFullYear(endDate.getFullYear() + 100); // Set to 100 years from now
+      break;
+    default:
+      endDate.setMonth(endDate.getMonth() + 1); // Default to monthly
+  }
+  
+  return endDate;
+};
+
 class user {
   async register(req, res) {
   try {
@@ -1341,33 +1365,61 @@ async makEverifyUnverify(req,res){
         }
       );
 
-      // Create new user subscription
-      const userSubscription = await UserSubscription.create({
+      // Calculate end date based on subscription duration
+      const startDate = new Date();
+      const endDate = calculateSubscriptionEndDate(startDate, subscription.duration);
+      
+      console.log('Creating subscription with:', {
         userId,
-        subscriptionId,
+        subscriptionId: subscription._id,
         planName: planName || subscription.displayName,
         type: subscription.type,
         amount: amount || subscription.price,
-        paymentMethod,
-        transactionId,
-        status: 'active',
-        startDate: new Date()
+        startDate,
+        endDate,
+        duration: subscription.duration
       });
 
-      console.log('Subscription activated successfully:', userSubscription._id);
+      // Create new user subscription with calculated endDate
+      try {
+        const userSubscription = await UserSubscription.create({
+          userId,
+          subscriptionId: subscription._id,
+          planName: planName || subscription.displayName,
+          type: subscription.type,
+          amount: amount || subscription.price,
+          paymentMethod,
+          transactionId,
+          status: 'active',
+          startDate: startDate,
+          endDate: endDate,
+          features: subscription.features
+        });
 
-      return res.status(200).json({
-        success: true,
-        message: 'Subscription activated successfully',
-        data: {
-          subscriptionId: userSubscription._id,
-          planName: userSubscription.planName,
-          type: userSubscription.type,
-          status: userSubscription.status,
-          startDate: userSubscription.startDate,
-          endDate: userSubscription.endDate
-        }
-      });
+        console.log('Subscription activated successfully:', userSubscription._id);
+
+        return res.status(200).json({
+          success: true,
+          message: 'Subscription activated successfully',
+          data: {
+            subscriptionId: userSubscription._id,
+            planName: userSubscription.planName,
+            type: userSubscription.type,
+            status: userSubscription.status,
+            startDate: userSubscription.startDate,
+            endDate: userSubscription.endDate
+          }
+        });
+        
+      } catch (subscriptionError) {
+        console.error('Error creating user subscription:', subscriptionError);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to create subscription record',
+          details: subscriptionError.message,
+          validationErrors: subscriptionError.errors
+        });
+      }
 
     } catch (error) {
       console.error('Error activating subscription:', error);
