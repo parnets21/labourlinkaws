@@ -1,0 +1,170 @@
+const SubscriptionValidationService = require('../services/subscriptionValidationService');
+
+/**
+ * Middleware to validate subscription before allowing actions
+ * @param {String} requiredAction - Action that requires validation
+ * @param {Object} options - Additional options
+ */
+const validateSubscription = (requiredAction, options = {}) => {
+  return async (req, res, next) => {
+    try {
+      // Extract user ID from various sources
+      const userId = req.user?.id || req.user?._id || req.body.userId || req.params.userId || req.query.userId;
+      
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          error: 'User authentication required',
+          code: 'AUTH_REQUIRED'
+        });
+      }
+
+      // Get current usage if needed
+      let currentUsage = {};
+      if (options.checkUsage) {
+        try {
+          currentUsage = await SubscriptionValidationService.getCurrentUsage(userId, options.usagePeriod || 'monthly');
+        } catch (usageError) {
+          console.log('Warning: Could not fetch usage data:', usageError.message);
+        }
+      }
+
+      // Validate the action
+      const validation = await SubscriptionValidationService.validateAction(userId, requiredAction, currentUsage);
+      
+      if (!validation.allowed) {
+        const statusCode = validation.upgradeRequired ? 402 : 403; // 402 Payment Required for upgrade needed
+        
+        return res.status(statusCode).json({
+          success: false,
+          error: validation.reason,
+          code: validation.upgradeRequired ? 'UPGRADE_REQUIRED' : 'FEATURE_NOT_AVAILABLE',
+          subscription: validation.subscription,
+          remainingUsage: validation.remainingUsage,
+          upgradeRequired: validation.upgradeRequired,
+          action: requiredAction
+        });
+      }
+
+      // Attach subscription info to request for use in controllers
+      req.userSubscription = validation.subscription;
+      req.remainingUsage = validation.remainingUsage;
+      
+      next();
+
+    } catch (error) {
+      console.error('Subscription validation middleware error:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to validate subscription',
+        details: error.message
+      });
+    }
+  };
+};
+
+/**
+ * Middleware to check if user has any active subscription
+ */
+const requireActiveSubscription = async (req, res, next) => {
+  try {
+    const userId = req.user?.id || req.user?._id || req.body.userId || req.params.userId;
+    
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User authentication required'
+      });
+    }
+
+    const subscription = await SubscriptionValidationService.getUserActiveSubscription(userId);
+    
+    if (!subscription.hasActiveSubscription) {
+      return res.status(402).json({
+        success: false,
+        error: 'Active subscription required',
+        code: 'SUBSCRIPTION_REQUIRED',
+        userType: subscription.userType
+      });
+    }
+
+    req.userSubscription = subscription;
+    next();
+
+  } catch (error) {
+    console.error('Active subscription check error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to verify subscription status'
+    });
+  }
+};
+
+/**
+ * Middleware to check specific feature availability
+ * @param {String} featureName - Feature to check
+ */
+const requireFeature = (featureName) => {
+  return async (req, res, next) => {
+    try {
+      const userId = req.user?.id || req.user?._id || req.body.userId || req.params.userId;
+      
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          error: 'User authentication required'
+        });
+      }
+
+      const subscription = await SubscriptionValidationService.getUserActiveSubscription(userId);
+      const hasFeature = subscription.features[featureName];
+      
+      if (!hasFeature) {
+        return res.status(402).json({
+          success: false,
+          error: `Feature '${featureName}' not available in current plan`,
+          code: 'FEATURE_NOT_AVAILABLE',
+          feature: featureName,
+          subscription: subscription
+        });
+      }
+
+      req.userSubscription = subscription;
+      next();
+
+    } catch (error) {
+      console.error('Feature check error:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to verify feature availability'
+      });
+    }
+  };
+};
+
+/**
+ * Middleware to add subscription info to all requests (non-blocking)
+ */
+const attachSubscriptionInfo = async (req, res, next) => {
+  try {
+    const userId = req.user?.id || req.user?._id || req.body.userId || req.params.userId;
+    
+    if (userId) {
+      const subscription = await SubscriptionValidationService.getUserActiveSubscription(userId);
+      req.userSubscription = subscription;
+    }
+    
+    next();
+
+  } catch (error) {
+    console.log('Warning: Could not attach subscription info:', error.message);
+    next(); // Continue anyway - this is non-blocking
+  }
+};
+
+module.exports = {
+  validateSubscription,
+  requireActiveSubscription,
+  requireFeature,
+  attachSubscriptionInfo
+};

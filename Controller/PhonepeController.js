@@ -1,4 +1,5 @@
 const transactionModel = require("../Model/PhonepeModel");
+const phonepeTransactionService = require("../services/phonepeTransactionService");
 const axios = require("axios");
 const crypto = require('crypto');
 
@@ -411,6 +412,89 @@ class Transaction {
     } catch (error) {
       console.error("Get all payments error:", error);
       return res.status(500).json({ error: "Failed to fetch payments" });
+    }
+  }
+
+  // Get transaction details with enhanced information
+  async getTransactionDetails(req, res) {
+    try {
+      const { transactionId } = req.params;
+      
+      if (!transactionId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Transaction ID is required'
+        });
+      }
+
+      const transactionDetails = await phonepeTransactionService.getTransactionDetails(transactionId);
+      
+      return res.status(200).json({
+        success: true,
+        data: transactionDetails
+      });
+    } catch (error) {
+      console.error('Get transaction details error:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to fetch transaction details',
+        details: error.message
+      });
+    }
+  }
+
+  // Get transaction statistics
+  async getTransactionStatistics(req, res) {
+    try {
+      const filters = {
+        dateFrom: req.query.dateFrom,
+        dateTo: req.query.dateTo,
+        status: req.query.status,
+        userId: req.query.userId
+      };
+
+      const statistics = await phonepeTransactionService.getTransactionStatistics(filters);
+      
+      return res.status(200).json({
+        success: true,
+        data: statistics
+      });
+    } catch (error) {
+      console.error('Get transaction statistics error:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to fetch transaction statistics',
+        details: error.message
+      });
+    }
+  }
+
+  // Retry failed transaction
+  async retryTransaction(req, res) {
+    try {
+      const { transactionId } = req.params;
+      
+      if (!transactionId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Transaction ID is required'
+        });
+      }
+
+      const retryResult = await phonepeTransactionService.retryTransaction(transactionId);
+      
+      return res.status(200).json({
+        success: true,
+        data: retryResult,
+        message: 'Transaction marked for retry'
+      });
+    } catch (error) {
+      console.error('Retry transaction error:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to retry transaction',
+        details: error.message
+      });
     }
   }
 

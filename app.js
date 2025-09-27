@@ -51,6 +51,8 @@ const subscription = require("./Routes/subscription")
 const offertemplate = require("./Routes/template") 
 const fcm = require("./Routes/User/fcmRoutes") 
 const phonepe = require("./Routes/PhonepeRoutes")
+const subscriptionValidation = require("./Routes/subscriptionValidationRoutes")
+const adminSubscriptionRoutes = require("./Routes/Admin/adminSubscriptionRoutes")
 
 
 
@@ -103,6 +105,8 @@ app.use("/api/subscription", subscription)
 app.use("/api/templates", offertemplate)  
 app.use("/api/user",fcm) 
 app.use("/api/user",phonepe)
+app.use("/api/subscription-validation", subscriptionValidation)
+app.use("/api/admin/subscriptions", adminSubscriptionRoutes)
 
 const employerController=require("./Controller/Employers/employers");
 const employeeController=require("./Controller/User/user");

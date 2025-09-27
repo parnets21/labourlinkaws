@@ -5,6 +5,32 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 exports.createJob = async (req, res) => {
     try {
+        // Check subscription limits for job posting
+        const subscription = req.userSubscription;
+        const remainingUsage = req.remainingUsage;
+        
+        if (subscription && remainingUsage) {
+            // Check if user has reached their job posting limit
+            const activeJobsCount = await Job.countDocuments({ 
+                employer: req.user._id, 
+                status: 'active' 
+            });
+            
+            const jobLimit = subscription.limits.activeJobPosts || 0;
+            
+            if (activeJobsCount >= jobLimit) {
+                return res.status(402).json({
+                    success: false,
+                    error: 'Job posting limit reached',
+                    code: 'JOB_LIMIT_REACHED',
+                    currentUsage: activeJobsCount,
+                    limit: jobLimit,
+                    upgradeRequired: true,
+                    subscription: subscription
+                });
+            }
+        }
+
         const newJob = await Job.create({
             ...req.body,
             employer: req.user._id
@@ -13,7 +39,9 @@ exports.createJob = async (req, res) => {
         res.status(201).json({
             status: 'success',
             data: {
-                job: newJob
+                job: newJob,
+                subscription: subscription,
+                remainingUsage: remainingUsage
             }
         });
     } catch (err) {
@@ -62,21 +90,39 @@ exports.searchJobs = async (req, res) => {
         // Only show active jobs
         query.status = 'active';
 
-        // Implement free/paid search logic
-        let limit = 5; // Default free limit
-        if (req.user.paidSearch) {
-            limit = parseInt(req.query.limit) || 20;
+        // Get subscription limits
+        const subscription = req.userSubscription;
+        const remainingUsage = req.remainingUsage;
+        
+        // Determine search limit based on subscription
+        let searchLimit = 5; // Default free limit
+        
+        if (subscription && subscription.hasActiveSubscription) {
+            searchLimit = subscription.limits.jobSearchPerDay || 50;
+        }
+
+        // Check if user has exceeded daily search limit
+        if (remainingUsage && remainingUsage.jobSearchPerDay <= 0) {
+            return res.status(402).json({
+                success: false,
+                error: 'Daily job search limit reached',
+                code: 'SEARCH_LIMIT_REACHED',
+                upgradeRequired: true,
+                subscription: subscription
+            });
         }
 
         const jobs = await Job.find(query)
-            .limit(limit)
+            .limit(searchLimit)
             .populate('employer', 'profile.firstName profile.lastName');
 
         res.status(200).json({
             status: 'success',
             results: jobs.length,
             data: {
-                jobs
+                jobs,
+                subscription: subscription,
+                remainingUsage: remainingUsage
             }
         });
     } catch (err) {
@@ -100,32 +146,66 @@ exports.applyForJob = async (req, res) => {
       });
     }
 
-    // Check if already applied
-    const existingApplication = await JobApplication.findOne({
-      job,
-      applicant
-    });
-
-    if (existingApplication) {
-      return res.status(400).json({
-        error: "Already applied"
+    // Check subscription limits for job application
+    const subscription = req.userSubscription;
+    const remainingUsage = req.remainingUsage;
+    
+    if (subscription && remainingUsage) {
+      // Check if user has reached their monthly application limit
+      const currentMonth = new Date();
+      currentMonth.setDate(1);
+      currentMonth.setHours(0, 0, 0, 0);
+      
+      const monthlyApplicationsCount = await JobApplication.countDocuments({
+        applicant: req.user._id,
+        createdAt: { $gte: currentMonth }
       });
+      
+      const applicationLimit = subscription.limits.jobApplicationsPerMonth || 0;
+      
+      if (monthlyApplicationsCount >= applicationLimit) {
+        return res.status(402).json({
+          success: false,
+          error: 'Monthly job application limit reached',
+          code: 'APPLICATION_LIMIT_REACHED',
+          currentUsage: monthlyApplicationsCount,
+          limit: applicationLimit,
+          upgradeRequired: true,
+          subscription: subscription
+        });
+      }
+
+      // Check if user has already applied to this job
+      const existingApplication = await JobApplication.findOne({
+        job: job,
+        applicant: req.user._id
+      });
+      
+      if (existingApplication) {
+        return res.status(400).json({
+          success: false,
+          error: 'You have already applied to this job',
+          code: 'DUPLICATE_APPLICATION'
+        });
+      }
     }
 
-    // Create new application
-    const newApplication = new JobApplication({
+    // Create the job application
+    const application = await JobApplication.create({
       job,
-      applicant,
-      status,
-      documents: documents || [],
-      notes: notes || []
+      applicant: req.user._id,
+      status: status || 'pending',
+      documents,
+      notes
     });
 
-    await newApplication.save();
-
     res.status(201).json({
-      message: "Successfully applied for the job",
-      application: newApplication
+      success: true,
+      data: {
+        application,
+        subscription: subscription,
+        remainingUsage: remainingUsage
+      }
     });
 
   } catch (error) {

@@ -10,4 +10,9 @@ router.get("/getallpayment",transactionController.getallpayment);
 router.post("/payment-callback",transactionController.paymentcallback);
 router.get("/checkPayment/history/:userId",transactionController.getUserTransactionHistory);
 router.get("/checkPayment/:id/:userId",transactionController.checkPayment);
+
+// Enhanced transaction management routes
+router.get("/transaction/details/:transactionId", transactionController.getTransactionDetails);
+router.get("/transaction/statistics", transactionController.getTransactionStatistics);
+router.post("/transaction/retry/:transactionId", transactionController.retryTransaction);
 module.exports=router;  

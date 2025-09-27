@@ -2,26 +2,33 @@ const express = require('express');
 const jobController = require('../Controller/jobController');
 const authController = require('../Controller/authController');
 const interviewController = require('../Controller/interviewController');
+const { validateSubscription, requireActiveSubscription, requireFeature } = require('../middileware/subscriptionValidationMiddleware');
 
 const router = express.Router();
 
 // Protect all routes after this middleware
 router.use(authController.protect);
 
-// Job posting routes
+// Job posting routes (Employer only)
 router.post(
     '/create',
     authController.restrictTo('employer', 'admin'),
+    validateSubscription('post_job', { checkUsage: true }),
     jobController.createJob
 );
 
-// Job search routes
-router.get('/search', jobController.searchJobs);
+// Job search routes (Employee only)
+router.get('/search', 
+    authController.restrictTo('employee'),
+    validateSubscription('search_job', { checkUsage: true, usagePeriod: 'daily' }),
+    jobController.searchJobs
+);
 
-// Job application routes
+// Job application routes (Employee only)
 router.post(
     '/:jobId/apply',
     authController.restrictTo('employee'),
+    validateSubscription('apply_job', { checkUsage: true }),
     jobController.applyForJob
 );
 
