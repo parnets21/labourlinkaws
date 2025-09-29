@@ -537,7 +537,7 @@ class Transaction {
           _id: tx._id,
           orderId: tx.orderId,
           amount: tx.amount,
-          status: this.mapStatusToStandard(tx.status),
+          status: PhonepeController.mapStatusToStandard(tx.status),
           planName: planName,
           paymentMethod: 'PhonePe',
           createdAt: tx.createdAt,
@@ -565,7 +565,7 @@ class Transaction {
   }
 
   // Helper method to map old status to standard format
-  mapStatusToStandard(oldStatus) {
+  static mapStatusToStandard(oldStatus) {
     const statusMap = {
       'InProgress': 'PENDING',
       'Completed': 'COMPLETED',

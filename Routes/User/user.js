@@ -49,8 +49,13 @@ router.delete(
 router.post("/makeBlockUnBlockEmployee",userController.makeBlockUnBlock)
 router.delete('/deleteProfileParmanet/:userId',userController.deleteProfileParmanet);
 
-//apply form for company
-router.post("/applyForJob", userController.applyNow);
+//apply form for company with subscription validation
+const { validateSubscription } = require('../../middileware/subscriptionValidationMiddleware');
+router.post(
+  "/applyForJob",
+  validateSubscription('apply_job', { checkUsage: true }),
+  userController.applyNow
+);
 router.get("/getlistOfaplly", userController.getAllApplyCompanyList);
 
 router.get("/getlistofinterviewscedule", userController.getlistofinterviewscedule);

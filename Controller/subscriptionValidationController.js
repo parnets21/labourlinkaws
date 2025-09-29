@@ -54,11 +54,19 @@ class SubscriptionValidationController {
       }
 
       const validation = await SubscriptionValidationService.validateAction(userId, action, currentUsage);
-
-      return res.status(200).json({
+      const result = {
         success: true,
-        data: validation
-      });
+        data: {
+          allowed: validation.allowed,
+          reason: validation.reason,
+          subscription: validation.subscription,
+          remainingUsage: validation.remainingUsage,
+          totalLimit: validation.totalLimit,
+          currentUsage: validation.currentUsage
+        }
+      };
+
+      return res.status(200).json(result);
 
     } catch (error) {
       console.error('Validate action error:', error);
@@ -153,7 +161,8 @@ class SubscriptionValidationController {
       
       for (const action of actions) {
         try {
-          results[action] = await SubscriptionValidationService.validateAction(userId, action, currentUsage);
+          const v = await SubscriptionValidationService.validateAction(userId, action, currentUsage);
+          results[action] = v;
         } catch (error) {
           results[action] = {
             allowed: false,
@@ -261,11 +270,53 @@ class SubscriptionValidationController {
         });
       }
 
-      // TODO: Implement actual usage recording
-      // This would typically insert into a usage tracking collection
-      // Example: await UsageLog.create({ userId, action, metadata, timestamp: new Date() });
+      // Map action to usageKey for recording
+      const actionToUsageKey = {
+        'search_job': 'jobSearchPerDay',
+        'apply_job': 'jobApplicationsPerDay',
+        'search_candidates': 'candidateSearchesPerDay',
+        'view_candidate_contact': 'candidateViewsPerDay',
+        'application_review': 'applicationReviewsPerDay'
+      };
+      const usageKey = actionToUsageKey[action];
 
-      console.log('Recording usage:', { userId, action, metadata });
+      if (!usageKey) {
+        // For unsupported actions, acknowledge without recording
+        return res.status(200).json({
+          success: true,
+          message: 'No recording needed for this action',
+          data: { userId, action }
+        });
+      }
+
+      const mongoose = require('mongoose');
+      const UsageRecord = require('../Model/usageRecord');
+
+      // Validate userId as ObjectId
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid user ID format for usage recording'
+        });
+      }
+      const userObjectId = new mongoose.Types.ObjectId(userId);
+      const now = new Date();
+      const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      const filter = {
+        userId: userObjectId,
+        usageKey,
+        date: dayStart
+      };
+      const update = {
+        $setOnInsert: { month: monthStart, date: dayStart, userId: userObjectId, usageKey },
+        $inc: { count: 1 },
+        $set: { lastAction: action, lastTimestamp: now, metadata }
+      };
+      const options = { upsert: true, new: true };
+
+      const record = await UsageRecord.findOneAndUpdate(filter, update, options);
 
       return res.status(200).json({
         success: true,
@@ -273,7 +324,9 @@ class SubscriptionValidationController {
         data: {
           userId,
           action,
-          timestamp: new Date()
+          usageKey,
+          date: record.date,
+          count: record.count
         }
       });
 

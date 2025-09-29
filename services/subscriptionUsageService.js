@@ -195,29 +195,24 @@ class SubscriptionUsageService {
    * @param {Object} usageData - Usage data
    */
   static async upsertUsageRecord(usageData) {
-    // This would typically use a usage tracking collection
-    // For now, we'll use a simple in-memory approach or database collection
-    // You might want to create a UsageRecord model for this
-    
-    // Example implementation:
-    // await UsageRecord.findOneAndUpdate(
-    //   {
-    //     userId: usageData.userId,
-    //     usageKey: usageData.usageKey,
-    //     date: usageData.date
-    //   },
-    //   {
-    //     $inc: { count: 1 },
-    //     $set: {
-    //       lastAction: usageData.action,
-    //       lastTimestamp: usageData.timestamp,
-    //       metadata: usageData.metadata
-    //     }
-    //   },
-    //   { upsert: true, new: true }
-    // );
-    
-    console.log('Usage recorded:', usageData);
+    const UsageRecord = require('../Model/usageRecord');
+    await UsageRecord.findOneAndUpdate(
+      {
+        userId: usageData.userId,
+        usageKey: usageData.usageKey,
+        date: usageData.date
+      },
+      {
+        $inc: { count: 1 },
+        $set: {
+          lastAction: usageData.action,
+          lastTimestamp: usageData.timestamp,
+          metadata: usageData.metadata,
+          month: usageData.month
+        }
+      },
+      { upsert: true, new: true }
+    );
   }
 
   /**
@@ -228,9 +223,11 @@ class SubscriptionUsageService {
    * @returns {Promise<Array>} Usage records
    */
   static async getUsageRecords(userId, startDate, endDate) {
-    // This would typically query a usage tracking collection
-    // For now, return empty array as placeholder
-    return [];
+    const UsageRecord = require('../Model/usageRecord');
+    return UsageRecord.find({
+      userId,
+      date: { $gte: startDate, $lte: endDate }
+    }).lean();
   }
 
   /**

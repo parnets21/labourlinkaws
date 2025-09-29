@@ -23,6 +23,8 @@ const Cuisines = require("../../Model/Admin/jobmanagment/Cuisines");
 const user = require("../../Model/User/user"); 
 const admin = require("firebase-admin");
 const FCMtoken = require("../../Model/User/FCMtoken");
+const SubscriptionUsageService = require("../../services/subscriptionUsageService");
+const SubscriptionValidationService = require("../../services/subscriptionValidationService");
 
 
 class company {
@@ -44,6 +46,27 @@ async register(req, res) {
       } = req.body;
       console.log("📥 Received Request Body:", req.body);
      
+      // Validate employer subscription: enforce post_job limits before creating
+      try {
+          if (!employerId) throw new Error('Missing employerId');
+          const currentUsage = await SubscriptionValidationService.getCurrentUsage(employerId, 'monthly');
+          const validation = await SubscriptionValidationService.validateAction(employerId, 'post_job', currentUsage);
+          if (!validation.allowed) {
+              const statusCode = validation.upgradeRequired ? 402 : 403;
+              return res.status(statusCode).json({
+                  success: false,
+                  error: validation.reason || 'Usage limit exceeded',
+                  message: validation.message || 'You have reached your job posting limit.',
+                  remainingUsage: validation.remainingUsage || 0,
+                  totalLimit: validation.totalLimit || null,
+                  upgradeRequired: !!validation.upgradeRequired
+              });
+          }
+      } catch (limitErr) {
+          console.log('Warning: post_job validation issue:', limitErr?.message || limitErr);
+          // Fail-open: optionally restrict or proceed. Proceeding to avoid blocking due to transient errors.
+      }
+
       let obj = {
           companyName, jobtitle, averageIncentive, openings, address, email, reason,
           experience, interview, period, description, typeofjob, typeofwork, 
@@ -79,6 +102,17 @@ async register(req, res) {
       // Save the job in DB
       const newJob = await jobModel.create(obj);
       console.log("✅ New Job Saved:", newJob); 
+
+      // Record employer usage for post_job (non-blocking)
+      try {
+        const SubscriptionValidationController = require('../subscriptionValidationController');
+        // Reuse recordUsage logic via internal call
+        await SubscriptionValidationController.recordUsage({
+          body: { userId: employerId, action: 'post_job', metadata: { jobId: newJob._id } }
+        }, { status: () => ({ json: () => {} }) });
+      } catch (uErr) {
+        console.log('Warning: could not record post_job usage:', uErr?.message || uErr);
+      }
 
       let msg =
           `This is a new ${companyName} company registered post by email id is ${email}
@@ -399,19 +433,110 @@ async register(req, res) {
 
   async getAllJobs(req, res) {
     try {
-        // Fetch all jobs (remove isVerify condition)
-        let findData = await jobModel.find().sort({ _id: -1 }).populate("employerId");
-        if (findData.length === 0) {
-            return res.status(400).json({ success: false, message: "No jobs found" });
-        }
+      const { q, remote, sort, limit, userId } = req.query;
 
-        // console.log("findData" , findData)
-        return res.status(200).json({ success: true, data: findData });
+      // Optional: validate subscription limits when userId present
+      let remainingBefore;
+      let totalLimit;
+      if (userId) {
+        try {
+          const currentUsage = await require("../../services/subscriptionUsageService").getCurrentUsage(userId, 'daily');
+          const validation = await SubscriptionValidationService.validateAction(userId, 'search_job', currentUsage);
+          if (!validation.allowed) {
+            const statusCode = validation.upgradeRequired ? 402 : 403;
+            return res.status(statusCode).json({
+              success: false,
+              error: validation.reason || 'Usage limit exceeded',
+              upgradeRequired: !!validation.upgradeRequired,
+              remainingUsage: validation.remainingUsage || 0
+            });
+          }
+          remainingBefore = validation.remainingUsage;
+          totalLimit = validation.totalLimit;
+
+          // Record job search usage (non-blocking)
+          try {
+            const SubscriptionValidationController = require('../subscriptionValidationController');
+            await SubscriptionValidationController.recordUsage({
+              body: { userId, action: 'search_job', metadata: { endpoint: 'getAllJobs' } }
+            }, { status: () => ({ json: () => {} }) });
+          } catch (recErr) {
+            console.log('Warning: could not record search_job usage:', recErr?.message || recErr);
+          }
+        } catch (vErr) {
+          // Fail open but restrict results if validation fails unexpectedly
+        }
+      }
+
+      // Build filters
+      const filters = { isDelete: false };
+      if (q) {
+        const regex = new RegExp(q, "i");
+        filters.$or = [
+          { jobtitle: { $regex: regex } },
+          { jobProfile: { $regex: regex } },
+          { companyName: { $regex: regex } },
+          { location: { $regex: regex } },
+          { skill: { $regex: regex } }
+        ];
+      }
+      if (remote === 'true') {
+        filters.typeofwork = 'Remote';
+      }
+
+      // Sorting
+      let sortSpec = { _id: -1 };
+      if (sort === 'location') sortSpec = { location: 1 };
+      if (sort === 'salary_low_to_high') sortSpec = { minSalary: 1 };
+      if (sort === 'salary_high_to_low') sortSpec = { maxSalary: -1 };
+
+      // Query
+      let query = jobModel.find(filters).sort(sortSpec).populate("employerId");
+      const numericLimit = parseInt(limit, 10);
+      if (!isNaN(numericLimit) && numericLimit > 0) {
+        query = query.limit(numericLimit);
+      }
+      // If no userId, apply a conservative cap to support anonymous access
+      if (!userId && (isNaN(numericLimit) || numericLimit > 10)) {
+        query = query.limit(10);
+      }
+
+      const findData = await query.exec();
+
+      // Record usage for successful searches only when userId is present
+      try {
+        const effectiveUserId = req.query.userId || req.params.userId;
+        if (effectiveUserId) {
+          await SubscriptionUsageService.recordUsage(String(effectiveUserId), 'search_job', {
+            q: q || '',
+            remote: remote === 'true',
+            sort: sort || '',
+            limit: numericLimit || null
+          });
+        }
+      } catch (usageErr) {
+        console.log('Search usage record failed:', usageErr?.message || usageErr);
+      }
+
+      // Include remaining usage info (estimated post-record)
+      let remainingSearches = null;
+      if (typeof remainingBefore === 'number') {
+        remainingSearches = Math.max(0, (remainingBefore || 0) - 1);
+      }
+
+      return res.status(200).json({ 
+        success: true, 
+        data: findData,
+        meta: {
+          remainingSearches,
+          totalLimit: typeof totalLimit === 'number' ? totalLimit : null
+        }
+      });
     } catch (err) {
-        console.error("Error fetching jobs:", err);
-        return res.status(500).json({ success: false, message: "Internal server error" });
+      console.error("Error fetching jobs:", err);
+      return res.status(500).json({ success: false, message: "Internal server error" });
     }
-}
+  }
 
   async getUnvarifiedList(req, res) {
     try {
@@ -619,6 +744,19 @@ async register(req, res) {
           return res.status(400).json({ success: false, message: "Data not found" });
       }
   
+      // Record employer candidate search usage if employerId provided (query)
+      try {
+        const employerId = req.query?.employerId;
+        if (employerId) {
+          const SubscriptionValidationController = require('../subscriptionValidationController');
+          await SubscriptionValidationController.recordUsage({
+            body: { userId: employerId, action: 'search_candidates', metadata: { endpoint: 'getApplyList', jobId } }
+          }, { status: () => ({ json: () => {} }) });
+        }
+      } catch (recErr) {
+        console.log('Warning: could not record candidate search usage:', recErr?.message || recErr);
+      }
+
       return res.status(200).json({ success: true, data: findData });
   } catch (err) {
       console.error("Server Error:", err);
