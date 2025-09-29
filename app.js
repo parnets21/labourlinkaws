@@ -53,10 +53,12 @@ const fcm = require("./Routes/User/fcmRoutes")
 const phonepe = require("./Routes/PhonepeRoutes")
 const subscriptionValidation = require("./Routes/subscriptionValidationRoutes")
 const adminSubscriptionRoutes = require("./Routes/Admin/adminSubscriptionRoutes")
-
+const analyticsRoutes = require("./Routes/analyticsRoutes")
 
 
 app.use('/api/user', locationRoutes);
+app.use('/api/admin/analytics', analyticsRoutes);
+
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

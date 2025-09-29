@@ -308,10 +308,10 @@ class SubscriptionValidationService {
       };
 
       try {
-        // Check if JobApplication model exists and get job applications
+        // Count employee job applications this period (schema uses 'applicant')
         const JobApplication = require('../Model/User/JobApplication');
         usage.jobApplicationsPerMonth = await JobApplication.countDocuments({ 
-          userId, 
+          applicant: userId, 
           createdAt: { $gte: startDate } 
         });
       } catch (error) {
@@ -320,10 +320,10 @@ class SubscriptionValidationService {
       }
 
       try {
-        // Check if Job model exists and get active job posts for employers
+        // Count employer active jobs (schema uses 'employer')
         const Job = require('../Model/User/Job');
         usage.activeJobPosts = await Job.countDocuments({ 
-          employerId: userId, 
+          employer: userId, 
           status: 'active' 
         });
       } catch (error) {

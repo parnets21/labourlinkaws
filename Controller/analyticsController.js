@@ -1,6 +1,6 @@
-const Job = require('../Model/Job');
-const User = require('../Model/User');
-const JobApplication = require('../Model/JobApplication');
+const Job = require('../Model/Employers/company');
+const User = require('../Model/User/user');
+const JobApplication = require('../Model/Employers/apply');
 
 exports.getDashboardStats = async (req, res) => {
     try {
