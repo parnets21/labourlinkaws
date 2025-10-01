@@ -27,8 +27,12 @@ const employerSchema = new Schema(
     industry: { type: String },
     GstNum: { type: String },
     PanNum: { type: String },
+    deviceId: { type: String },
+    platform: { type: String, enum: ["android", "ios"] },
+    isActive: { type: Boolean, default: true },
+    lastUpdated: { type: Date, default: Date.now },
     EmployerImg:String,
-
+    fcmToken: { type: String },
     // Additional fields
     isPrime: { type: Boolean, default: false },
     isApproved: { type: Boolean, default: false }, // Only approved employers can post jobs

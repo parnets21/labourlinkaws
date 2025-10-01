@@ -2,6 +2,7 @@ const FCMtoken = require("../../Model/User/FCMtoken")
 const User = require("../../Model/User/user")
 const admin = require("firebase-admin");
 const serviceAccount = require('../../serviceAccountKey.json');
+const EmployerController = require("../Employers/employers")
 
 if (!admin.apps.length) {
 admin.initializeApp({
@@ -21,7 +22,12 @@ exports.updateFCMToken =  async(req,res) => {
             })
         }
 
-        const employee = await User.findById(employeeId)
+        let employee = await User.findById(employeeId)
+        if(!employee){
+          employee = await EmployerController.findById(employeeId)
+        }
+        
+       
         if(!employee){
             return res.status(404).json({
                 success:false,
