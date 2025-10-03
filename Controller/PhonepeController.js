@@ -535,9 +535,10 @@ class Transaction {
 
         return {
           _id: tx._id,
+          userId: tx.userId, // include userId for client-side filtering
           orderId: tx.orderId,
           amount: tx.amount,
-          status: PhonepeController.mapStatusToStandard(tx.status),
+          status:tx.status,
           planName: planName,
           paymentMethod: 'PhonePe',
           createdAt: tx.createdAt,

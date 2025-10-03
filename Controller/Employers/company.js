@@ -435,10 +435,17 @@ async register(req, res) {
     try {
       const { q, remote, sort, limit, userId } = req.query;
 
-      // Optional: validate subscription limits when userId present
+      // Treat it as a billable "search" only when the user applies a query or filters
+      const isSearchIntent = (
+        (typeof q === 'string' && q.trim().length > 0) ||
+        (typeof remote === 'string' && (remote === 'true' || remote === '1')) ||
+        (typeof sort === 'string' && sort.trim().length > 0)
+      );
+
+      // Optional: validate subscription limits when userId present and user is actually searching
       let remainingBefore;
       let totalLimit;
-      if (userId) {
+      if (userId && isSearchIntent) {
         try {
           const currentUsage = await require("../../services/subscriptionUsageService").getCurrentUsage(userId, 'daily');
           const validation = await SubscriptionValidationService.validateAction(userId, 'search_job', currentUsage);
@@ -454,7 +461,7 @@ async register(req, res) {
           remainingBefore = validation.remainingUsage;
           totalLimit = validation.totalLimit;
 
-          // Record job search usage (non-blocking)
+          // Record job search usage (non-blocking) only for real search actions
           try {
             const SubscriptionValidationController = require('../subscriptionValidationController');
             await SubscriptionValidationController.recordUsage({
@@ -723,6 +730,35 @@ async register(req, res) {
       console.log(jobId,"this is jobid")
       let data = await jobModel.findById(jobId);
       if (!data) return res.status(400).json({ success: "data not found" });
+      // Optional: enforce company views per day when a userId is provided
+      try {
+        const userId = req.query && req.query.userId;
+        if (userId) {
+          const SubscriptionValidationService = require("../../services/subscriptionValidationService");
+          const currentUsage = await require("../../services/subscriptionUsageService").getCurrentUsage(userId, 'daily');
+          const validation = await SubscriptionValidationService.validateAction(userId, 'view_company_details', currentUsage);
+          if (!validation.allowed) {
+            const statusCode = validation.upgradeRequired ? 402 : 403;
+            return res.status(statusCode).json({
+              success: false,
+              error: validation.reason || 'Usage limit exceeded',
+              upgradeRequired: !!validation.upgradeRequired,
+              remainingUsage: validation.remainingUsage || 0
+            });
+          }
+          // Record a company view usage (non-blocking)
+          try {
+            const SubscriptionValidationController = require('../subscriptionValidationController');
+            await SubscriptionValidationController.recordUsage({
+              body: { userId, action: 'view_company_details', metadata: { endpoint: 'getJobById', jobId } }
+            }, { status: () => ({ json: () => {} }) });
+          } catch (recErr) {
+            console.log('Warning: could not record company view usage:', recErr?.message || recErr);
+          }
+        }
+      } catch (vErr) {
+        // fail open
+      }
       return res.status(200).json({ success: data });
     } catch (err) {
       console.log(err);
@@ -735,6 +771,27 @@ async register(req, res) {
       const{jobId}=req.params
       console.log("Received companyId:", jobId, "Type:", typeof jobId);
   
+      // Optional: validate employer candidate search limit if employerId provided
+      try {
+        const employerId = req.query && req.query.employerId;
+        if (employerId) {
+          const SubscriptionValidationService = require("../../services/subscriptionValidationService");
+          const currentUsage = await require("../../services/subscriptionUsageService").getCurrentUsage(employerId, 'daily');
+          const validation = await SubscriptionValidationService.validateAction(employerId, 'search_candidates', currentUsage);
+          if (!validation.allowed) {
+            const statusCode = validation.upgradeRequired ? 402 : 403;
+            return res.status(statusCode).json({
+              success: false,
+              error: validation.reason || 'Usage limit exceeded',
+              upgradeRequired: !!validation.upgradeRequired,
+              remainingUsage: validation.remainingUsage || 0
+            });
+          }
+        }
+      } catch (vErr) {
+        console.log('Warning: candidate search validation failed:', vErr?.message || vErr);
+      }
+
       let findData = await applyModel
           .find({ companyId: jobId }) // Ensure conversion
           .sort({ _id: -1 })
@@ -746,12 +803,10 @@ async register(req, res) {
   
       // Record employer candidate search usage if employerId provided (query)
       try {
-        const employerId = req.query?.employerId;
+        const employerId = req.query && req.query.employerId;
         if (employerId) {
-          const SubscriptionValidationController = require('../subscriptionValidationController');
-          await SubscriptionValidationController.recordUsage({
-            body: { userId: employerId, action: 'search_candidates', metadata: { endpoint: 'getApplyList', jobId } }
-          }, { status: () => ({ json: () => {} }) });
+          const SubscriptionUsageService = require("../../services/subscriptionUsageService");
+          await SubscriptionUsageService.recordUsage(String(employerId), 'search_candidates', { endpoint: 'getApplyList', jobId });
         }
       } catch (recErr) {
         console.log('Warning: could not record candidate search usage:', recErr?.message || recErr);
@@ -842,8 +897,35 @@ async register(req, res) {
 
 async addShortList(req, res) {
   try {
-    const { userId, companyId } = req.body;
+    const { userId, companyId, employerId } = req.body;
     console.log("Received request:", userId, companyId);
+
+    // Validate required ids
+    if (!userId || !companyId) {
+      return res.status(400).json({ success: false, error: 'userId and companyId are required' });
+    }
+    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(companyId)) {
+      return res.status(400).json({ success: false, error: 'Invalid userId or companyId format' });
+    }
+
+    // Enforce application review limit for employer if provided
+    try {
+      if (employerId) {
+        const currentUsage = await SubscriptionValidationService.getCurrentUsage(employerId, 'daily');
+        const validation = await SubscriptionValidationService.validateAction(employerId, 'application_review', currentUsage);
+        if (!validation.allowed) {
+          const statusCode = validation.upgradeRequired ? 402 : 403;
+          return res.status(statusCode).json({
+            success: false,
+            error: validation.reason || 'Application review limit reached',
+            upgradeRequired: !!validation.upgradeRequired,
+            remainingUsage: validation.remainingUsage || 0
+          });
+        }
+      }
+    } catch (vErr) {
+      console.log('Warning: application_review validation error:', vErr?.message || vErr);
+    }
 
     let data = await applyModel
       .findOne({ userId: mongoose.Types.ObjectId(userId), companyId: mongoose.Types.ObjectId(companyId) })
@@ -926,6 +1008,16 @@ async addShortList(req, res) {
       }
     } else {
       console.log("⚠️ No active FCM token found for this employee");
+    }
+
+    // Record application review usage
+    try {
+      if (employerId) {
+        const SubscriptionUsageService = require("../../services/subscriptionUsageService");
+        await SubscriptionUsageService.recordUsage(String(employerId), 'application_review', { endpoint: 'addShortList', companyId, candidateId: String(userId) });
+      }
+    } catch (recErr) {
+      console.log('Warning: could not record application_review usage:', recErr?.message || recErr);
     }
 
     return res.status(200).json({ success: true, message: "Successfully shortlisted" });
@@ -1109,10 +1201,37 @@ async AllAplliedDetals(req, res) {
 
 async rejectApply(req, res) {
     try {
-      const { userId, companyId } = req.body;
+      const { userId, companyId, employerId } = req.body;
       console.log(companyId,"lililili")
+
+      // Validate required ids
+      if (!userId || !companyId) {
+        return res.status(400).json({ success: false, error: 'userId and companyId are required' });
+      }
+      if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(companyId)) {
+        return res.status(400).json({ success: false, error: 'Invalid userId or companyId format' });
+      }
+
+      // Enforce application review limit for employer if provided
+      try {
+        if (employerId) {
+          const currentUsage = await SubscriptionValidationService.getCurrentUsage(employerId, 'daily');
+          const validation = await SubscriptionValidationService.validateAction(employerId, 'application_review', currentUsage);
+          if (!validation.allowed) {
+            const statusCode = validation.upgradeRequired ? 402 : 403;
+            return res.status(statusCode).json({
+              success: false,
+              error: validation.reason || 'Application review limit reached',
+              upgradeRequired: !!validation.upgradeRequired,
+              remainingUsage: validation.remainingUsage || 0
+            });
+          }
+        }
+      } catch (vErr) {
+        console.log('Warning: application_review validation error:', vErr?.message || vErr);
+      }
       let data = await applyModel
-        .findOne({ userId: userId, companyId: companyId })
+        .findOne({ userId: mongoose.Types.ObjectId(userId), companyId: mongoose.Types.ObjectId(companyId) })
         .populate("userId")
         .populate("companyId");
       // if (data.status == "Rejected") {
@@ -1128,6 +1247,16 @@ async rejectApply(req, res) {
           ", thanks for showing your interest."+"<h3>Thank you <br>Labor Link Team</h3>"
       );
       await applyModel.findOneAndUpdate({_id:data._id},{$set:{status:"Rejected"}})
+
+      // Record application review usage
+      try {
+        if (employerId) {
+          const SubscriptionUsageService = require("../../services/subscriptionUsageService");
+          await SubscriptionUsageService.recordUsage(String(employerId), 'application_review', { endpoint: 'rejectApply', companyId, candidateId: String(userId) });
+        }
+      } catch (recErr) {
+        console.log('Warning: could not record application_review usage:', recErr?.message || recErr);
+      }
       return res.status(200).json({ success: "Successfully rejected" });
     } catch (err) {
       console.log(err);

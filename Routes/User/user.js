@@ -28,8 +28,15 @@ router.post('/uploadResumeRegister', upload.single('resume'), userController.reg
 router.post("/userlogin", userController.login);
 router.post("/changePassword", userController.changePassword);
 router.put('/updateProfileImg/:userId', upload.any(), userController.updateProfileImg);
-router.put('/editUser/:id', userController.editUser);
+const { validateSubscription } = require('../../middileware/subscriptionValidationMiddleware');
+router.put('/editUser/:id', validateSubscription('profile_update', { checkUsage: true, usagePeriod: 'monthly' }), userController.editUser);
 router.put('/updateResume/:userId', upload.any(), userController.updateResume);
+// Alias route expected by mobile app
+router.put('/updateProfile/:userId', validateSubscription('profile_update', { checkUsage: true, usagePeriod: 'monthly' }), (req, res, next) => {
+  // Map params to match editUser signature
+  req.params.id = req.params.userId;
+  return userController.editUser(req, res, next);
+});
 // router.put("/editProfile", upload.any(), userController.editProfile);
 router.post("/AddEducation", userController.addEducation);
 router.delete(
@@ -50,7 +57,6 @@ router.post("/makeBlockUnBlockEmployee",userController.makeBlockUnBlock)
 router.delete('/deleteProfileParmanet/:userId',userController.deleteProfileParmanet);
 
 //apply form for company with subscription validation
-const { validateSubscription } = require('../../middileware/subscriptionValidationMiddleware');
 router.post(
   "/applyForJob",
   validateSubscription('apply_job', { checkUsage: true }),

@@ -181,7 +181,7 @@ class SubscriptionUsageService {
       'view_company_details': ['companyViewsPerDay'],
       'contact_employer': ['messagesPerThread'],
       'profile_update': ['profileUpdatesPerMonth'],
-      'skill_assessment': ['skillAssessmentsPerMonth'],
+      // 'skill_assessment' removed - no assessments feature in app
       'interview_schedule': ['interviewsPerMonth'],
       'interview_schedule_employer': ['interviewSlotsPerJob'],
       'application_review': ['applicationReviewsPerDay']
@@ -295,7 +295,6 @@ class SubscriptionUsageService {
         jobApplicationsPerDay: 1,
         companyViewsPerDay: 3,
         profileUpdatesPerMonth: 2,
-        skillAssessmentsPerMonth: 1,
         interviewsPerMonth: 2,
         messagesPerThread: 10,
         customJobAlerts: 1

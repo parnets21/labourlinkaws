@@ -560,6 +560,27 @@ class Employers {
       });
     }
 
+    // Subscription: enforce employer interview slots per job
+    try {
+      if (employerId && companyObjectId) {
+        const SubscriptionValidationService = require("../../services/subscriptionValidationService");
+        const SubscriptionUsageService = require("../../services/subscriptionUsageService");
+        const currentUsage = await SubscriptionUsageService.getCurrentUsage(employerId, 'daily');
+        const validation = await SubscriptionValidationService.validateAction(employerId, 'interview_schedule_employer', currentUsage, { companyId: String(companyObjectId) });
+        if (!validation.allowed) {
+          const statusCode = validation.upgradeRequired ? 402 : 403;
+          return res.status(statusCode).json({
+            success: false,
+            error: validation.reason || 'Interview slot limit reached',
+            upgradeRequired: !!validation.upgradeRequired,
+            remainingUsage: validation.remainingUsage || 0
+          });
+        }
+      }
+    } catch (vErr) {
+      console.log('Warning: interview_schedule_employer validation error:', vErr?.message || vErr);
+    }
+
     // Create a new interview call
     let newCall = await callModel.create({
       employerId,
@@ -583,6 +604,16 @@ class Employers {
     }
 
     console.log("Interview Call Created:", newCall);
+
+    // Record interview slot usage for employer
+    try {
+      if (employerId) {
+        const SubscriptionUsageService = require("../../services/subscriptionUsageService");
+        await SubscriptionUsageService.recordUsage(String(employerId), 'interview_schedule_employer', { endpoint: 'callinterview', companyId: String(companyObjectId), candidateId: String(userId) });
+      }
+    } catch (recErr) {
+      console.log('Warning: could not record interview_schedule_employer usage:', recErr?.message || recErr);
+    }
 
     // Prepare common interview details
     let interviewDetails = '';
