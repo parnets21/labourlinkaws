@@ -3,6 +3,8 @@ const router = express.Router();
 const fcm = require ("../../Controller/User/fcmController");
 
 
+
+
 router.post("/fcmToken", fcm.sendNotificationToEmployee);
 router.post("/update-token" , fcm.updateFCMToken )
 router.post("/clear-token", fcm.clearFCMToken);
