@@ -2,14 +2,36 @@ const FCMtoken = require("../../Model/User/FCMtoken")
 const User = require("../../Model/User/user")
 const Employer = require("../../Model/Employers/employers")
 const admin = require("firebase-admin");
-const serviceAccount = require('../../serviceAccountKey.json');
 
-if (!admin.apps.length) {
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+// Initialize Firebase Admin SDK with error handling
+let firebaseInitialized = false;
+try {
+  if (!admin.apps.length) {
+    const serviceAccount = require('../../serviceAccountKey.json');
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+    firebaseInitialized = true;
+    console.log('✅ Firebase Admin SDK initialized successfully');
+  } else {
+    firebaseInitialized = true;
+    console.log('✅ Firebase Admin SDK already initialized');
+  }
+} catch (error) {
+  console.error('❌ Firebase Admin SDK initialization failed:', error.message);
+  firebaseInitialized = false;
 }
 
+// Helper function to check Firebase initialization
+const checkFirebaseInit = (res) => {
+  if (!firebaseInitialized) {
+    return res.status(500).json({
+      success: false,
+      message: 'Firebase Admin SDK not initialized. Please check serviceAccountKey.json'
+    });
+  }
+  return null;
+};
 
 exports.updateFCMToken =  async(req,res) => {
     try {
@@ -70,7 +92,10 @@ exports.updateFCMToken =  async(req,res) => {
   
 
 exports.sendNotificationToEmployee = async(req,res) => {
-     const { token, title, body } = req.body;
+  const firebaseCheck = checkFirebaseInit(res);
+  if (firebaseCheck) return firebaseCheck;
+
+  const { token, title, body } = req.body;
 
   if (!token || !title || !body) {
     return res.status(400).json({ error: 'Missing token, title, or body' });
@@ -97,6 +122,9 @@ exports.sendNotificationToEmployee = async(req,res) => {
 
 
 exports.sendBulkNotification = async (req, res) => {
+  const firebaseCheck = checkFirebaseInit(res);
+  if (firebaseCheck) return firebaseCheck;
+
   const { employeeIds, title, body } = req.body;
 
   if (!employeeIds || !Array.isArray(employeeIds) || !title || !body) {
