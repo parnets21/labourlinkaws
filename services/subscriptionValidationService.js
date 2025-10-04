@@ -495,6 +495,8 @@ class SubscriptionValidationService {
       return {
         activeJobPosts: 1,
         candidateSearchesPerDay: 3,
+        candidateViewsPerDay: 2,
+        applicationReviewsPerDay: 5,
         candidateContactAccess: false,
         premiumJobPosting: false,
         candidateDatabase: false,
