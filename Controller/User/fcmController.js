@@ -1,18 +1,43 @@
-const FCMtoken = require("../../Model/User/FCMtoken")
-const User = require("../../Model/User/user")
-const Employer = require("../../Model/Employers/employers")
-const admin = require("firebase-admin");
+const FCMtoken = require("../../Model/User/FCMtoken");
+const User = require("../../Model/User/user");
+const Employer = require("../../Model/Employers/employers");
 
-// Initialize Firebase Admin SDK with error handling
+// Firebase Admin SDK with AWS-compatible initialization
+let admin = null;
 let firebaseInitialized = false;
+
 try {
+  admin = require("firebase-admin");
+  
+  // Initialize Firebase Admin SDK with error handling
   if (!admin.apps.length) {
-    const serviceAccount = require('../../serviceAccountKey.json');
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-    firebaseInitialized = true;
-    console.log('✅ Firebase Admin SDK initialized successfully');
+    try {
+      // Try to load service account key
+      const serviceAccount = require('../../serviceAccountKey.json');
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+      });
+      firebaseInitialized = true;
+      console.log('✅ Firebase Admin SDK initialized successfully');
+    } catch (serviceAccountError) {
+      console.warn('⚠️ serviceAccountKey.json not found, trying environment variables...');
+      
+      // Try using environment variables (AWS-friendly)
+      if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL) {
+        admin.initializeApp({
+          credential: admin.credential.cert({
+            projectId: process.env.FIREBASE_PROJECT_ID,
+            privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+          }),
+        });
+        firebaseInitialized = true;
+        console.log('✅ Firebase Admin SDK initialized with environment variables');
+      } else {
+        console.warn('⚠️ Firebase credentials not found in environment variables');
+        firebaseInitialized = false;
+      }
+    }
   } else {
     firebaseInitialized = true;
     console.log('✅ Firebase Admin SDK already initialized');
@@ -95,6 +120,13 @@ exports.sendNotificationToEmployee = async(req,res) => {
   const firebaseCheck = checkFirebaseInit(res);
   if (firebaseCheck) return firebaseCheck;
 
+  if (!admin) {
+    return res.status(500).json({
+      success: false,
+      message: 'Firebase Admin SDK not available'
+    });
+  }
+
   const { token, title, body } = req.body;
 
   if (!token || !title || !body) {
@@ -124,6 +156,13 @@ exports.sendNotificationToEmployee = async(req,res) => {
 exports.sendBulkNotification = async (req, res) => {
   const firebaseCheck = checkFirebaseInit(res);
   if (firebaseCheck) return firebaseCheck;
+
+  if (!admin) {
+    return res.status(500).json({
+      success: false,
+      message: 'Firebase Admin SDK not available'
+    });
+  }
 
   const { employeeIds, title, body } = req.body;
 

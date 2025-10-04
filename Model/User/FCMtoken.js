@@ -1,4 +1,4 @@
-const mongoose = require("mongoose")
+const mongoose = require("mongoose");
 
 const fcmTokenSchema = new mongoose.Schema({
     employeeId: {
@@ -29,4 +29,4 @@ const fcmTokenSchema = new mongoose.Schema({
     }
 })
 
-module.exports = mongoose.model("FCMtoken", fcmTokenSchema)
+module.exports = mongoose.model("FCMtoken", fcmTokenSchema);
