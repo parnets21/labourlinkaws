@@ -636,6 +636,83 @@ class SubscriptionValidationService {
     
     return Math.round((matches / totalDesired) * 100);
   }
+
+  /**
+   * Get usage keys for an action
+   * @param {String} action - Action name
+   * @returns {Array} Array of usage keys
+   */
+  static getUsageKeys(action) {
+    const usageKeyMap = {
+      'apply_job': ['jobApplicationsPerMonth', 'jobApplicationsPerDay'],
+      'search_job': ['jobSearchPerDay'],
+      'post_job': ['activeJobPosts'],
+      'search_candidates': ['candidateSearchesPerDay'],
+      'view_candidate_contact': ['candidateViewsPerDay'],
+      'application_review': ['applicationReviewsPerDay'],
+      'interview_schedule_employer': ['interviewSlotsPerJob'],
+      'profile_update': ['profileUpdatesPerMonth'],
+      'interview_schedule': ['interviewsPerMonth']
+    };
+
+    return usageKeyMap[action] || [action];
+  }
+
+  /**
+   * Record usage for an action
+   * @param {String} userId - User ID
+   * @param {String} action - Action name
+   * @param {Object} metadata - Additional metadata
+   * @returns {Promise<Object>} Recording result
+   */
+  static async recordUsage(userId, action, metadata = {}) {
+    try {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      // Define usage tracking keys based on action
+      const usageKeys = this.getUsageKeys(action);
+      
+      // Update usage counts
+      const updatePromises = usageKeys.map(async (key) => {
+        const UsageRecord = require('../Model/usageRecord');
+        
+        // Use upsert to create or update usage record
+        await UsageRecord.findOneAndUpdate(
+          {
+            userId: typeof userId === 'string' ? require('mongoose').Types.ObjectId(userId) : userId,
+            usageKey: key,
+            date: today
+          },
+          {
+            $inc: { count: 1 },
+            $set: {
+              lastAction: action,
+              lastTimestamp: now,
+              metadata: metadata,
+              month: currentMonth
+            }
+          },
+          { upsert: true, new: true }
+        );
+      });
+
+      await Promise.all(updatePromises);
+
+      console.log(`📝 Recorded usage for user ${userId}, action: ${action}`);
+      return {
+        success: true,
+        action,
+        timestamp: now,
+        usageKeys
+      };
+
+    } catch (error) {
+      console.error('Record usage error:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = SubscriptionValidationService;
