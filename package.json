@@ -5,7 +5,15 @@
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon app.js"
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "pm2:start": "pm2 start app.js --name labourlink-api",
+    "pm2:stop": "pm2 stop labourlink-api", 
+    "pm2:restart": "pm2 restart labourlink-api",
+    "pm2:delete": "pm2 delete labourlink-api",
+    "pm2:logs": "pm2 logs labourlink-api",
+    "aws:update": "./update-aws.sh",
+    "aws:deploy": "./deploy-aws.sh"
   },
   "keywords": [],
   "author": "",
