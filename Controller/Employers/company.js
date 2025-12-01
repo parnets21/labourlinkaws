@@ -445,10 +445,30 @@ async register(req, res) {
       // Optional: validate subscription limits when userId present and user is actually searching
       let remainingBefore;
       let totalLimit;
+      let userType = 'employee'; // Default to employee
+      let searchAction = 'search_job'; // Default action
+      
       if (userId && isSearchIntent) {
         try {
+          // Determine user type by checking both user and employer collections
+          const userModel = require('../Model/User/user');
+          const EmployerModel = require('../Model/Employers/employers');
+          
+          const user = await userModel.findById(userId);
+          const employer = await EmployerModel.findById(userId);
+          
+          if (employer) {
+            userType = 'employer';
+            searchAction = 'search_candidates';
+          } else if (user) {
+            userType = 'employee';
+            searchAction = 'search_job';
+          }
+          
+          console.log(`🔍 User ${userId} is ${userType}, using action: ${searchAction}`);
+          
           const currentUsage = await require("../../services/subscriptionUsageService").getCurrentUsage(userId, 'daily');
-          const validation = await SubscriptionValidationService.validateAction(userId, 'search_job', currentUsage);
+          const validation = await SubscriptionValidationService.validateAction(userId, searchAction, currentUsage);
           if (!validation.allowed) {
             const statusCode = validation.upgradeRequired ? 402 : 403;
             return res.status(statusCode).json({
@@ -461,17 +481,18 @@ async register(req, res) {
           remainingBefore = validation.remainingUsage;
           totalLimit = validation.totalLimit;
 
-          // Record job search usage (non-blocking) only for real search actions
+          // Record search usage (non-blocking) only for real search actions
           try {
             const SubscriptionValidationController = require('../subscriptionValidationController');
             await SubscriptionValidationController.recordUsage({
-              body: { userId, action: 'search_job', metadata: { endpoint: 'getAllJobs' } }
+              body: { userId, action: searchAction, metadata: { endpoint: 'getAllJobs', userType } }
             }, { status: () => ({ json: () => {} }) });
           } catch (recErr) {
-            console.log('Warning: could not record search_job usage:', recErr?.message || recErr);
+            console.log(`Warning: could not record ${searchAction} usage:`, recErr?.message || recErr);
           }
         } catch (vErr) {
           // Fail open but restrict results if validation fails unexpectedly
+          console.log('Validation error:', vErr?.message || vErr);
         }
       }
 
@@ -513,13 +534,16 @@ async register(req, res) {
       // Record usage for successful searches only when userId is present
       try {
         const effectiveUserId = req.query.userId || req.params.userId;
-        if (effectiveUserId) {
-          await SubscriptionUsageService.recordUsage(String(effectiveUserId), 'search_job', {
+        if (effectiveUserId && isSearchIntent) {
+          // Use the same userType and searchAction determined earlier
+          await SubscriptionUsageService.recordUsage(String(effectiveUserId), searchAction, {
             q: q || '',
             remote: remote === 'true',
             sort: sort || '',
-            limit: numericLimit || null
+            limit: numericLimit || null,
+            userType: userType
           });
+          console.log(`📝 Recorded ${searchAction} usage for ${userType} user ${effectiveUserId}`);
         }
       } catch (usageErr) {
         console.log('Search usage record failed:', usageErr?.message || usageErr);
