@@ -54,6 +54,7 @@ const phonepe = require("./Routes/PhonepeRoutes")
 const subscriptionValidation = require("./Routes/subscriptionValidationRoutes")
 const adminSubscriptionRoutes = require("./Routes/Admin/adminSubscriptionRoutes")
 const analyticsRoutes = require("./Routes/analyticsRoutes")
+const iapRoutes = require("./Routes/iapRoutes")
 
 
 app.use('/api/user', locationRoutes);
@@ -109,6 +110,7 @@ app.use("/api/user",fcm)
 app.use("/api/user",phonepe)
 app.use("/api/subscription-validation", subscriptionValidation)
 app.use("/api/admin/subscriptions", adminSubscriptionRoutes)
+app.use("/api/user", iapRoutes)
 
 const employerController=require("./Controller/Employers/employers");
 const employeeController=require("./Controller/User/user");

@@ -32,17 +32,27 @@ class Employers {
         mobile, age, name, email, password, gender,
         street, city, state, pincode, country, address,
         hiring, MyCompany, CompanyName, companyWebsite,
-        numberOfemp, industry, GstNum, searchCount, PanNum
+        numberOfemp, industry, GstNum, searchCount, PanNum, profile
       } = req.body;
 
       // Validations
-      if (!isValidString(name)) return res.status(400).json({ error: "Invalid name format!" });
+      if (!name || name.trim() === '') return res.status(400).json({ error: "Name is required!" });
       if (!isValidEmail(email)) return res.status(400).json({ error: "Invalid email!" });
-      if (password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters!" });
-      if (!phonenumber(mobile)) return res.status(400).json({ error: "Invalid phone number!" });
+      if (!password || password.length < 6) return res.status(400).json({ error: "Password must be at least 6 characters!" });
+      if (!mobile || mobile.toString().trim() === '') return res.status(400).json({ error: "Mobile number is required!" });
+      if (!CompanyName || CompanyName.trim() === '') return res.status(400).json({ error: "Company name is required!" });
+      if (!industry || industry.trim() === '') return res.status(400).json({ error: "Industry is required!" });
+      
+      // Convert mobile to number if it's a string
+      const mobileNumber = typeof mobile === 'string' ? parseInt(mobile) : mobile;
+      
+      // Validate mobile number format
+      if (isNaN(mobileNumber) || mobileNumber.toString().length < 10) {
+        return res.status(400).json({ error: "Invalid phone number format!" });
+      }
 
       // Check if mobile or email already exists
-      const existingMobile = await employerModel.findOne({ mobile, isDelete: false });
+      const existingMobile = await employerModel.findOne({ mobile: mobileNumber, isDelete: false });
       if (existingMobile) return res.status(400).json({ error: "Mobile number already exists!" });
 
       const existingEmail = await employerModel.findOne({ email, isDelete: false });
@@ -58,39 +68,86 @@ class Employers {
         return res.status(500).json({ error: "Failed to encrypt password" });
       }
 
+      // Prepare employer data with defaults for optional fields
+      const employerData = {
+        mobile: mobileNumber,
+        age: age && age !== '' ? parseInt(age) : 25, // Default age if not provided
+        name,
+        email,
+        password: hashedPassword,
+        gender: gender && gender !== '' ? gender : 'Other', // Default gender if not provided
+        CompanyName,
+        industry,
+        street: street || '',
+        city: city || '',
+        state: state || '',
+        pincode: pincode || null,
+        country: country || '',
+        address: address || '',
+        hiring: hiring || false,
+        MyCompany: MyCompany || false,
+        companyWebsite: companyWebsite || '',
+        numberOfemp: numberOfemp || null,
+        GstNum: GstNum || '',
+        PanNum: PanNum || '',
+        searchCount: searchCount || 0,
+        EmployerImg: profile || '',
+        isApproved: false,
+        status: 'Pending'
+      };
+
       // Create new employer
-      const newEmployer = await employerModel.create({
-        mobile, age, name, email, password: hashedPassword, gender,
-        street, city, state, pincode, country, address,
-        hiring, MyCompany, CompanyName, companyWebsite,
-        numberOfemp, industry, GstNum, searchCount, PanNum
-      });
+      const newEmployer = await employerModel.create(employerData);
 
       // Send welcome email
       try {
-        await send.sendMail(name, email, `Welcome to Labor Link <h3>Thank you <br>Labor Link Team</h3>`);
+        await send.sendMail(name, email, `Welcome to Labor Link!<br><h3>Your account is pending approval. You will be notified once approved.<br><br>Thank you,<br>Labor Link Team</h3>`);
       } catch (mailError) {
         console.error("Email Sending Error:", mailError);
       }
 
+      // Send WhatsApp notification
+      try {
+        await send.sendUserRegisteredWhatsapp({
+          name: name,
+          mobile: mobileNumber.toString()
+        });
+        console.log("WhatsApp welcome message sent successfully");
+      } catch (whatsappError) {
+        console.error("Failed to send WhatsApp message:", whatsappError);
+      }
+
       // Return success response with user data (excluding sensitive info)
       return res.status(200).json({
-        success: "Successfully registered!",
+        success: true,
+        message: "Successfully registered! Your account is pending approval.",
         userData: {
           _id: newEmployer._id,
           name: newEmployer.name,
           email: newEmployer.email,
           mobile: newEmployer.mobile,
           CompanyName: newEmployer.CompanyName,
-          MyCompany: newEmployer.MyCompany,
-          hiring: newEmployer.hiring,
-          GstNum: newEmployer.GstNum,
-          PanNum: newEmployer.PanNum
+          industry: newEmployer.industry,
+          isApproved: newEmployer.isApproved,
+          status: newEmployer.status
         }
       });
 
     } catch (err) {
       console.error("Error in registerEmployer:", err);
+      
+      // Handle mongoose validation errors
+      if (err.name === 'ValidationError') {
+        const errors = Object.values(err.errors).map(e => e.message);
+        return res.status(400).json({ error: "Validation error", details: errors });
+      }
+      
+      // Handle duplicate key errors
+      if (err.code === 11000) {
+        const field = Object.keys(err.keyPattern)[0];
+        return res.status(400).json({ error: `${field} already exists!` });
+      }
+      
       return res.status(500).json({ error: "Internal server error", details: err.message });
     }
   }
