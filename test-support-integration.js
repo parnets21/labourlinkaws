@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 // Test configuration
-const BASE_URL = 'http://localhost:8500/api';
+const BASE_URL = 'https://laborlink.co.in/api';
 const TEST_DATA = {
   name: 'Test User',
   email: 'test@example.com',
