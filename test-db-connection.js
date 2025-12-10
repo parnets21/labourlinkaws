@@ -1,80 +1,92 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-// Test MongoDB connection
-const testConnection = async () => {
-  console.log('🧪 Testing MongoDB Connection...');
-  console.log('🔗 Connection String:', process.env.DB ? 'Found' : 'Missing');
-  
-  if (!process.env.DB) {
-    console.error('❌ DB environment variable not found!');
-    console.log('💡 Create a .env file with your MongoDB connection string:');
-    console.log('   DB=mongodb://localhost:27017/laborlink');
-    console.log('   or');
-    console.log('   DB=mongodb+srv://username:password@cluster.mongodb.net/laborlink');
-    process.exit(1);
-  }
+const testDatabaseConnection = async () => {
+  console.log('🔍 Testing Database Connection...\n');
 
   try {
-    // Set mongoose options
-    mongoose.set('bufferCommands', false);
+    // Get database URL from environment
+    const dbUrl = process.env.DB;
+    console.log('Database URL:', dbUrl ? 'Set' : 'Not set');
     
-    const conn = await mongoose.connect(process.env.DB, {
+    if (!dbUrl) {
+      console.log('❌ Database URL not found in environment variables');
+      return false;
+    }
+
+    // Test connection
+    console.log('Connecting to database...');
+    await mongoose.connect(dbUrl, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 10000, // 10 second timeout
     });
 
-    console.log('✅ Connection successful!');
-    console.log(`🌐 Host: ${conn.connection.host}`);
-    console.log(`📊 Database: ${conn.connection.name}`);
-    console.log(`🔗 Port: ${conn.connection.port}`);
-    console.log(`📈 Ready State: ${conn.connection.readyState}`);
+    console.log('✅ Database connected successfully');
+
+    // Test if we can access the SupportEnquiry collection
+    const SupportEnquiry = require('./Model/supportModel');
     
-    // Test a simple operation
-    const collections = await conn.connection.db.listCollections().toArray();
-    console.log(`📁 Collections found: ${collections.length}`);
-    
-    if (collections.length > 0) {
-      console.log('📋 Collection names:');
-      collections.forEach(col => {
-        console.log(`   - ${col.name}`);
-      });
+    console.log('Testing SupportEnquiry model...');
+    const count = await SupportEnquiry.countDocuments();
+    console.log(`✅ SupportEnquiry collection accessible. Document count: ${count}`);
+
+    // Test creating a simple document (without saving)
+    console.log('Testing document creation...');
+    const testEnquiry = new SupportEnquiry({
+      name: 'Test User',
+      email: 'test@example.com',
+      userType: 'Job Seeker',
+      priority: 'medium',
+      category: 'Technical Issue',
+      subject: 'Test subject',
+      description: 'Test description for validation'
+    });
+
+    // Validate without saving
+    const validationError = testEnquiry.validateSync();
+    if (validationError) {
+      console.log('❌ Model validation failed:', validationError.message);
+      return false;
     }
 
-    await mongoose.connection.close();
-    console.log('🔴 Connection closed successfully');
-    process.exit(0);
-    
+    console.log('✅ Model validation passed');
+
+    // Test actual save and delete
+    console.log('Testing save operation...');
+    await testEnquiry.save();
+    console.log(`✅ Document saved successfully. Ticket ID: ${testEnquiry.ticketId}`);
+
+    // Clean up test document
+    await SupportEnquiry.findByIdAndDelete(testEnquiry._id);
+    console.log('✅ Test document cleaned up');
+
+    console.log('\n🎉 All database tests passed!');
+    return true;
+
   } catch (error) {
-    console.error('❌ Connection failed:', error.message);
+    console.log('❌ Database test failed:', error.message);
     
-    // Provide specific troubleshooting tips
-    if (error.message.includes('ENOTFOUND')) {
-      console.log('🔍 DNS resolution failed. Check your connection string hostname.');
-    } else if (error.message.includes('ECONNREFUSED')) {
-      console.log('🔍 Connection refused. Check if MongoDB is running on the specified port.');
-    } else if (error.message.includes('Authentication failed')) {
-      console.log('🔍 Authentication failed. Check your username and password.');
-    } else if (error.message.includes('Server selection timed out')) {
-      console.log('🔍 Server selection timed out. Check your network connection and MongoDB availability.');
+    if (error.name === 'MongooseServerSelectionError') {
+      console.log('💡 This usually means the MongoDB server is unreachable');
+    } else if (error.name === 'ValidationError') {
+      console.log('💡 Model validation error:', error.message);
+    } else if (error.code === 11000) {
+      console.log('💡 Duplicate key error - document already exists');
     }
     
-    console.log('\n💡 Troubleshooting tips:');
-    console.log('1. Check if MongoDB is running locally: mongod --version');
-    console.log('2. For MongoDB Atlas, check your IP whitelist');
-    console.log('3. Verify your connection string format');
-    console.log('4. Check your network connection');
-    
-    process.exit(1);
+    return false;
+  } finally {
+    // Close connection
+    await mongoose.connection.close();
+    console.log('Database connection closed');
   }
 };
 
-// Handle process termination
-process.on('SIGINT', async () => {
-  console.log('\n🛑 Test interrupted');
-  await mongoose.connection.close();
-  process.exit(0);
-});
+// Run test if called directly
+if (require.main === module) {
+  testDatabaseConnection().then(success => {
+    process.exit(success ? 0 : 1);
+  });
+}
 
-testConnection();
+module.exports = { testDatabaseConnection };

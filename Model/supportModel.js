@@ -24,9 +24,11 @@ const supportResponseSchema = new mongoose.Schema({
 const supportEnquirySchema = new mongoose.Schema({
   ticketId: {
     type: String,
-    required: true,
     unique: true,
-    index: true
+    index: true,
+    default: function() {
+      return `TKT-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    }
   },
   name: {
     type: String,
@@ -161,12 +163,8 @@ supportEnquirySchema.virtual('timeElapsed').get(function() {
   return Date.now() - this.createdAt.getTime();
 });
 
-// Pre-save middleware to generate ticket ID
+// Pre-save middleware for timestamps
 supportEnquirySchema.pre('save', function(next) {
-  if (!this.ticketId) {
-    this.ticketId = `TKT-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-  }
-  
   // Set resolved/closed timestamps
   if (this.status === 'resolved' && !this.resolvedAt) {
     this.resolvedAt = new Date();
