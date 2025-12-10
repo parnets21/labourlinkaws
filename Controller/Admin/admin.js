@@ -1,6 +1,7 @@
 const adminModel=require('../../Model/Admin/admin');
 const Feedback=require('../../Model/Admin/feedback')
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const Appointment=require('../../Model/Admin/slotbook')
 const userModel =require("../../Model/User/user")
 const subadmininterview =require("../../Model/Admin/subadminInterview")
@@ -61,7 +62,7 @@ class admin{
     async login(req,res){
         try{
             const {email,password}=req.body;
-console.log("fff",req.body);
+            console.log("Admin login attempt:", req.body);
 
             let check =await adminModel.findOne({$or:[{email:email}]});
             if(!check) return res.status(400).json({error:"Please enter register email Id!"});
@@ -72,10 +73,38 @@ console.log("fff",req.body);
           
               if (!compare) {return res.status(400).send({error: "Invalid password!" });}
 
-            return res.status(200).json({msg:"Successfully login",success:check});
+            // Generate JWT token
+            const token = jwt.sign(
+                { 
+                    id: check._id,
+                    adminId: check._id,
+                    email: check.email,
+                    userType: 'admin'
+                },
+                process.env.JWT_SECRET || 'your-secret-key',
+                { expiresIn: '24h' }
+            );
+
+            // Remove password from response
+            const adminData = {
+                _id: check._id,
+                name: check.name,
+                email: check.email,
+                userName: check.userName,
+                mobile: check.mobile,
+                gender: check.gender,
+                profile: check.profile
+            };
+
+            return res.status(200).json({
+                msg:"Successfully login",
+                success: adminData,
+                token: token,
+                userType: 'admin'
+            });
         }catch(err){
+            console.error("Admin login error:", err);
             return res.status(400).json({msg:"error login",message:err.message});
-            // console.log(err);
         }
     }
     //subadminlogininterview
@@ -91,12 +120,39 @@ console.log("fff",req.body);
         });
     
         if (!compare) {return res.status(400).send({error: "Invalid password!" });}
+
+        // Generate JWT token for subadmin
+        const token = jwt.sign(
+            { 
+                id: check._id,
+                adminId: check._id,
+                email: check.email,
+                userType: 'subadmin'
+            },
+            process.env.JWT_SECRET || 'your-secret-key',
+            { expiresIn: '24h' }
+        );
+
+        // Remove password from response
+        const subadminData = {
+            _id: check._id,
+            name: check.name,
+            email: check.email,
+            userName: check.userName,
+            mobile: check.mobile,
+            gender: check.gender,
+            profile: check.profile
+        };
   
-      return res.status(200).json({msg:"Successfully login",success:check});
+      return res.status(200).json({
+          msg:"Successfully login",
+          success:subadminData,
+          token: token,
+          userType: 'subadmin'
+      });
       }catch(err){
+        console.error("Subadmin login error:", err);
         return res.status(400).json({msg:"error login",message:err.message});
-
-
       }
 
     }
