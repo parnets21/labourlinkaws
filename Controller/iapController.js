@@ -1,4 +1,5 @@
 const axios = require('axios');
+const mongoose = require('mongoose');
 const UserSubscription = require('../Model/userSubscription');
 
 // Apple's receipt validation URLs
@@ -114,43 +115,71 @@ exports.activateSubscription = async (req, res) => {
             userId,
             subscriptionId,
             transactionId,
-            paymentMethod
+            paymentMethod,
+            userType,
+            planName
         });
 
         // Validate required fields
-        if (!userId || !subscriptionId || !transactionId) {
+        if (!userId || !transactionId) {
             return res.status(400).json({
                 success: false,
-                message: 'Missing required fields: userId, subscriptionId, transactionId'
+                message: 'Missing required fields: userId, transactionId'
+            });
+        }
+
+        // Validate planName is provided
+        if (!planName) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required field: planName'
             });
         }
 
         // Check if transaction already exists
         const existingSubscription = await UserSubscription.findOne({ transactionId });
         if (existingSubscription) {
-            return res.status(400).json({
-                success: false,
+            console.log('Transaction already processed:', transactionId);
+            return res.status(200).json({
+                success: true,
                 message: 'Transaction already processed',
                 data: existingSubscription
             });
         }
 
-        // Create subscription record
+        // Handle missing or invalid subscriptionId for IAP purchases
+        let validSubscriptionId = subscriptionId;
+        if (!subscriptionId || !mongoose.Types.ObjectId.isValid(subscriptionId)) {
+            console.log('Invalid or missing subscriptionId, creating placeholder for IAP purchase');
+            // For IAP purchases, we might not have a valid backend subscription ID
+            // Create a placeholder or use a default subscription ID
+            validSubscriptionId = null; // Allow null for IAP purchases
+        }
+
+        // Ensure userType is provided, default to 'employee' if missing
+        const validUserType = userType || 'employee';
+
+        // Create subscription record with proper validation
         const subscriptionData = {
-            userId,
-            subscriptionId,
+            userId: mongoose.Types.ObjectId(userId),
+            subscriptionId: validSubscriptionId ? mongoose.Types.ObjectId(validSubscriptionId) : null,
             transactionId,
-            amount: amount || 0,
+            amount: Number(amount) || 0,
             status: status || 'active',
-            startDate: startDate || new Date(),
+            startDate: startDate ? new Date(startDate) : new Date(),
             paymentMethod: paymentMethod || 'Apple IAP',
-            planName,
+            planName: planName.trim(),
             serviceType: serviceType || 'job_portal_subscription',
-            serviceDescription,
-            userType,
+            serviceDescription: serviceDescription || 'Premium subscription features',
+            userType: validUserType,
             iapReceipt,
             iapProductId
         };
+
+        console.log('Creating subscription with data:', {
+            ...subscriptionData,
+            iapReceipt: iapReceipt ? '[RECEIPT_DATA]' : null
+        });
 
         const newSubscription = await UserSubscription.create(subscriptionData);
 
@@ -164,6 +193,35 @@ exports.activateSubscription = async (req, res) => {
 
     } catch (error) {
         console.error('Subscription activation error:', error);
+        console.error('Error details:', {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+        });
+
+        // Handle specific MongoDB validation errors
+        if (error.name === 'ValidationError') {
+            const validationErrors = Object.keys(error.errors).map(key => ({
+                field: key,
+                message: error.errors[key].message
+            }));
+            
+            return res.status(400).json({
+                success: false,
+                message: 'Validation failed',
+                errors: validationErrors
+            });
+        }
+
+        // Handle duplicate key errors
+        if (error.code === 11000) {
+            return res.status(400).json({
+                success: false,
+                message: 'Transaction already exists',
+                error: 'Duplicate transaction ID'
+            });
+        }
+
         res.status(500).json({
             success: false,
             message: 'Failed to activate subscription',

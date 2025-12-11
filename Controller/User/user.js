@@ -1210,10 +1210,83 @@ async makEverifyUnverify(req,res){
     // Activate user subscription after payment
     async activateSubscription(req, res) {
     try {
-      const { userId, subscriptionId, planName, amount, paymentMethod = 'PhonePe', transactionId } = req.body;
+      const { 
+        userId, 
+        subscriptionId, 
+        planName, 
+        amount, 
+        paymentMethod = 'PhonePe', 
+        transactionId,
+        userType: providedUserType,
+        serviceType,
+        serviceDescription,
+        iapReceipt,
+        iapProductId
+      } = req.body;
 
       console.log('Activating subscription:', req.body);
 
+      // Check if this is an IAP purchase
+      const isIAPPurchase = paymentMethod === 'Apple IAP' || iapReceipt || iapProductId;
+      
+      if (isIAPPurchase) {
+        console.log('Processing IAP purchase');
+        // For IAP purchases, use the dedicated IAP model
+        const UserSubscription = require('../../Model/userSubscription');
+        
+        // Validate required fields for IAP
+        if (!userId || !transactionId || !planName) {
+          return res.status(400).json({
+            success: false,
+            message: 'Missing required fields for IAP: userId, transactionId, planName'
+          });
+        }
+
+        // Check if transaction already exists
+        const existingSubscription = await UserSubscription.findOne({ transactionId });
+        if (existingSubscription) {
+          console.log('IAP transaction already processed:', transactionId);
+          return res.status(200).json({
+            success: true,
+            message: 'Transaction already processed',
+            data: existingSubscription
+          });
+        }
+
+        // Create IAP subscription record
+        const subscriptionData = {
+          userId: mongoose.Types.ObjectId(userId),
+          subscriptionId: subscriptionId ? mongoose.Types.ObjectId(subscriptionId) : null,
+          transactionId,
+          amount: Number(amount) || 0,
+          status: 'active',
+          startDate: new Date(),
+          paymentMethod: 'Apple IAP',
+          planName: planName.trim(),
+          serviceType: serviceType || 'job_portal_subscription',
+          serviceDescription: serviceDescription || 'Premium subscription features',
+          userType: providedUserType || 'employee',
+          iapReceipt,
+          iapProductId
+        };
+
+        console.log('Creating IAP subscription with data:', {
+          ...subscriptionData,
+          iapReceipt: iapReceipt ? '[RECEIPT_DATA]' : null
+        });
+
+        const newSubscription = await UserSubscription.create(subscriptionData);
+
+        console.log('IAP subscription activated successfully:', newSubscription._id);
+
+        return res.json({
+          success: true,
+          message: 'Subscription activated successfully',
+          data: newSubscription
+        });
+      }
+
+      // Regular (non-IAP) subscription processing continues below
       // Validate required fields - subscriptionId is not always required, we can find it
       if (!userId) {
         return res.status(400).json({

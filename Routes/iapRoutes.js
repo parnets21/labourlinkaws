@@ -9,8 +9,8 @@ const iapController = require('../Controller/iapController');
 // Validate IAP receipt with Apple
 router.post('/validateIAPReceipt', iapController.validateIAPReceipt);
 
-// Activate subscription after successful purchase
-router.post('/activateSubscription', iapController.activateSubscription);
+// Activate subscription after successful IAP purchase
+router.post('/activateIAPSubscription', iapController.activateSubscription);
 
 // Get user's subscriptions
 router.get('/subscriptions/:userId', iapController.getUserSubscriptions);

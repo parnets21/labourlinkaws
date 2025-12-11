@@ -13,7 +13,7 @@ const userSubscriptionSchema = new mongoose.Schema({
   subscriptionId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Subscription',
-    required: [true, 'Subscription ID is required'],
+    required: false, // Made optional for IAP purchases
     index: true
   },
   planName: {
