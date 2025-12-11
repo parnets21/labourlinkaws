@@ -190,5 +190,5 @@ userSubscriptionSchema.pre('save', function(next) {
   next();
 });
 
-// Export model, checking if it already exists to avoid OverwriteModelError
-module.exports = mongoose.models.UserSubscription || mongoose.model('UserSubscription', userSubscriptionSchema);
+// Export model with a different name to avoid conflicts with User/userSubscription.js
+module.exports = mongoose.models.IAPUserSubscription || mongoose.model('IAPUserSubscription', userSubscriptionSchema);

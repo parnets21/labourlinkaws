@@ -1232,7 +1232,7 @@ async makEverifyUnverify(req,res){
       if (isIAPPurchase) {
         console.log('Processing IAP purchase');
         // For IAP purchases, use the dedicated IAP model
-        const UserSubscription = require('../../Model/userSubscription');
+        const IAPUserSubscription = require('../../Model/userSubscription');
         
         // Validate required fields for IAP
         if (!userId || !transactionId || !planName) {
@@ -1243,7 +1243,7 @@ async makEverifyUnverify(req,res){
         }
 
         // Check if transaction already exists
-        const existingSubscription = await UserSubscription.findOne({ transactionId });
+        const existingSubscription = await IAPUserSubscription.findOne({ transactionId });
         if (existingSubscription) {
           console.log('IAP transaction already processed:', transactionId);
           return res.status(200).json({
@@ -1255,12 +1255,13 @@ async makEverifyUnverify(req,res){
 
         // Create IAP subscription record
         const subscriptionData = {
-          userId: mongoose.Types.ObjectId(userId),
-          subscriptionId: subscriptionId ? mongoose.Types.ObjectId(subscriptionId) : null,
+          userId: userId,
+          subscriptionId: subscriptionId || null,
           transactionId,
           amount: Number(amount) || 0,
           status: 'active',
           startDate: new Date(),
+          endDate: null, // IAP subscriptions might not have end dates (auto-renewing)
           paymentMethod: 'Apple IAP',
           planName: planName.trim(),
           serviceType: serviceType || 'job_portal_subscription',
@@ -1275,7 +1276,7 @@ async makEverifyUnverify(req,res){
           iapReceipt: iapReceipt ? '[RECEIPT_DATA]' : null
         });
 
-        const newSubscription = await UserSubscription.create(subscriptionData);
+        const newSubscription = await IAPUserSubscription.create(subscriptionData);
 
         console.log('IAP subscription activated successfully:', newSubscription._id);
 
@@ -1299,7 +1300,6 @@ async makEverifyUnverify(req,res){
       console.log('Looking for user with ID:', userId);
       
       // Validate ObjectId format first
-      const mongoose = require('mongoose');
       if (!mongoose.Types.ObjectId.isValid(userId)) {
         console.error('Invalid user ID format:', userId);
         return res.status(400).json({
@@ -1564,7 +1564,6 @@ async makEverifyUnverify(req,res){
       }
       
       // If not found and we have a valid subscriptionId, try to find by subscriptionId
-      const mongoose = require('mongoose');
       if (!userSubscription && subscriptionId && mongoose.Types.ObjectId.isValid(subscriptionId)) {
         userSubscription = await UserSubscription.findOne({ 
           userId, 
@@ -1668,7 +1667,6 @@ async makEverifyUnverify(req,res){
       console.log('Debug user lookup for ID:', userId);
       
       // Check if it's a valid ObjectId
-      const mongoose = require('mongoose');
       if (!mongoose.Types.ObjectId.isValid(userId)) {
         return res.status(400).json({
           success: false,

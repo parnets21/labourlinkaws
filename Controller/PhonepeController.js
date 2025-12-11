@@ -2,6 +2,7 @@ const transactionModel = require("../Model/PhonepeModel");
 const phonepeTransactionService = require("../services/phonepeTransactionService");
 const axios = require("axios");
 const crypto = require('crypto');
+const mongoose = require('mongoose');
 
 // Configuration for URL handling
 const getCorrectApiUrl = (url) => {
@@ -208,6 +209,11 @@ class Transaction {
       let id = req.params.id;
       let userId = req.params.userId;
       
+      // Validate ObjectId format
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ error: "Invalid transaction ID format" });
+      }
+      
       let data = await transactionModel.findById(id);
       if (!data) {
         return res.status(400).json({ error: "Payment Id not found!" });
@@ -323,7 +329,12 @@ class Transaction {
         return res.status(400).json({ error: "No merchant transaction ID" });
       }
 
-      // Find and update transaction
+      // Find and update transaction (validate ObjectId first)
+      if (!mongoose.Types.ObjectId.isValid(merchantTransactionId)) {
+        console.error('Invalid merchantTransactionId format:', merchantTransactionId);
+        return res.status(400).json({ error: "Invalid transaction ID format" });
+      }
+      
       let data = await transactionModel.findById(merchantTransactionId);
       
       if (data) {
