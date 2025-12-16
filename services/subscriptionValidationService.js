@@ -1,4 +1,4 @@
-const UserSubscription = require('../Model/User/userSubscription');
+const UserSubscription = require('../Model/userSubscription');
 const Subscription = require('../Model/subscription');
 const userModel = require('../Model/User/user');
 const EmployerModel = require('../Model/Employers/employers');
@@ -49,12 +49,12 @@ class SubscriptionValidationService {
 
       return {
         hasActiveSubscription: true,
-        userType: userType,
-        subscriptionType: activeSubscription.type,
+        userType: activeSubscription.userType || userType,
+        subscriptionType: activeSubscription.userType || userType,
         subscriptionId: activeSubscription._id,
         planName: activeSubscription.planName,
-        features: activeSubscription.features || {},
-        limits: this.extractLimits(activeSubscription.features || {}),
+        features: activeSubscription.features || this.getFreeFeatures(activeSubscription.userType || userType),
+        limits: this.extractLimits(activeSubscription.features || this.getFreeFeatures(activeSubscription.userType || userType)),
         startDate: activeSubscription.startDate,
         endDate: activeSubscription.endDate,
         isExpiringSoon: this.isExpiringSoon(activeSubscription.endDate)
@@ -484,24 +484,43 @@ class SubscriptionValidationService {
     if (userType === 'employee') {
       return {
         jobApplicationsPerMonth: 5,
+        jobApplicationsPerDay: 2,
         jobSearchPerDay: 10,
-        companyDetailsAccess: false,
-        directEmployerContact: false,
-        premiumFilters: false,
-        resumeBoost: false,
-        jobAlerts: true
+        companyViewsPerDay: 3,
+        profileUpdatesPerMonth: 2,
+        enableJobApplications: true,
+        enableJobSearch: true,
+        enableProfileUpdates: true,
+        enableInterviews: true,
+        enableCommunication: true,
+        profileCreation: true,
+        workExperience: true,
+        educationDetails: true,
+        skillsManagement: true,
+        jobAlerts: true,
+        employerChat: true,
+        onlineInterviews: true,
+        interviewScheduling: true
       };
     } else {
       return {
         activeJobPosts: 1,
         candidateSearchesPerDay: 3,
         candidateViewsPerDay: 2,
-        applicationReviewsPerDay: 5,
-        candidateContactAccess: false,
-        premiumJobPosting: false,
-        candidateDatabase: false,
-        advancedAnalytics: false,
-        bulkMessaging: false
+        applicationReviewsPerDay: 10,
+        enableJobPosting: true,
+        enableCandidateSearch: true,
+        enableEmployerInterviews: true,
+        enableEmployerCommunication: true,
+        profileCreation: true,
+        workExperience: true,
+        jobApplications: true,
+        applicationTracking: true,
+        employerChat: true,
+        applicationMessages: true,
+        onlineInterviews: true,
+        interviewScheduling: true,
+        interviewFeedback: true
       };
     }
   }

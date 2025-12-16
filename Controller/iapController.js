@@ -156,8 +156,16 @@ exports.activateSubscription = async (req, res) => {
             validSubscriptionId = null; // Allow null for IAP purchases
         }
 
-        // Ensure userType is provided, default to 'employee' if missing
-        const validUserType = userType || 'employee';
+        // Ensure userType is provided, try to detect from planName if missing
+        let validUserType = userType || 'employee';
+        
+        // Try to detect user type from plan name if not provided
+        if (!userType && planName) {
+            const lowerPlanName = planName.toLowerCase();
+            if (lowerPlanName.includes('employer') || lowerPlanName.includes('job post') || lowerPlanName.includes('hiring')) {
+                validUserType = 'employer';
+            }
+        }
 
         // Create subscription record with proper validation
         const subscriptionData = {
@@ -170,10 +178,19 @@ exports.activateSubscription = async (req, res) => {
             paymentMethod: paymentMethod || 'Apple IAP',
             planName: planName.trim(),
             serviceType: serviceType || 'job_portal_subscription',
-            serviceDescription: serviceDescription || 'Premium subscription features',
+            serviceDescription: serviceDescription || (validUserType === 'employer' 
+                ? 'Job posting and candidate management platform access'
+                : 'Job search and application platform access'),
             userType: validUserType,
             iapReceipt,
-            iapProductId
+            iapProductId,
+            // Add metadata for better tracking
+            metadata: {
+                source: 'IAP',
+                platform: 'iOS',
+                activatedAt: new Date(),
+                originalAmount: amount
+            }
         };
 
         console.log('Creating subscription with data:', {
@@ -237,14 +254,36 @@ exports.activateSubscription = async (req, res) => {
 exports.getUserSubscriptions = async (req, res) => {
     try {
         const { userId } = req.params;
+        const { userType } = req.query; // Optional filter by user type
 
-        const subscriptions = await UserSubscription.find({ userId })
+        let query = { userId };
+        if (userType) {
+            query.userType = userType;
+        }
+
+        const subscriptions = await UserSubscription.find(query)
             .populate('subscriptionId')
             .sort({ createdAt: -1 });
 
+        // Add computed fields
+        const enrichedSubscriptions = subscriptions.map(sub => {
+            const subObj = sub.toObject();
+            const now = new Date();
+            
+            return {
+                ...subObj,
+                isActive: sub.status === 'active' && (!sub.endDate || sub.endDate > now),
+                isExpired: sub.endDate && sub.endDate <= now,
+                daysRemaining: sub.endDate ? Math.ceil((sub.endDate - now) / (1000 * 60 * 60 * 24)) : null,
+                isExpiringSoon: sub.endDate ? Math.ceil((sub.endDate - now) / (1000 * 60 * 60 * 24)) <= 7 : false
+            };
+        });
+
         res.json({
             success: true,
-            data: subscriptions
+            data: enrichedSubscriptions,
+            count: enrichedSubscriptions.length,
+            activeCount: enrichedSubscriptions.filter(sub => sub.isActive).length
         });
 
     } catch (error) {
@@ -252,6 +291,64 @@ exports.getUserSubscriptions = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to fetch subscriptions',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Refresh user's subscription status (useful for IAP sync issues)
+ * POST /api/user/subscriptions/:userId/refresh
+ */
+exports.refreshUserSubscriptions = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { userType } = req.body;
+
+        console.log('Refreshing subscriptions for user:', userId, 'type:', userType);
+
+        // Get all subscriptions for user
+        const subscriptions = await UserSubscription.find({ userId })
+            .populate('subscriptionId')
+            .sort({ createdAt: -1 });
+
+        // Update expired subscriptions
+        const now = new Date();
+        let updatedCount = 0;
+
+        for (const subscription of subscriptions) {
+            if (subscription.status === 'active' && subscription.endDate && subscription.endDate <= now) {
+                subscription.status = 'expired';
+                await subscription.save();
+                updatedCount++;
+            }
+        }
+
+        // Get fresh data
+        const refreshedSubscriptions = await UserSubscription.find({ userId })
+            .populate('subscriptionId')
+            .sort({ createdAt: -1 });
+
+        const activeSubscriptions = refreshedSubscriptions.filter(sub => 
+            sub.status === 'active' && (!sub.endDate || sub.endDate > now)
+        );
+
+        res.json({
+            success: true,
+            message: 'Subscriptions refreshed successfully',
+            data: {
+                total: refreshedSubscriptions.length,
+                active: activeSubscriptions.length,
+                updated: updatedCount,
+                subscriptions: refreshedSubscriptions
+            }
+        });
+
+    } catch (error) {
+        console.error('Error refreshing subscriptions:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to refresh subscriptions',
             error: error.message
         });
     }
