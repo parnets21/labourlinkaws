@@ -1,6 +1,7 @@
 const axios = require('axios');
 const mongoose = require('mongoose');
 const UserSubscription = require('../Model/userSubscription');
+const IAPService = require('../services/iapService');
 
 // Apple's receipt validation URLs
 const SANDBOX_URL = 'https://sandbox.itunes.apple.com/verifyReceipt';
@@ -92,147 +93,24 @@ exports.validateIAPReceipt = async (req, res) => {
 /**
  * Activate subscription after successful IAP purchase
  * POST /api/user/activateSubscription
+ * Mirrors PhonePe payment processing
  */
 exports.activateSubscription = async (req, res) => {
     try {
-        const {
-            userId,
-            subscriptionId,
-            transactionId,
-            amount,
-            status,
-            startDate,
-            paymentMethod,
-            planName,
-            serviceType,
-            serviceDescription,
-            userType,
-            iapReceipt,
-            iapProductId
-        } = req.body;
-
-        console.log('Activating subscription:', {
-            userId,
-            subscriptionId,
-            transactionId,
-            paymentMethod,
-            userType,
-            planName
+        console.log('=== IAP ACTIVATION REQUEST ===');
+        console.log('Request body:', {
+            ...req.body,
+            iapReceipt: req.body.iapReceipt ? '[RECEIPT_DATA]' : null
         });
 
-        // Validate required fields
-        if (!userId || !transactionId) {
-            return res.status(400).json({
-                success: false,
-                message: 'Missing required fields: userId, transactionId'
-            });
-        }
+        // Use IAPService for processing (mirrors PaymentService)
+        const result = await IAPService.processIAPPurchase(req.body);
 
-        // Validate planName is provided
-        if (!planName) {
-            return res.status(400).json({
-                success: false,
-                message: 'Missing required field: planName'
-            });
-        }
-
-        // Check if transaction already exists
-        const existingSubscription = await UserSubscription.findOne({ transactionId });
-        if (existingSubscription) {
-            console.log('Transaction already processed:', transactionId);
-            return res.status(200).json({
-                success: true,
-                message: 'Transaction already processed',
-                data: existingSubscription
-            });
-        }
-
-        // Handle missing or invalid subscriptionId for IAP purchases
-        let validSubscriptionId = subscriptionId;
-        if (!subscriptionId || !mongoose.Types.ObjectId.isValid(subscriptionId)) {
-            console.log('Invalid or missing subscriptionId, creating placeholder for IAP purchase');
-            // For IAP purchases, we might not have a valid backend subscription ID
-            // Create a placeholder or use a default subscription ID
-            validSubscriptionId = null; // Allow null for IAP purchases
-        }
-
-        // Ensure userType is provided, try to detect from planName if missing
-        let validUserType = userType || 'employee';
-        
-        // Try to detect user type from plan name if not provided
-        if (!userType && planName) {
-            const lowerPlanName = planName.toLowerCase();
-            if (lowerPlanName.includes('employer') || lowerPlanName.includes('job post') || lowerPlanName.includes('hiring')) {
-                validUserType = 'employer';
-            }
-        }
-
-        // Parse and validate dates
-        const parsedStartDate = startDate ? new Date(startDate) : new Date();
-        const parsedEndDate = req.body.endDate ? new Date(req.body.endDate) : null;
-
-        // Validate dates
-        if (isNaN(parsedStartDate.getTime())) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid start date format'
-            });
-        }
-
-        if (parsedEndDate && isNaN(parsedEndDate.getTime())) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid end date format'
-            });
-        }
-
-        // Create subscription record with proper validation
-        const subscriptionData = {
-            userId: mongoose.Types.ObjectId(userId),
-            subscriptionId: validSubscriptionId ? mongoose.Types.ObjectId(validSubscriptionId) : null,
-            transactionId,
-            amount: Number(amount) || 0,
-            status: status || 'active',
-            startDate: parsedStartDate,
-            endDate: parsedEndDate,
-            paymentMethod: paymentMethod || 'Apple IAP',
-            planName: planName.trim(),
-            serviceType: serviceType || 'job_portal_subscription',
-            serviceDescription: serviceDescription || (validUserType === 'employer' 
-                ? 'Job posting and candidate management platform access'
-                : 'Job search and application platform access'),
-            userType: validUserType,
-            iapReceipt,
-            iapProductId,
-            // Add metadata for better tracking
-            metadata: {
-                source: 'IAP',
-                platform: 'iOS',
-                activatedAt: new Date(),
-                originalAmount: amount,
-                duration: req.body.duration || 'monthly'
-            }
-        };
-
-        console.log('Creating subscription with data:', {
-            ...subscriptionData,
-            iapReceipt: iapReceipt ? '[RECEIPT_DATA]' : null,
-            startDate: subscriptionData.startDate.toISOString(),
-            endDate: subscriptionData.endDate ? subscriptionData.endDate.toISOString() : null
-        });
-
-        const newSubscription = await UserSubscription.create(subscriptionData);
-
-        console.log('Subscription activated successfully:', newSubscription._id);
-
-        res.json({
-            success: true,
-            message: 'Subscription activated successfully',
-            data: newSubscription
-        });
+        // Return response
+        return res.status(200).json(result);
 
     } catch (error) {
-        console.error('Subscription activation error:', error);
+        console.error('IAP activation error:', error);
         console.error('Error details:', {
             name: error.name,
             message: error.message,
@@ -262,7 +140,7 @@ exports.activateSubscription = async (req, res) => {
             });
         }
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: 'Failed to activate subscription',
             error: error.message
@@ -273,28 +151,27 @@ exports.activateSubscription = async (req, res) => {
 /**
  * Get user's active subscriptions
  * GET /api/user/subscriptions/:userId
+ * Mirrors PhonePe transaction history
  */
 exports.getUserSubscriptions = async (req, res) => {
     try {
         const { userId } = req.params;
-        const { userType } = req.query; // Optional filter by user type
+        const { userType, limit, offset, status } = req.query;
 
-        let query = { userId };
-        if (userType) {
-            query.userType = userType;
-        }
-
-        const subscriptions = await UserSubscription.find(query)
-            .populate('subscriptionId')
-            .sort({ createdAt: -1 });
+        // Use IAPService for fetching (mirrors PaymentService)
+        const subscriptions = await IAPService.getSubscriptionHistory(userId, {
+            userType,
+            limit: limit ? parseInt(limit) : 100,
+            offset: offset ? parseInt(offset) : 0,
+            status
+        });
 
         // Add computed fields
         const enrichedSubscriptions = subscriptions.map(sub => {
-            const subObj = sub.toObject();
             const now = new Date();
             
             return {
-                ...subObj,
+                ...sub,
                 isActive: sub.status === 'active' && (!sub.endDate || sub.endDate > now),
                 isExpired: sub.endDate && sub.endDate <= now,
                 daysRemaining: sub.endDate ? Math.ceil((sub.endDate - now) / (1000 * 60 * 60 * 24)) : null,
@@ -306,7 +183,11 @@ exports.getUserSubscriptions = async (req, res) => {
             success: true,
             data: enrichedSubscriptions,
             count: enrichedSubscriptions.length,
-            activeCount: enrichedSubscriptions.filter(sub => sub.isActive).length
+            activeCount: enrichedSubscriptions.filter(sub => sub.isActive).length,
+            pagination: {
+                limit: limit ? parseInt(limit) : 100,
+                offset: offset ? parseInt(offset) : 0
+            }
         });
 
     } catch (error) {
@@ -380,6 +261,7 @@ exports.refreshUserSubscriptions = async (req, res) => {
 /**
  * Handle Apple Server-to-Server notifications
  * POST /api/user/iap/webhook
+ * Mirrors PhonePe callback handling
  */
 exports.handleAppleWebhook = async (req, res) => {
     try {
@@ -387,45 +269,22 @@ exports.handleAppleWebhook = async (req, res) => {
 
         console.log('Received Apple webhook:', JSON.stringify(notification, null, 2));
 
-        const notificationType = notification.notification_type;
-        const latestReceiptInfo = notification.latest_receipt_info;
-
-        // Handle different notification types
-        switch (notificationType) {
-            case 'INITIAL_BUY':
-                console.log('New subscription purchased');
-                break;
-
-            case 'DID_RENEW':
-                console.log('Subscription renewed');
-                await handleSubscriptionRenewal(latestReceiptInfo);
-                break;
-
-            case 'DID_FAIL_TO_RENEW':
-                console.log('Subscription renewal failed');
-                await handleRenewalFailure(latestReceiptInfo);
-                break;
-
-            case 'CANCEL':
-                console.log('Subscription cancelled');
-                await handleSubscriptionCancellation(latestReceiptInfo);
-                break;
-
-            case 'DID_CHANGE_RENEWAL_STATUS':
-                console.log('Renewal status changed');
-                break;
-
-            default:
-                console.log('Unknown notification type:', notificationType);
-        }
+        // Use IAPService for processing (mirrors PaymentService callback handling)
+        await IAPService.handleAppleNotification(notification);
 
         // Always respond with 200 to acknowledge receipt
-        res.status(200).send('OK');
+        res.status(200).json({
+            success: true,
+            message: 'Webhook processed successfully'
+        });
 
     } catch (error) {
         console.error('Error handling Apple webhook:', error);
         // Still respond with 200 to prevent retries
-        res.status(200).send('OK');
+        res.status(200).json({
+            success: true,
+            message: 'Webhook received'
+        });
     }
 };
 
@@ -564,5 +423,66 @@ async function handleSubscriptionCancellation(receiptInfo) {
         console.error('Error handling cancellation:', error);
     }
 }
+
+/**
+ * Get IAP transaction report
+ * GET /api/user/iap/report
+ * Mirrors PhonePe payment report
+ */
+exports.getIAPReport = async (req, res) => {
+    try {
+        const { dateFrom, dateTo, status, userType } = req.query;
+
+        const report = await IAPService.generateReport({
+            dateFrom,
+            dateTo,
+            status,
+            userType
+        });
+
+        res.json({
+            success: true,
+            data: report,
+            message: 'IAP report generated successfully'
+        });
+
+    } catch (error) {
+        console.error('Error generating IAP report:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to generate IAP report',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Get active IAP subscriptions for a user
+ * GET /api/user/iap/active/:userId
+ * Mirrors PhonePe active subscriptions check
+ */
+exports.getActiveIAPSubscriptions = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { userType } = req.query;
+
+        const subscriptions = await IAPService.getActiveSubscriptions(userId, userType);
+
+        res.json({
+            success: true,
+            data: subscriptions,
+            count: subscriptions.length,
+            message: 'Active IAP subscriptions retrieved successfully'
+        });
+
+    } catch (error) {
+        console.error('Error fetching active IAP subscriptions:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch active IAP subscriptions',
+            error: error.message
+        });
+    }
+};
 
 module.exports = exports;

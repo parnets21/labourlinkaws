@@ -1253,22 +1253,49 @@ async makEverifyUnverify(req,res){
           });
         }
 
+        // Parse and validate dates
+        const parsedStartDate = req.body.startDate ? new Date(req.body.startDate) : new Date();
+        const parsedEndDate = req.body.endDate ? new Date(req.body.endDate) : null;
+
+        // Validate dates
+        if (isNaN(parsedStartDate.getTime())) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid start date format'
+          });
+        }
+
+        if (parsedEndDate && isNaN(parsedEndDate.getTime())) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid end date format'
+          });
+        }
+
         // Create IAP subscription record
         const subscriptionData = {
           userId: userId,
           subscriptionId: subscriptionId || null,
           transactionId,
           amount: Number(amount) || 0,
-          status: 'active',
-          startDate: new Date(),
-          endDate: null, // IAP subscriptions might not have end dates (auto-renewing)
+          status: req.body.status || 'active',
+          startDate: parsedStartDate,
+          endDate: parsedEndDate, // Use provided endDate from client
           paymentMethod: 'Apple IAP',
           planName: planName.trim(),
           serviceType: serviceType || 'job_portal_subscription',
           serviceDescription: serviceDescription || 'Premium subscription features',
           userType: providedUserType || 'employee',
           iapReceipt,
-          iapProductId
+          iapProductId,
+          // Add metadata for better tracking
+          metadata: {
+            source: 'IAP',
+            platform: 'iOS',
+            activatedAt: new Date(),
+            originalAmount: amount,
+            duration: req.body.duration || 'monthly'
+          }
         };
 
         console.log('Creating IAP subscription with data:', {
