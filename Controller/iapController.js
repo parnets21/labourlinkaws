@@ -167,6 +167,25 @@ exports.activateSubscription = async (req, res) => {
             }
         }
 
+        // Parse and validate dates
+        const parsedStartDate = startDate ? new Date(startDate) : new Date();
+        const parsedEndDate = req.body.endDate ? new Date(req.body.endDate) : null;
+
+        // Validate dates
+        if (isNaN(parsedStartDate.getTime())) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid start date format'
+            });
+        }
+
+        if (parsedEndDate && isNaN(parsedEndDate.getTime())) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid end date format'
+            });
+        }
+
         // Create subscription record with proper validation
         const subscriptionData = {
             userId: mongoose.Types.ObjectId(userId),
@@ -174,7 +193,8 @@ exports.activateSubscription = async (req, res) => {
             transactionId,
             amount: Number(amount) || 0,
             status: status || 'active',
-            startDate: startDate ? new Date(startDate) : new Date(),
+            startDate: parsedStartDate,
+            endDate: parsedEndDate,
             paymentMethod: paymentMethod || 'Apple IAP',
             planName: planName.trim(),
             serviceType: serviceType || 'job_portal_subscription',
@@ -189,13 +209,16 @@ exports.activateSubscription = async (req, res) => {
                 source: 'IAP',
                 platform: 'iOS',
                 activatedAt: new Date(),
-                originalAmount: amount
+                originalAmount: amount,
+                duration: req.body.duration || 'monthly'
             }
         };
 
         console.log('Creating subscription with data:', {
             ...subscriptionData,
-            iapReceipt: iapReceipt ? '[RECEIPT_DATA]' : null
+            iapReceipt: iapReceipt ? '[RECEIPT_DATA]' : null,
+            startDate: subscriptionData.startDate.toISOString(),
+            endDate: subscriptionData.endDate ? subscriptionData.endDate.toISOString() : null
         });
 
         const newSubscription = await UserSubscription.create(subscriptionData);
