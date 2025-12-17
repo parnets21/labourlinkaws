@@ -293,6 +293,7 @@ exports.handleAppleWebhook = async (req, res) => {
  */
 async function verifyReceiptWithApple(receipt) {
     const sharedSecret = process.env.APPLE_SHARED_SECRET;
+    console.log('Using Apple Shared Secret:', sharedSecret ? `${sharedSecret.substring(0, 8)}...` : 'NOT SET');
 
     const requestBody = {
         'receipt-data': receipt,
