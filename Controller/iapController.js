@@ -1,6 +1,7 @@
 const axios = require('axios');
 const mongoose = require('mongoose');
-const UserSubscription = require('../Model/userSubscription');
+// Use the same UserSubscription model as regular subscriptions
+const UserSubscription = require('../Model/User/userSubscription');
 const IAPService = require('../services/iapService');
 
 // Apple's receipt validation URLs

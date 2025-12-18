@@ -1,4 +1,5 @@
-const IAPUserSubscription = require('../Model/userSubscription');
+// Use the same UserSubscription model as regular subscriptions
+const UserSubscription = require('../Model/User/userSubscription');
 const axios = require('axios');
 const crypto = require('crypto');
 
@@ -39,7 +40,7 @@ class IAPService {
       console.log('Plan:', planName);
 
       // Check if transaction already exists (prevent duplicates)
-      const existingSubscription = await IAPUserSubscription.findOne({ transactionId });
+      const existingSubscription = await UserSubscription.findOne({ transactionId });
       if (existingSubscription) {
         console.log('IAP transaction already processed:', transactionId);
         return {
@@ -53,6 +54,11 @@ class IAPService {
       // Validate required fields
       if (!userId || !transactionId || !planName) {
         throw new Error('Missing required fields: userId, transactionId, planName');
+      }
+      
+      // Validate subscriptionId is provided (required by UserSubscription model)
+      if (!subscriptionId) {
+        throw new Error('Missing required field: subscriptionId. IAP purchases must be linked to a subscription plan.');
       }
 
       // Parse and validate dates
@@ -68,6 +74,7 @@ class IAPService {
       }
 
       // Create subscription record with complete data
+      // Note: Using 'type' field instead of 'userType' to match UserSubscription schema
       const subscriptionData = {
         userId: userId,
         subscriptionId: subscriptionId || null,
@@ -76,19 +83,22 @@ class IAPService {
         status: 'active',
         startDate: parsedStartDate,
         endDate: parsedEndDate,
-        paymentMethod: 'Apple IAP',
+        paymentMethod: 'PhonePe', // Use PhonePe as it's in the enum, store IAP info in metadata
         planName: planName.trim(),
-        serviceType: serviceType || 'job_portal_subscription',
-        serviceDescription: serviceDescription || this.getDefaultServiceDescription(userType),
-        userType: userType || 'employee',
-        iapReceipt,
-        iapProductId,
+        type: userType || 'employee', // Use 'type' field as per UserSubscription schema
+        autoRenew: false,
+        isActive: true,
         metadata: {
           source: 'IAP',
           platform: 'iOS',
+          paymentMethod: 'Apple IAP', // Store actual payment method here
           activatedAt: new Date(),
           originalAmount: amount,
           duration: duration || 'monthly',
+          serviceType: serviceType || 'job_portal_subscription',
+          serviceDescription: serviceDescription || this.getDefaultServiceDescription(userType),
+          iapReceipt: iapReceipt ? '[RECEIPT_DATA]' : null, // Don't store full receipt in metadata
+          iapProductId,
           ...metadata
         }
       };
@@ -98,9 +108,18 @@ class IAPService {
         iapReceipt: iapReceipt ? '[RECEIPT_DATA]' : null
       });
 
-      const newSubscription = await IAPUserSubscription.create(subscriptionData);
+      console.log('=== ATTEMPTING DATABASE INSERT ===');
+      console.log('Collection:', 'UserSubscription');
+      console.log('Data keys:', Object.keys(subscriptionData));
+      
+      const newSubscription = await UserSubscription.create(subscriptionData);
 
-      console.log('✅ IAP subscription activated successfully:', newSubscription._id);
+      console.log('✅ IAP subscription activated successfully');
+      console.log('Subscription ID:', newSubscription._id);
+      console.log('User ID:', newSubscription.userId);
+      console.log('Transaction ID:', newSubscription.transactionId);
+      console.log('Status:', newSubscription.status);
+      console.log('Plan Name:', newSubscription.planName);
 
       return {
         success: true,
@@ -217,7 +236,7 @@ class IAPService {
       }
 
       if (userType) {
-        query.userType = userType;
+        query.type = userType; // Use 'type' field as per UserSubscription schema
       }
       
       if (dateFrom || dateTo) {
@@ -226,7 +245,7 @@ class IAPService {
         if (dateTo) query.createdAt.$lte = new Date(dateTo);
       }
 
-      const subscriptions = await IAPUserSubscription.find(query)
+      const subscriptions = await UserSubscription.find(query)
         .sort({ createdAt: -1 })
         .limit(limit)
         .skip(offset)
@@ -259,10 +278,10 @@ class IAPService {
       };
 
       if (userType) {
-        query.userType = userType;
+        query.type = userType; // Use 'type' field as per UserSubscription schema
       }
 
-      const subscriptions = await IAPUserSubscription.find(query)
+      const subscriptions = await UserSubscription.find(query)
         .populate('subscriptionId')
         .sort({ createdAt: -1 });
 
@@ -328,7 +347,7 @@ class IAPService {
   static async handleSubscriptionRenewal(receiptInfo) {
     try {
       const transactionId = receiptInfo.original_transaction_id;
-      const subscription = await IAPUserSubscription.findOne({ transactionId });
+      const subscription = await UserSubscription.findOne({ transactionId });
 
       if (subscription) {
         subscription.status = 'active';
@@ -348,7 +367,7 @@ class IAPService {
   static async handleRenewalFailure(receiptInfo) {
     try {
       const transactionId = receiptInfo.original_transaction_id;
-      const subscription = await IAPUserSubscription.findOne({ transactionId });
+      const subscription = await UserSubscription.findOne({ transactionId });
 
       if (subscription) {
         subscription.status = 'expired';
@@ -367,7 +386,7 @@ class IAPService {
   static async handleSubscriptionCancellation(receiptInfo) {
     try {
       const transactionId = receiptInfo.original_transaction_id;
-      const subscription = await IAPUserSubscription.findOne({ transactionId });
+      const subscription = await UserSubscription.findOne({ transactionId });
 
       if (subscription) {
         subscription.status = 'cancelled';
@@ -394,14 +413,15 @@ class IAPService {
         userType
       } = filters;
 
-      let query = { paymentMethod: 'Apple IAP' };
+      // Note: We store IAP info in metadata, so query by metadata
+      let query = { 'metadata.paymentMethod': 'Apple IAP' };
       
       if (status) {
         query.status = status;
       }
 
       if (userType) {
-        query.userType = userType;
+        query.type = userType; // Use 'type' field as per UserSubscription schema
       }
       
       if (dateFrom || dateTo) {
@@ -410,7 +430,7 @@ class IAPService {
         if (dateTo) query.createdAt.$lte = new Date(dateTo);
       }
 
-      const subscriptions = await IAPUserSubscription.find(query);
+      const subscriptions = await UserSubscription.find(query);
 
       const report = {
         totalTransactions: subscriptions.length,
@@ -419,8 +439,8 @@ class IAPService {
         expiredSubscriptions: subscriptions.filter(sub => sub.status === 'expired').length,
         cancelledSubscriptions: subscriptions.filter(sub => sub.status === 'cancelled').length,
         byUserType: {
-          employee: subscriptions.filter(sub => sub.userType === 'employee').length,
-          employer: subscriptions.filter(sub => sub.userType === 'employer').length
+          employee: subscriptions.filter(sub => sub.type === 'employee').length,
+          employer: subscriptions.filter(sub => sub.type === 'employer').length
         },
         byStatus: subscriptions.reduce((acc, sub) => {
           acc[sub.status] = (acc[sub.status] || 0) + 1;
