@@ -1226,96 +1226,7 @@ async makEverifyUnverify(req,res){
 
       console.log('Activating subscription:', req.body);
 
-      // Check if this is an IAP purchase
-      const isIAPPurchase = paymentMethod === 'Apple IAP' || iapReceipt || iapProductId;
-      
-      if (isIAPPurchase) {
-        console.log('Processing IAP purchase');
-        // For IAP purchases, use the dedicated IAP model
-        const IAPUserSubscription = require('../../Model/userSubscription');
-        
-        // Validate required fields for IAP
-        if (!userId || !transactionId || !planName) {
-          return res.status(400).json({
-            success: false,
-            message: 'Missing required fields for IAP: userId, transactionId, planName'
-          });
-        }
-
-        // Check if transaction already exists
-        const existingSubscription = await IAPUserSubscription.findOne({ transactionId });
-        if (existingSubscription) {
-          console.log('IAP transaction already processed:', transactionId);
-          return res.status(200).json({
-            success: true,
-            message: 'Transaction already processed',
-            data: existingSubscription
-          });
-        }
-
-        // Parse and validate dates
-        const parsedStartDate = req.body.startDate ? new Date(req.body.startDate) : new Date();
-        const parsedEndDate = req.body.endDate ? new Date(req.body.endDate) : null;
-
-        // Validate dates
-        if (isNaN(parsedStartDate.getTime())) {
-          return res.status(400).json({
-            success: false,
-            message: 'Invalid start date format'
-          });
-        }
-
-        if (parsedEndDate && isNaN(parsedEndDate.getTime())) {
-          return res.status(400).json({
-            success: false,
-            message: 'Invalid end date format'
-          });
-        }
-
-        // Create IAP subscription record
-        const subscriptionData = {
-          userId: userId,
-          subscriptionId: subscriptionId || null,
-          transactionId,
-          amount: Number(amount) || 0,
-          status: req.body.status || 'active',
-          startDate: parsedStartDate,
-          endDate: parsedEndDate, // Use provided endDate from client
-          paymentMethod: 'Apple IAP',
-          planName: planName.trim(),
-          serviceType: serviceType || 'job_portal_subscription',
-          serviceDescription: serviceDescription || 'Premium subscription features',
-          userType: providedUserType || 'employee',
-          iapReceipt,
-          iapProductId,
-          // Add metadata for better tracking
-          metadata: {
-            source: 'IAP',
-            platform: 'iOS',
-            activatedAt: new Date(),
-            originalAmount: amount,
-            duration: req.body.duration || 'monthly'
-          }
-        };
-
-        console.log('Creating IAP subscription with data:', {
-          ...subscriptionData,
-          iapReceipt: iapReceipt ? '[RECEIPT_DATA]' : null
-        });
-
-        const newSubscription = await IAPUserSubscription.create(subscriptionData);
-
-        console.log('IAP subscription activated successfully:', newSubscription._id);
-
-        return res.json({
-          success: true,
-          message: 'Subscription activated successfully',
-          data: newSubscription
-        });
-      }
-
-      // Regular (non-IAP) subscription processing continues below
-      // Validate required fields - subscriptionId is not always required, we can find it
+      // Validate required fields
       if (!userId) {
         return res.status(400).json({
           success: false,
@@ -1323,10 +1234,14 @@ async makEverifyUnverify(req,res){
         });
       }
 
-      // Validate user exists - check both employee and employer schemas
-      console.log('Looking for user with ID:', userId);
-      
-      // Validate ObjectId format first
+      if (!transactionId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required field: transactionId'
+        });
+      }
+
+      // Validate ObjectId format
       if (!mongoose.Types.ObjectId.isValid(userId)) {
         console.error('Invalid user ID format:', userId);
         return res.status(400).json({
@@ -1334,8 +1249,24 @@ async makEverifyUnverify(req,res){
           error: 'Invalid user ID format'
         });
       }
+
+      // Use unified UserSubscription model for both IAP and PhonePe
+      const UserSubscription = require('../../Model/User/userSubscription');
       
-      // Try to find user in employee schema first
+      // Check if transaction already exists to prevent duplicates
+      const existingSubscription = await UserSubscription.findOne({ transactionId });
+      if (existingSubscription) {
+        console.log('Transaction already processed:', transactionId);
+        return res.status(200).json({
+          success: true,
+          message: 'Transaction already processed',
+          data: existingSubscription
+        });
+      }
+
+      // Validate user exists - check both employee and employer schemas
+      console.log('Looking for user with ID:', userId);
+      
       let user = await userModel.findById(userId);
       let userType = 'employee';
       let userSchema = 'user';
@@ -1360,7 +1291,7 @@ async makEverifyUnverify(req,res){
         console.log(`Total employees in database: ${userCount}`);
         console.log(`Total employers in database: ${employerCount}`);
         
-        // Check if user exists but is marked as deleted in either schema
+        // Check if user exists but is marked as deleted
         const deletedEmployee = await userModel.findOne({ _id: userId, isDelete: true });
         const deletedEmployer = await EmployerModel.findOne({ _id: userId, isDelete: true });
         
@@ -1396,8 +1327,6 @@ async makEverifyUnverify(req,res){
       
       // If no subscription found by ID or no ID provided, try to find by planName
       if (!subscription && planName) {
-        // Use the userType we already determined from schema lookup
-        
         subscription = await Subscription.findOne({
           $or: [
             { name: planName, type: userType },
@@ -1418,8 +1347,6 @@ async makEverifyUnverify(req,res){
       
       // If still no subscription found, get default for user type
       if (!subscription) {
-        // Use the userType we already determined from schema lookup
-        
         subscription = await Subscription.findOne({ 
           type: userType,
           isDefault: true 
@@ -1441,8 +1368,6 @@ async makEverifyUnverify(req,res){
       }
 
       // Check if subscription type matches user type
-      // We already have the correct userType from schema detection above
-
       if (subscription.type !== userType) {
         return res.status(400).json({
           success: false,
@@ -1451,7 +1376,6 @@ async makEverifyUnverify(req,res){
       }
 
       // Deactivate any existing active subscriptions of the same type
-      const UserSubscription = require('../../Model/User/userSubscription');
       await UserSubscription.updateMany(
         {
           userId,
@@ -1465,9 +1389,28 @@ async makEverifyUnverify(req,res){
         }
       );
 
-      // Calculate end date based on subscription duration
-      const startDate = new Date();
-      const endDate = calculateSubscriptionEndDate(startDate, subscription.duration);
+      // Parse and validate dates
+      const parsedStartDate = req.body.startDate ? new Date(req.body.startDate) : new Date();
+      const parsedEndDate = req.body.endDate ? new Date(req.body.endDate) : null;
+
+      // Validate dates
+      if (isNaN(parsedStartDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid start date format'
+        });
+      }
+
+      if (parsedEndDate && isNaN(parsedEndDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid end date format'
+        });
+      }
+
+      // Calculate end date if not provided
+      const startDate = parsedStartDate;
+      const endDate = parsedEndDate || calculateSubscriptionEndDate(startDate, subscription.duration);
       
       console.log('Creating subscription with:', {
         userId,
@@ -1475,26 +1418,46 @@ async makEverifyUnverify(req,res){
         planName: planName || subscription.displayName,
         type: subscription.type,
         amount: amount || subscription.price,
+        paymentMethod,
         startDate,
         endDate,
         duration: subscription.duration
       });
 
-      // Create new user subscription with calculated endDate
+      // Prepare unified subscription data for both IAP and PhonePe
+      const subscriptionData = {
+        userId: userId,
+        subscriptionId: subscription._id,
+        transactionId,
+        amount: Number(amount) || subscription.price,
+        status: req.body.status || 'active',
+        startDate: startDate,
+        endDate: endDate,
+        paymentMethod: paymentMethod,
+        planName: (planName || subscription.displayName).trim(),
+        type: subscription.type,
+        serviceType: serviceType || 'job_portal_subscription',
+        serviceDescription: serviceDescription || 'Premium subscription features',
+        userType: userType,
+        features: subscription.features
+      };
+
+      // Add IAP-specific fields if present
+      if (paymentMethod === 'Apple IAP' || iapReceipt || iapProductId) {
+        subscriptionData.iapReceipt = iapReceipt;
+        subscriptionData.iapProductId = iapProductId;
+        subscriptionData.metadata = {
+          source: 'IAP',
+          platform: 'iOS',
+          activatedAt: new Date(),
+          originalAmount: amount,
+          duration: req.body.duration || subscription.duration
+        };
+      }
+
+      // Create new user subscription - unified for both payment methods
       try {
-        const userSubscription = await UserSubscription.create({
-          userId,
-          subscriptionId: subscription._id,
-          planName: planName || subscription.displayName,
-          type: subscription.type,
-          amount: amount || subscription.price,
-          paymentMethod,
-          transactionId,
-          status: 'active',
-          startDate: startDate,
-          endDate: endDate,
-          features: subscription.features
-        });
+        const userSubscription = await UserSubscription.create(subscriptionData);
 
         console.log('Subscription activated successfully:', userSubscription._id);
 
@@ -1507,7 +1470,8 @@ async makEverifyUnverify(req,res){
             type: userSubscription.type,
             status: userSubscription.status,
             startDate: userSubscription.startDate,
-            endDate: userSubscription.endDate
+            endDate: userSubscription.endDate,
+            paymentMethod: userSubscription.paymentMethod
           }
         });
         
