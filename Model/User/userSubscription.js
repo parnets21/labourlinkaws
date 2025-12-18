@@ -10,7 +10,7 @@ const userSubscriptionSchema = new mongoose.Schema({
   subscriptionId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Subscription',
-    required: [true, 'Subscription ID is required']
+    required: false // Not always required (e.g., for some IAP purchases)
   },
   planName: {
     type: String,
@@ -47,7 +47,7 @@ const userSubscriptionSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['PhonePe', 'Free', 'Razorpay', 'Stripe', 'Manual'],
+    enum: ['PhonePe', 'Free', 'Razorpay', 'Stripe', 'Manual', 'Apple IAP'],
     required: [true, 'Payment method is required']
   },
   transactionId: {
@@ -57,6 +57,27 @@ const userSubscriptionSchema = new mongoose.Schema({
   features: {
     type: mongoose.Schema.Types.Mixed,
     description: 'Subscription features available to the user'
+  },
+  // IAP-specific fields
+  iapReceipt: {
+    type: String,
+    description: 'Apple IAP receipt data'
+  },
+  iapProductId: {
+    type: String,
+    description: 'Apple IAP product identifier'
+  },
+  serviceType: {
+    type: String,
+    description: 'Type of service subscription'
+  },
+  serviceDescription: {
+    type: String,
+    description: 'Description of the service'
+  },
+  userType: {
+    type: String,
+    description: 'User type for the subscription'
   },
   autoRenew: {
     type: Boolean,
@@ -89,6 +110,7 @@ userSubscriptionSchema.index({ userId: 1, status: 1 });
 userSubscriptionSchema.index({ subscriptionId: 1 });
 userSubscriptionSchema.index({ endDate: 1, status: 1 });
 userSubscriptionSchema.index({ userId: 1, type: 1, status: 1 });
+userSubscriptionSchema.index({ transactionId: 1 }, { unique: true, sparse: true }); // Unique transaction IDs
 
 // Virtual for checking if subscription is currently active
 userSubscriptionSchema.virtual('isCurrentlyActive').get(function() {
