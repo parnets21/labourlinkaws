@@ -110,7 +110,8 @@ userSubscriptionSchema.index({ userId: 1, status: 1 });
 userSubscriptionSchema.index({ subscriptionId: 1 });
 userSubscriptionSchema.index({ endDate: 1, status: 1 });
 userSubscriptionSchema.index({ userId: 1, type: 1, status: 1 });
-userSubscriptionSchema.index({ transactionId: 1 }, { unique: true, sparse: true }); // Unique transaction IDs
+userSubscriptionSchema.index({ transactionId: 1 }); // Index for fast transaction lookups
+userSubscriptionSchema.index({ userId: 1, transactionId: 1 }, { unique: true, sparse: true }); // Unique per user
 
 // Virtual for checking if subscription is currently active
 userSubscriptionSchema.virtual('isCurrentlyActive').get(function() {

@@ -1253,10 +1253,14 @@ async makEverifyUnverify(req,res){
       // Use unified UserSubscription model for both IAP and PhonePe
       const UserSubscription = require('../../Model/User/userSubscription');
       
-      // Check if transaction already exists to prevent duplicates
-      const existingSubscription = await UserSubscription.findOne({ transactionId });
+      // Check if transaction already exists for THIS USER to prevent duplicates
+      // This allows multiple users on the same device to have different subscriptions
+      const existingSubscription = await UserSubscription.findOne({ 
+        userId, 
+        transactionId 
+      });
       if (existingSubscription) {
-        console.log('Transaction already processed:', transactionId);
+        console.log('Transaction already processed for this user:', transactionId, userId);
         return res.status(200).json({
           success: true,
           message: 'Transaction already processed',
