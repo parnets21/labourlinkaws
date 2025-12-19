@@ -46,7 +46,11 @@ class SubscriptionValidationService {
       console.log('Active Subscription Found:', !!activeSubscription);
       if (activeSubscription) {
         console.log('Plan Name:', activeSubscription.planName);
-        console.log('Subscription Features:', JSON.stringify(activeSubscription.features, null, 2));
+        console.log('Has subscriptionId:', !!activeSubscription.subscriptionId);
+        if (activeSubscription.subscriptionId) {
+          console.log('Subscription Features from Plan:', JSON.stringify(activeSubscription.subscriptionId.features, null, 2));
+        }
+        console.log('Direct features on UserSubscription:', JSON.stringify(activeSubscription.features, null, 2));
       }
       console.log('--------------------------');
 

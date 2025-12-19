@@ -37,6 +37,7 @@ const validateSubscription = (requiredAction, options = {}) => {
       const validation = await SubscriptionValidationService.validateAction(userId, requiredAction, currentUsage);
 
       if (!validation.allowed) {
+        console.log(`❌ Subscription validation failed for user ${userId}, action ${requiredAction}:`, validation.reason);
         const statusCode = validation.upgradeRequired ? 402 : 403; // 402 Payment Required for upgrade needed
 
         return res.status(statusCode).json({
