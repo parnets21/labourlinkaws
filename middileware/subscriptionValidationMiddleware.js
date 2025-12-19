@@ -9,8 +9,23 @@ const validateSubscription = (requiredAction, options = {}) => {
   return async (req, res, next) => {
     try {
       // Extract user ID from various sources
-      let userId = req.user?.id || req.user?._id || req.body.userId || req.body.employerId || req.query.employerId || req.query.userId || req.query.id || req.params.userId || req.params.id;
-      // Support alternate field names per action (e.g., applicant for apply_job)
+      let userId = req.headers['x-user-id'] ||
+        req.user?.id ||
+        req.user?._id ||
+        req.body.userId ||
+        req.body.employerId ||
+        req.query.employerId ||
+        req.query.userId ||
+        req.query.id ||
+        req.params.userId ||
+        req.params.id;
+
+      if (!userId) {
+        console.log(`⚠️ No userId found in request for action: ${requiredAction}`);
+        console.log('Query params:', req.query);
+        console.log('Body params:', req.body ? Object.keys(req.body) : 'none');
+        console.log('Params:', req.params);
+      }
       if (!userId && requiredAction === 'apply_job') {
         userId = req.body.applicant || req.body.userId;
       }
