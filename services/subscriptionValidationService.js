@@ -67,8 +67,8 @@ class SubscriptionValidationService {
         subscriptionType: activeSubscription.userType || userType,
         subscriptionId: activeSubscription._id,
         planName: activeSubscription.planName,
-        features: activeSubscription.features || this.getFreeFeatures(activeSubscription.userType || userType),
-        limits: this.extractLimits(activeSubscription.features || this.getFreeFeatures(activeSubscription.userType || userType)),
+        features: activeSubscription.features || activeSubscription.subscriptionId?.features || this.getFreeFeatures(activeSubscription.userType || userType),
+        limits: this.extractLimits(activeSubscription.features || activeSubscription.subscriptionId?.features || this.getFreeFeatures(activeSubscription.userType || userType)),
         startDate: activeSubscription.startDate,
         endDate: activeSubscription.endDate,
         isExpiringSoon: this.isExpiringSoon(activeSubscription.endDate)

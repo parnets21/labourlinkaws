@@ -9,12 +9,12 @@ const validateSubscription = (requiredAction, options = {}) => {
   return async (req, res, next) => {
     try {
       // Extract user ID from various sources
-      let userId = req.user?.id || req.user?._id || req.body.userId || req.params.userId || req.query.userId || req.params.id;
+      let userId = req.user?.id || req.user?._id || req.body.userId || req.body.employerId || req.params.userId || req.query.userId || req.params.id;
       // Support alternate field names per action (e.g., applicant for apply_job)
       if (!userId && requiredAction === 'apply_job') {
         userId = req.body.applicant || req.body.userId;
       }
-      
+
       if (!userId) {
         return res.status(401).json({
           success: false,
@@ -35,10 +35,10 @@ const validateSubscription = (requiredAction, options = {}) => {
 
       // Validate the action
       const validation = await SubscriptionValidationService.validateAction(userId, requiredAction, currentUsage);
-      
+
       if (!validation.allowed) {
         const statusCode = validation.upgradeRequired ? 402 : 403; // 402 Payment Required for upgrade needed
-        
+
         return res.status(statusCode).json({
           success: false,
           error: validation.reason,
@@ -53,7 +53,7 @@ const validateSubscription = (requiredAction, options = {}) => {
       // Attach subscription info to request for use in controllers
       req.userSubscription = validation.subscription;
       req.remainingUsage = validation.remainingUsage;
-      
+
       next();
 
     } catch (error) {
@@ -73,7 +73,7 @@ const validateSubscription = (requiredAction, options = {}) => {
 const requireActiveSubscription = async (req, res, next) => {
   try {
     const userId = req.user?.id || req.user?._id || req.body.userId || req.params.userId;
-    
+
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -82,7 +82,7 @@ const requireActiveSubscription = async (req, res, next) => {
     }
 
     const subscription = await SubscriptionValidationService.getUserActiveSubscription(userId);
-    
+
     if (!subscription.hasActiveSubscription) {
       return res.status(402).json({
         success: false,
@@ -112,7 +112,7 @@ const requireFeature = (featureName) => {
   return async (req, res, next) => {
     try {
       const userId = req.user?.id || req.user?._id || req.body.userId || req.params.userId;
-      
+
       if (!userId) {
         return res.status(401).json({
           success: false,
@@ -122,7 +122,7 @@ const requireFeature = (featureName) => {
 
       const subscription = await SubscriptionValidationService.getUserActiveSubscription(userId);
       const hasFeature = subscription.features[featureName];
-      
+
       if (!hasFeature) {
         return res.status(402).json({
           success: false,
@@ -152,12 +152,12 @@ const requireFeature = (featureName) => {
 const attachSubscriptionInfo = async (req, res, next) => {
   try {
     const userId = req.user?.id || req.user?._id || req.body.userId || req.params.userId;
-    
+
     if (userId) {
       const subscription = await SubscriptionValidationService.getUserActiveSubscription(userId);
       req.userSubscription = subscription;
     }
-    
+
     next();
 
   } catch (error) {
