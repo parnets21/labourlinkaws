@@ -752,7 +752,7 @@ class company {
       // should not be subject to search limits.
 
       let findData = await applyModel
-        .find({ companyId: jobId }) // Ensure conversion
+        .find({ companyId: jobId, isDelete: false }) // Ensure only non-deleted are returned
         .sort({ _id: -1 })
         .populate("userId");
 
@@ -1075,7 +1075,7 @@ class company {
       let companyId = req.params.companyId
       console.log(companyId, "this is company id")
       const hash = await applyModel
-        .find({ companyId, status: "Selected" })
+        .find({ companyId, status: "Selected", isDelete: false })
         .populate("userId");
       console.log(hash, "this is hash");
 
@@ -1250,7 +1250,7 @@ class company {
 
       // Find all rejected applications for the given company
       let rejectedApplications = await applyModel
-        .find({ companyId: companyId, status: "Rejected" })
+        .find({ companyId: companyId, status: "Rejected", isDelete: false })
         .populate("userId") // Populate user details
         .populate("companyId"); // Populate company details
       if (!rejectedApplications || rejectedApplications.length === 0) {
