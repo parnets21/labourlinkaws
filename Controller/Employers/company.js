@@ -795,26 +795,8 @@ class company {
       const { jobId } = req.params
       console.log("Received companyId:", jobId, "Type:", typeof jobId);
 
-      // Optional: validate employer candidate search limit if employerId provided
-      try {
-        const employerId = req.query && req.query.employerId;
-        if (employerId) {
-          const SubscriptionValidationService = require("../../services/subscriptionValidationService");
-          const currentUsage = await require("../../services/subscriptionUsageService").getCurrentUsage(employerId, 'daily');
-          const validation = await SubscriptionValidationService.validateAction(employerId, 'search_candidates', currentUsage);
-          if (!validation.allowed) {
-            const statusCode = validation.upgradeRequired ? 402 : 403;
-            return res.status(statusCode).json({
-              success: false,
-              error: validation.reason || 'Usage limit exceeded',
-              upgradeRequired: !!validation.upgradeRequired,
-              remainingUsage: validation.remainingUsage || 0
-            });
-          }
-        }
-      } catch (vErr) {
-        console.log('Warning: candidate search validation failed:', vErr?.message || vErr);
-      }
+      // Removed search_candidates validation. Viewing applications for your own job
+      // should not be subject to search limits.
 
       let findData = await applyModel
         .find({ companyId: jobId }) // Ensure conversion
