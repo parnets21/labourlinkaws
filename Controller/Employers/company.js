@@ -46,26 +46,7 @@ class company {
       } = req.body;
       console.log("📥 Received Request Body:", req.body);
 
-      // Validate employer subscription: enforce post_job limits before creating
-      try {
-        if (!employerId) throw new Error('Missing employerId');
-        const currentUsage = await SubscriptionValidationService.getCurrentUsage(employerId, 'monthly');
-        const validation = await SubscriptionValidationService.validateAction(employerId, 'post_job', currentUsage);
-        if (!validation.allowed) {
-          const statusCode = validation.upgradeRequired ? 402 : 403;
-          return res.status(statusCode).json({
-            success: false,
-            error: validation.reason || 'Usage limit exceeded',
-            message: validation.message || 'You have reached your job posting limit.',
-            remainingUsage: validation.remainingUsage || 0,
-            totalLimit: validation.totalLimit || null,
-            upgradeRequired: !!validation.upgradeRequired
-          });
-        }
-      } catch (limitErr) {
-        console.log('Warning: post_job validation issue:', limitErr?.message || limitErr);
-        // Fail-open: optionally restrict or proceed. Proceeding to avoid blocking due to transient errors.
-      }
+      // Subscription validation is now handled by middleware
 
       let obj = {
         companyName, jobtitle, averageIncentive, openings, address, email, reason,
@@ -754,35 +735,7 @@ class company {
       console.log(jobId, "this is jobid")
       let data = await jobModel.findById(jobId);
       if (!data) return res.status(400).json({ success: "data not found" });
-      // Optional: enforce company views per day when a userId is provided
-      try {
-        const userId = req.query && req.query.userId;
-        if (userId) {
-          const SubscriptionValidationService = require("../../services/subscriptionValidationService");
-          const currentUsage = await require("../../services/subscriptionUsageService").getCurrentUsage(userId, 'daily');
-          const validation = await SubscriptionValidationService.validateAction(userId, 'view_company_details', currentUsage);
-          if (!validation.allowed) {
-            const statusCode = validation.upgradeRequired ? 402 : 403;
-            return res.status(statusCode).json({
-              success: false,
-              error: validation.reason || 'Usage limit exceeded',
-              upgradeRequired: !!validation.upgradeRequired,
-              remainingUsage: validation.remainingUsage || 0
-            });
-          }
-          // Record a company view usage (non-blocking)
-          try {
-            const SubscriptionValidationController = require('../subscriptionValidationController');
-            await SubscriptionValidationController.recordUsage({
-              body: { userId, action: 'view_company_details', metadata: { endpoint: 'getJobById', jobId } }
-            }, { status: () => ({ json: () => { } }) });
-          } catch (recErr) {
-            console.log('Warning: could not record company view usage:', recErr?.message || recErr);
-          }
-        }
-      } catch (vErr) {
-        // fail open
-      }
+      // Subscription validation is now handled by middleware
       return res.status(200).json({ success: data });
     } catch (err) {
       console.log(err);
@@ -914,24 +867,7 @@ class company {
         return res.status(400).json({ success: false, error: 'Invalid userId or companyId format' });
       }
 
-      // Enforce application review limit for employer if provided
-      try {
-        if (employerId) {
-          const currentUsage = await SubscriptionValidationService.getCurrentUsage(employerId, 'daily');
-          const validation = await SubscriptionValidationService.validateAction(employerId, 'application_review', currentUsage);
-          if (!validation.allowed) {
-            const statusCode = validation.upgradeRequired ? 402 : 403;
-            return res.status(statusCode).json({
-              success: false,
-              error: validation.reason || 'Application review limit reached',
-              upgradeRequired: !!validation.upgradeRequired,
-              remainingUsage: validation.remainingUsage || 0
-            });
-          }
-        }
-      } catch (vErr) {
-        console.log('Warning: application_review validation error:', vErr?.message || vErr);
-      }
+      // Subscription validation is now handled by middleware
 
       let data = await applyModel
         .findOne({ userId: mongoose.Types.ObjectId(userId), companyId: mongoose.Types.ObjectId(companyId) })
@@ -1118,6 +1054,17 @@ class company {
     );
     console.log("SMS sent successfully");
 
+    // Record application review usage
+    try {
+      const employerId = req.body.employerId || req.query.employerId;
+      if (employerId) {
+        const SubscriptionUsageService = require("../../services/subscriptionUsageService");
+        await SubscriptionUsageService.recordUsage(String(employerId), 'application_review', { endpoint: 'addSelect', companyId, candidateId: String(userId) });
+      }
+    } catch (recErr) {
+      console.log('Warning: could not record application_review usage:', recErr?.message || recErr);
+    }
+
     return res.status(200).json({ success: "Successfully Selected" });
   }
 
@@ -1240,18 +1187,35 @@ class company {
         .findOne({ userId: mongoose.Types.ObjectId(userId), companyId: mongoose.Types.ObjectId(companyId) })
         .populate("userId")
         .populate("companyId");
-      // if (data.status == "Rejected") {
-      //   return res.status(400).json({ error: "already rejected" });
-      // }
+
+      if (!data) {
+        return res.status(404).json({ success: false, error: "Application not found" });
+      }
+
+      // Use fullName and phone from populated userId
+      const candidateName = data.userId.fullName || data.userId.name || "Candidate";
+      const candidateEmail = data.userId.email;
+      const candidatePhone = data.userId.phone;
+      const jobTitle = data.companyId.jobProfile || data.companyId.jobtitle || "the position";
+      const companyName = data.companyId.CompanyName || "our company";
+
+      // Send Email
       sent.sendMail(
-        data.userId.name,
-        data.userId.email,
-        "This " +
-        data.companyId.CompanyName +
-        " company rejected you for position " +
-        data.companyId.jobProfile +
-        ", thanks for showing your interest." + "<h3>Thank you <br>Labor Link Team</h3>"
+        candidateName,
+        candidateEmail,
+        `This ${companyName} company rejected you for position ${jobTitle}, thanks for showing your interest.<h3>Thank you <br>Labor Link Team</h3>`
       );
+
+      // Send WhatsApp Notification
+      if (candidatePhone) {
+        try {
+          const whatsappMsg = `We regret to inform you that your application for ${jobTitle} at ${companyName} has been rejected. Thank you for your interest.`;
+          await sent.sendRejectedWhatsapp(candidateName, candidatePhone, whatsappMsg);
+        } catch (waErr) {
+          console.log('Warning: WhatsApp rejection notification failed:', waErr.message);
+        }
+      }
+
       await applyModel.findOneAndUpdate({ _id: data._id }, { $set: { status: "Rejected" } })
 
       // Record application review usage

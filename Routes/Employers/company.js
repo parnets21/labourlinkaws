@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const jobController = require("../../Controller/Employers/company");
 const multer = require("multer");
+const { validateSubscription } = require('../../middileware/subscriptionValidationMiddleware');
 
 // Use memory storage for S3 uploads
 const storage = multer.memoryStorage();
@@ -9,8 +10,8 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 // Existing job routes
-router.post("/registerCompany", upload.any(), jobController.register);
-router.get("/GetregisterCompany/:jobId", jobController.registeredjobbyId );
+router.post("/registerCompany", upload.any(), validateSubscription('post_job', { checkUsage: true }), jobController.register);
+router.get("/GetregisterCompany/:jobId", jobController.registeredjobbyId);
 router.put("/editJob", upload.any(), jobController.editJob);
 router.get("/getAllJobs", jobController.getAllJobs);
 
@@ -20,20 +21,18 @@ router.post("/AddSkillJ", jobController.AddSkillJ);
 router.delete('/removeSkillJ/:employerId/:removeId', jobController.removeSkillJ);
 router.post("/AddBenefits", jobController.AddBenefits);
 router.delete('/removeBenefits/:employerId/:removeId', jobController.removeBenefits);
-router.get("/getJobById/:jobId", jobController.getJobById);
+router.get("/getJobById/:jobId", validateSubscription('view_company_details', { checkUsage: true, usagePeriod: 'daily' }), jobController.getJobById);
 router.post("/getJobByfilter", jobController.getJobByfilter);
 router.post("/getJobOfTheDay", jobController.jobOftheDay);
 router.delete("/deleteJob/:jobId", jobController.deleteJob);
 
 // router.get("/getShortList", jobController.addShortList);
 // Apply API routes
-router.post("/addSelect", jobController.addSelect);
-router.get("/getSelectDatas/:companyId", jobController.getSelectData);
-router.get("/getApplyList/:jobId", jobController.getApplyList);
-router.post("/addShortList", jobController.addShortList);
-router.get("/getShortlistingData/:jobId", jobController.getShortlistingData);
-router.post("/rejectApply", jobController.rejectApply);
+router.get("/getApplyList/:jobId", validateSubscription('search_candidates', { checkUsage: true, usagePeriod: 'daily' }), jobController.getApplyList);
+router.post("/addShortList", validateSubscription('application_review', { checkUsage: true, usagePeriod: 'daily' }), jobController.addShortList);
+router.post("/rejectApply", validateSubscription('application_review', { checkUsage: true, usagePeriod: 'daily' }), jobController.rejectApply);
 router.get("/getrejected/:companyId", jobController.getRejectedApplications);
+router.post("/addSelect", validateSubscription('application_review', { checkUsage: true, usagePeriod: 'daily' }), jobController.addSelect);
 
 
 // Job discovery routes
@@ -54,7 +53,7 @@ router.get("/getJobByEmployerId/:employerId", jobController.getJobByEmployerId);
 router.delete("/deleteApply/:applyId", jobController.deleteApply);
 
 // Job Management Routes - POST endpoints
-router.post("/add-company-type", jobController.addCompanyType); 
+router.post("/add-company-type", jobController.addCompanyType);
 router.post("/add-industry", jobController.addIndustry);
 router.post("/add-department", jobController.addDepartment);
 router.post("/add-job-role", jobController.addJobRole);

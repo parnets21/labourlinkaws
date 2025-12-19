@@ -2,37 +2,36 @@ const applyModel = require("../Model/Employers/apply");
 const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 const fs = require('fs').promises;
 const path = require('path');
-const twilio = require('twilio');
-
-const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+const sent = require("../EmailSender/send");
 
 // Get all applications for a job
 exports.getApplyList = async (req, res) => {
     try {
         const { jobId } = req.params;
         console.log("Received jobId:", jobId, "Type:", typeof jobId);
-        
+
         let findData = await applyModel
             .find({ companyId: jobId })
             .sort({ _id: -1 })
             .populate("userId");
-            
+
         if (!findData || findData.length === 0) {
-            return res.status(400).json({ 
-                success: false, 
-                message: "No applications found for this job" 
+            return res.status(200).json({
+                success: true,
+                message: "No applications found for this job",
+                data: []
             });
         }
-        
-        return res.status(200).json({ 
-            success: true, 
-            data: findData 
+
+        return res.status(200).json({
+            success: true,
+            data: findData
         });
     } catch (err) {
         console.error("Server Error:", err);
-        return res.status(500).json({ 
-            success: false, 
-            message: "Internal Server Error" 
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error"
         });
     }
 };
@@ -52,7 +51,7 @@ exports.generateOfferLetter = async (req, res) => {
         // Find the application
         const application = await applyModel
             .findById(applicationId)
-            .populate('userId', 'name email phone');
+            .populate('userId', 'fullName name email phone');
 
         if (!application) {
             return res.status(404).json({
@@ -65,10 +64,10 @@ exports.generateOfferLetter = async (req, res) => {
         const pdfDoc = await PDFDocument.create();
         const page = pdfDoc.addPage();
         const { width, height } = page.getSize();
-        
+
         // Embed fonts with Unicode support
         let boldFont, regularFont;
-        
+
         try {
             // Try to embed a Unicode-supporting font first
             // You can use any TrueType font that supports Unicode
@@ -143,13 +142,13 @@ exports.generateOfferLetter = async (req, res) => {
         ];
 
         contentLines.forEach((line, index) => {
-            const fontSize = line.startsWith('•') ? 10 : 
-                           line === 'OFFER DETAILS:' ? 14 : 12;
+            const fontSize = line.startsWith('•') ? 10 :
+                line === 'OFFER DETAILS:' ? 14 : 12;
             const font = line === 'OFFER DETAILS:' || line.startsWith('Dear') ? boldFont : regularFont;
-            
+
             // Use safeText to ensure compatibility
             const safeLine = safeText(line);
-            
+
             page.drawText(safeLine, {
                 x: 50,
                 y: currentY - (index * lineHeight),
@@ -187,34 +186,51 @@ exports.generateOfferLetter = async (req, res) => {
 
         // Send notifications
         try {
-            // WhatsApp notification
-            if (process.env.TWILIO_WHATSAPP_NUMBER && application.userId.phone) {
-                await twilioClient.messages.create({
-                    from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`,
-                    to: `whatsapp:+91${application.userId.phone}`,
-                    body: `🎉 Congratulations ${application.userId.name}!\n\nYour offer letter for the position of ${position} has been generated.\n\nPlease check your email and respond within 7 days.\n\nBest wishes!`
-                });
+            const candidateName = application.userId.fullName || application.userId.name || "Candidate";
+            const candidateEmail = application.userId.email;
+            const candidatePhone = application.userId.phone;
+            const offerLink = `https://laborlink.co.in/api/offers/download/${applicationId}`; // Use full URL if possible
+
+            // Send Email
+            if (candidateEmail) {
+                await sent.sendMail(
+                    candidateName,
+                    candidateEmail,
+                    `🎉 Congratulations ${candidateName}!<br><br>Your offer letter for the position of <b>${position}</b> at <b>${companyName}</b> has been generated.<br><br>You can download it here: <a href="${offerLink}">Download Offer Letter</a><br><br>Please review and respond within 7 days.<br><br>Best wishes!<br>Labor Link Team`
+                );
             }
 
-            // SMS notification
-            if (process.env.TWILIO_PHONE_NUMBER && application.userId.phone) {
-                await twilioClient.messages.create({
-                    from: process.env.TWILIO_PHONE_NUMBER,
-                    to: `+91${application.userId.phone}`,
-                    body: `Congratulations! Your offer letter for ${position} has been generated. Please check your email. Reply within 7 days.`
+            // Send WhatsApp Notification
+            if (candidatePhone) {
+                const whatsappMsg = `Congratulations ${candidateName}! Your offer letter for ${position} at ${companyName} is ready. View it here: ${offerLink}. Please respond within 7 days.`;
+                await sent.sendSelectedWhatsapp(candidateName, candidatePhone, whatsappMsg);
+            }
+        } catch (notifError) {
+            console.error('Notification error:', notifError);
+            // Don't fail the whole process if notifications fail
+        }
+
+        // Record application review usage
+        try {
+            const employerId = req.body.employerId || req.query.employerId;
+            if (employerId) {
+                const SubscriptionUsageService = require('../services/subscriptionUsageService');
+                await SubscriptionUsageService.recordUsage(String(employerId), 'application_review', {
+                    endpoint: 'generateOfferLetter',
+                    applicationId: req.params.applicationId,
+                    candidateId: String(application.userId._id)
                 });
             }
-        } catch (twilioError) {
-            console.error('Notification error:', twilioError);
-            // Don't fail the whole process if notifications fail
+        } catch (recErr) {
+            console.log('Warning: could not record application_review usage:', recErr?.message || recErr);
         }
 
         res.status(200).json({
             success: true,
-            message: 'Offer letter generated successfully',
+            message: 'Offer letter generated and sent successfully',
             data: {
-                offerLetter: application.offerLetter,
-                downloadUrl: `/offers/${applicationId}.pdf`
+                applicationId: application._id,
+                pdfUrl: `/offers/${application._id}.pdf`
             }
         });
 
@@ -231,10 +247,10 @@ exports.generateOfferLetter = async (req, res) => {
 exports.getOfferLetter = async (req, res) => {
     try {
         const { applicationId } = req.params;
-        
+
         const application = await applyModel
             .findById(applicationId)
-            .populate('userId', 'name email phone')
+            .populate('userId', 'fullName name email phone')
             .select('offerLetter applicationStatus');
 
         if (!application) {
@@ -255,7 +271,7 @@ exports.getOfferLetter = async (req, res) => {
             success: true,
             data: {
                 offerLetter: application.offerLetter,
-                applicantName: application.userId.name,
+                applicantName: application.userId.fullName || application.userId.name,
                 applicationStatus: application.applicationStatus
             }
         });
@@ -274,10 +290,10 @@ exports.respondToOffer = async (req, res) => {
     try {
         const { applicationId } = req.params;
         const { status, response } = req.body; // status: 'accepted' or 'declined'
-        
+
         const application = await applyModel
             .findById(applicationId)
-            .populate('userId', 'name email phone');
+            .populate('userId', 'fullName name email phone');
 
         if (!application) {
             return res.status(404).json({
@@ -297,7 +313,7 @@ exports.respondToOffer = async (req, res) => {
         application.offerLetter.status = status;
         application.offerLetter.respondedAt = new Date();
         application.offerLetter.response = response;
-        
+
         // Update application status
         if (status === 'accepted') {
             application.applicationStatus = 'hired';
@@ -346,14 +362,14 @@ exports.respondToOffer = async (req, res) => {
 exports.getSelectedCandidates = async (req, res) => {
     try {
         const { jobId } = req.params;
-        
+
         const selectedApplications = await applyModel
-            .find({ 
+            .find({
                 companyId: jobId,
                 applicationStatus: { $in: ['selected', 'hired'] },
                 offerLetter: { $exists: true }
             })
-            .populate('userId', 'name email phone')
+            .populate('userId', 'fullName name email phone')
             .sort({ 'offerLetter.generatedAt': -1 });
 
         res.status(200).json({

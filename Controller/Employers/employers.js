@@ -625,26 +625,7 @@ class Employers {
         });
       }
 
-      // Subscription: enforce employer interview slots per job
-      try {
-        if (employerId && companyObjectId) {
-          const SubscriptionValidationService = require("../../services/subscriptionValidationService");
-          const SubscriptionUsageService = require("../../services/subscriptionUsageService");
-          const currentUsage = await SubscriptionUsageService.getCurrentUsage(employerId, 'daily');
-          const validation = await SubscriptionValidationService.validateAction(employerId, 'interview_schedule_employer', currentUsage, { companyId: String(companyObjectId) });
-          if (!validation.allowed) {
-            const statusCode = validation.upgradeRequired ? 402 : 403;
-            return res.status(statusCode).json({
-              success: false,
-              error: validation.reason || 'Interview slot limit reached',
-              upgradeRequired: !!validation.upgradeRequired,
-              remainingUsage: validation.remainingUsage || 0
-            });
-          }
-        }
-      } catch (vErr) {
-        console.log('Warning: interview_schedule_employer validation error:', vErr?.message || vErr);
-      }
+      // Subscription validation is now handled by middleware
 
       // Create a new interview call
       let newCall = await callModel.create({

@@ -1,40 +1,41 @@
 const express = require("express");
 const router = express.Router();
-const employerController=require("../../Controller/Employers/employers")
+const employerController = require("../../Controller/Employers/employers")
 const multer = require("multer");
+const { validateSubscription } = require('../../middileware/subscriptionValidationMiddleware');
 
 
 const upload = multer();
 router.post("/registerEmployer", employerController.registerEmployer);
-router.put("/UpdateEmployerImg/:userId", upload.single('EmployerImg'),employerController.UpdateEmployerImg);
+router.put("/UpdateEmployerImg/:userId", upload.single('EmployerImg'), employerController.UpdateEmployerImg);
 router.post("/loginEmployer", employerController.login);
-router.get("/employer/:employerId",employerController.getEmployerProfile);
+router.get("/employer/:employerId", employerController.getEmployerProfile);
 router.get("/Postedjobs/:employerId", employerController.getJobsByEmployer);
-router.put("/editProfileEmployer",employerController.editProfile);
-router.post("/AddEducationEmployer",employerController.AddEducation);
-router.delete("/removeEducationEmployer/:userId/:removeId",employerController.removeEducation);
-router.get("/getAllProfileEmployer",employerController.getAllProfile);
+router.put("/editProfileEmployer", employerController.editProfile);
+router.post("/AddEducationEmployer", employerController.AddEducation);
+router.delete("/removeEducationEmployer/:userId/:removeId", employerController.removeEducation);
+router.get("/getAllProfileEmployer", employerController.getAllProfile);
 router.patch("/approve-employer/:employerId", employerController.toggleEmployerApproval);
 router.get('/check-approval-status/:userId', employerController.checkApprovalStatus);
 
-router.delete("/deleteProfileEmployer",employerController.deleteProfile);
-router.post("/addWorkExperienceEmployer",employerController.addWorkExperience);
-router.delete("/removeWorkExperienceEmployer/:removeId/:userId",employerController.removeWorkExperience);
-router.get("/getEmployerById/:employerId",employerController.getEmployerById)
-router.post('/getUserByFillter',employerController.getUserByFilter);
-router.delete("/deleteParmanetEmployer/:userId",employerController.deleteParmanet)
+router.delete("/deleteProfileEmployer", employerController.deleteProfile);
+router.post("/addWorkExperienceEmployer", employerController.addWorkExperience);
+router.delete("/removeWorkExperienceEmployer/:removeId/:userId", employerController.removeWorkExperience);
+router.get("/getEmployerById/:employerId", employerController.getEmployerById)
+router.post('/getUserByFillter', employerController.getUserByFilter);
+router.delete("/deleteParmanetEmployer/:userId", employerController.deleteParmanet)
 
 
 //apply form for company
-router.post("/makeBlockUnBlockEmployer",employerController.makeBlockUnBlock)
+router.post("/makeBlockUnBlockEmployer", employerController.makeBlockUnBlock)
 
-router.post("/callinterview",employerController.callinterview)
-router.get("/getAlllScheduledInterviews",employerController.getAllScheduledInterviews)
-router.get("/getcallinterview/:employerId/:companyId",employerController.getcallinterview);
+router.post("/callinterview", validateSubscription('interview_schedule_employer', { checkUsage: true, usagePeriod: 'daily' }), employerController.callinterview)
+router.get("/getAlllScheduledInterviews", employerController.getAllScheduledInterviews)
+router.get("/getcallinterview/:employerId/:companyId", employerController.getcallinterview);
 router.put('/updateInterviewStatus/:interviewId', employerController.updateInterviewStatus);
-router.post("/MakeIntrestedUser",employerController.MakeIntrestedUser);
-router.get("/getInterestedUser/:employerId",employerController.getInterestedUser);
-router.delete("/deleteIntrestById/:intrestId",employerController.deleteIntrestById);
-router.post("/emaployerForgetPWD",employerController.postmail);
-router.post("/checkApproval",employerController.makEverifyUnverify)
+router.post("/MakeIntrestedUser", employerController.MakeIntrestedUser);
+router.get("/getInterestedUser/:employerId", employerController.getInterestedUser);
+router.delete("/deleteIntrestById/:intrestId", employerController.deleteIntrestById);
+router.post("/emaployerForgetPWD", employerController.postmail);
+router.post("/checkApproval", employerController.makEverifyUnverify)
 module.exports = router;

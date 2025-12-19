@@ -2,6 +2,7 @@ const UserSubscription = require('../Model/userSubscription');
 const Subscription = require('../Model/subscription');
 const userModel = require('../Model/User/user');
 const EmployerModel = require('../Model/Employers/employers');
+const mongoose = require('mongoose');
 
 class SubscriptionValidationService {
 
@@ -38,6 +39,16 @@ class SubscriptionValidationService {
           { endDate: null } // For lifetime subscriptions
         ]
       }).populate('subscriptionId').lean();
+
+      console.log('--- Subscription Debug ---');
+      console.log('User ID:', userId);
+      console.log('User Type Found:', userType);
+      console.log('Active Subscription Found:', !!activeSubscription);
+      if (activeSubscription) {
+        console.log('Plan Name:', activeSubscription.planName);
+        console.log('Subscription Features:', JSON.stringify(activeSubscription.features, null, 2));
+      }
+      console.log('--------------------------');
 
       if (!activeSubscription) {
         return {
@@ -348,14 +359,14 @@ class SubscriptionValidationService {
       try {
         const Apply = require('../Model/Employers/apply');
         usage.jobApplicationsPerMonth = await Apply.countDocuments({
-          userId: typeof userId === 'string' ? require('mongoose').Types.ObjectId(userId) : userId,
+          userId: mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : userId,
           createdAt: { $gte: startDate }
         });
 
         // Also compute today's applications for daily limit enforcement
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         usage.jobApplicationsPerDay = await Apply.countDocuments({
-          userId: typeof userId === 'string' ? require('mongoose').Types.ObjectId(userId) : userId,
+          userId: mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : userId,
           createdAt: { $gte: todayStart }
         });
       } catch (err1) {
@@ -363,12 +374,12 @@ class SubscriptionValidationService {
           // Fallback to User/JobApplication if available (fields: applicant)
           const JobApplication = require('../Model/User/JobApplication');
           usage.jobApplicationsPerMonth = await JobApplication.countDocuments({
-            applicant: typeof userId === 'string' ? require('mongoose').Types.ObjectId(userId) : userId,
+            applicant: mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : userId,
             createdAt: { $gte: startDate }
           });
           const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
           usage.jobApplicationsPerDay = await JobApplication.countDocuments({
-            applicant: typeof userId === 'string' ? require('mongoose').Types.ObjectId(userId) : userId,
+            applicant: mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : userId,
             createdAt: { $gte: todayStart }
           });
         } catch (err2) {
@@ -382,14 +393,14 @@ class SubscriptionValidationService {
         // Count employer active jobs (new schema uses 'employer')
         const Job = require('../Model/User/Job');
         usage.activeJobPosts = await Job.countDocuments({
-          employer: typeof userId === 'string' ? require('mongoose').Types.ObjectId(userId) : userId,
+          employer: mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : userId,
           status: 'active'
         });
         // If zero in new model, also check legacy collection and use the higher count
         try {
           const LegacyCompanyJob = require('../Model/Employers/company');
           const legacyCount = await LegacyCompanyJob.countDocuments({
-            employerId: typeof userId === 'string' ? require('mongoose').Types.ObjectId(userId) : userId,
+            employerId: mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : userId,
             isDelete: false
           });
           if (typeof legacyCount === 'number' && legacyCount > usage.activeJobPosts) {
@@ -401,7 +412,7 @@ class SubscriptionValidationService {
         try {
           const LegacyCompanyJob = require('../Model/Employers/company');
           usage.activeJobPosts = await LegacyCompanyJob.countDocuments({
-            employerId: typeof userId === 'string' ? require('mongoose').Types.ObjectId(userId) : userId,
+            employerId: mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : userId,
             isDelete: false
           });
         } catch (e2) {
@@ -422,7 +433,7 @@ class SubscriptionValidationService {
         const searchRecords = await UsageRecord.aggregate([
           {
             $match: {
-              userId: typeof userId === 'string' ? require('mongoose').Types.ObjectId(userId) : userId,
+              userId: mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : userId,
               usageKey: 'jobSearchPerDay',
               date: { $gte: todayStart, $lte: now }
             }
@@ -441,15 +452,22 @@ class SubscriptionValidationService {
         ]);
         usage.candidateViewsPerDay = (candViewRecords && candViewRecords[0] && candViewRecords[0].total) || 0;
         const reviewRecords = await UsageRecord.aggregate([
-          { $match: { userId: typeof userId === 'string' ? require('mongoose').Types.ObjectId(userId) : userId, usageKey: 'applicationReviewsPerDay', date: { $gte: todayStart, $lte: now } } },
+          { $match: { userId: mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : userId, usageKey: 'applicationReviewsPerDay', date: { $gte: todayStart, $lte: now } } },
           { $group: { _id: null, total: { $sum: '$count' } } }
         ]);
         usage.applicationReviewsPerDay = (reviewRecords && reviewRecords[0] && reviewRecords[0].total) || 0;
+
+        const interviewRecords = await UsageRecord.aggregate([
+          { $match: { userId: mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : userId, usageKey: 'interviewSlotsPerJob', date: { $gte: todayStart, $lte: now } } },
+          { $group: { _id: null, total: { $sum: '$count' } } }
+        ]);
+        usage.interviewSlotsPerJob = (interviewRecords && interviewRecords[0] && interviewRecords[0].total) || 0;
       } catch (uErr) {
         usage.jobSearchPerDay = 0;
         usage.candidateSearchesPerDay = 0;
         usage.candidateViewsPerDay = 0;
         usage.applicationReviewsPerDay = 0;
+        usage.interviewSlotsPerJob = 0;
       }
 
       return usage;

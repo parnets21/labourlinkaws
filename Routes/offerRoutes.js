@@ -1,5 +1,6 @@
 const express = require('express');
 const offerController = require('../Controller/offerController');
+const { validateSubscription } = require('../middileware/subscriptionValidationMiddleware');
 // const authController = require('../Controller/authController');
 
 const router = express.Router();
@@ -18,6 +19,7 @@ router.get(
 router.post(
     '/generate/:applicationId',
     // authController.restrictTo('employer', 'admin'),
+    validateSubscription('application_review', { checkUsage: true, usagePeriod: 'daily' }),
     offerController.generateOfferLetter
 );
 
@@ -46,16 +48,16 @@ router.get('/download/:applicationId', async (req, res) => {
     try {
         const path = require('path');
         const fs = require('fs').promises;
-        
+
         const filePath = path.join(__dirname, `../public/offers/${req.params.applicationId}.pdf`);
-        
+
         // Check if file exists
         await fs.access(filePath);
-        
+
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="offer-letter-${req.params.applicationId}.pdf"`);
         res.sendFile(filePath);
-        
+
     } catch (error) {
         res.status(404).json({
             success: false,
