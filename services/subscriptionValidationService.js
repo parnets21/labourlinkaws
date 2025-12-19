@@ -243,7 +243,7 @@ class SubscriptionValidationService {
     }
 
     // Check if user type matches action requirement
-    if (actionConfig.userType !== userType) {
+    if (actionConfig.userType && actionConfig.userType !== userType) {
       return {
         allowed: false,
         reason: `This action is only available for ${actionConfig.userType}s`,
