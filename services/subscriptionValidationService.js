@@ -4,7 +4,7 @@ const userModel = require('../Model/User/user');
 const EmployerModel = require('../Model/Employers/employers');
 
 class SubscriptionValidationService {
-  
+
   /**
    * Get user's active subscription with all details
    * @param {String} userId - User ID
@@ -15,7 +15,10 @@ class SubscriptionValidationService {
       // Check if user exists in either schema
       let user = await userModel.findById(userId);
       let userType = 'employee';
-      if (!user) {
+      if (user) {
+        // If found in userModel, use the userType field if it exists
+        userType = user.userType || 'employee';
+      } else {
         user = await EmployerModel.findById(userId);
         if (user) userType = 'employer';
       }
@@ -77,7 +80,7 @@ class SubscriptionValidationService {
     try {
       const subscription = await this.getUserActiveSubscription(userId);
       const validation = this.checkActionPermission(subscription, action, currentUsage);
-      
+
       return {
         allowed: validation.allowed,
         reason: validation.reason,
@@ -163,7 +166,7 @@ class SubscriptionValidationService {
         userType: 'employee',
         featureKey: 'enableInterviews'
       },
-      
+
       // Employer actions
       'post_job': {
         limitKey: 'activeJobPosts',
@@ -213,7 +216,7 @@ class SubscriptionValidationService {
     };
 
     const actionConfig = actionMappings[action];
-    
+
     if (!actionConfig) {
       return {
         allowed: false,
@@ -316,10 +319,10 @@ class SubscriptionValidationService {
     try {
       // This would typically query various collections to get usage stats
       // For now, returning mock data - you'll need to implement based on your data structure
-      
+
       const now = new Date();
       let startDate;
-      
+
       switch (period) {
         case 'daily':
           startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -378,9 +381,9 @@ class SubscriptionValidationService {
       try {
         // Count employer active jobs (new schema uses 'employer')
         const Job = require('../Model/User/Job');
-        usage.activeJobPosts = await Job.countDocuments({ 
-          employer: typeof userId === 'string' ? require('mongoose').Types.ObjectId(userId) : userId, 
-          status: 'active' 
+        usage.activeJobPosts = await Job.countDocuments({
+          employer: typeof userId === 'string' ? require('mongoose').Types.ObjectId(userId) : userId,
+          status: 'active'
         });
         // If zero in new model, also check legacy collection and use the higher count
         try {
@@ -392,12 +395,12 @@ class SubscriptionValidationService {
           if (typeof legacyCount === 'number' && legacyCount > usage.activeJobPosts) {
             usage.activeJobPosts = legacyCount;
           }
-        } catch {}
+        } catch { }
       } catch (error) {
         // Fallback: legacy schema `Model/Employers/company`
         try {
           const LegacyCompanyJob = require('../Model/Employers/company');
-          usage.activeJobPosts = await LegacyCompanyJob.countDocuments({ 
+          usage.activeJobPosts = await LegacyCompanyJob.countDocuments({
             employerId: typeof userId === 'string' ? require('mongoose').Types.ObjectId(userId) : userId,
             isDelete: false
           });
@@ -464,7 +467,7 @@ class SubscriptionValidationService {
    */
   static extractLimits(features) {
     const limits = {};
-    
+
     // Extract numeric limits
     Object.keys(features).forEach(key => {
       if (typeof features[key] === 'number') {
@@ -541,10 +544,10 @@ class SubscriptionValidationService {
    */
   static isExpiringSoon(endDate) {
     if (!endDate) return false;
-    
+
     const now = new Date();
     const sevenDaysFromNow = new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000));
-    
+
     return endDate <= sevenDaysFromNow;
   }
 
@@ -557,9 +560,9 @@ class SubscriptionValidationService {
   static async getRecommendations(userId, desiredFeatures = {}) {
     try {
       const currentSubscription = await this.getUserActiveSubscription(userId);
-      const allSubscriptions = await Subscription.find({ 
+      const allSubscriptions = await Subscription.find({
         type: currentSubscription.userType,
-        isActive: true 
+        isActive: true
       }).lean();
 
       const recommendations = allSubscriptions
@@ -588,16 +591,16 @@ class SubscriptionValidationService {
   static meetsDesiredFeatures(subscriptionFeatures, desiredFeatures) {
     for (const [feature, requirement] of Object.entries(desiredFeatures)) {
       const subFeature = subscriptionFeatures[feature];
-      
+
       if (typeof requirement === 'boolean' && !subFeature) {
         return false;
       }
-      
+
       if (typeof requirement === 'number' && (!subFeature || subFeature < requirement)) {
         return false;
       }
     }
-    
+
     return true;
   }
 
@@ -611,7 +614,7 @@ class SubscriptionValidationService {
     // Simple upgrade check - you can make this more sophisticated
     const currentScore = this.calculateFeatureScore(currentFeatures);
     const newScore = this.calculateFeatureScore(newFeatures);
-    
+
     return newScore > currentScore;
   }
 
@@ -622,12 +625,12 @@ class SubscriptionValidationService {
    */
   static calculateFeatureScore(features) {
     let score = 0;
-    
+
     Object.values(features).forEach(value => {
       if (typeof value === 'boolean' && value) score += 1;
       if (typeof value === 'number') score += value * 0.1;
     });
-    
+
     return score;
   }
 
@@ -639,20 +642,20 @@ class SubscriptionValidationService {
    */
   static calculateMatchScore(subscriptionFeatures, desiredFeatures) {
     if (Object.keys(desiredFeatures).length === 0) return 50;
-    
+
     let matches = 0;
     const totalDesired = Object.keys(desiredFeatures).length;
-    
+
     Object.entries(desiredFeatures).forEach(([feature, requirement]) => {
       const subFeature = subscriptionFeatures[feature];
-      
+
       if (typeof requirement === 'boolean' && subFeature === requirement) {
         matches += 1;
       } else if (typeof requirement === 'number' && subFeature >= requirement) {
         matches += 1;
       }
     });
-    
+
     return Math.round((matches / totalDesired) * 100);
   }
 
@@ -692,11 +695,11 @@ class SubscriptionValidationService {
 
       // Define usage tracking keys based on action
       const usageKeys = this.getUsageKeys(action);
-      
+
       // Update usage counts
       const updatePromises = usageKeys.map(async (key) => {
         const UsageRecord = require('../Model/usageRecord');
-        
+
         // Use upsert to create or update usage record
         await UsageRecord.findOneAndUpdate(
           {

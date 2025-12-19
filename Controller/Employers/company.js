@@ -6,21 +6,21 @@ const selectModel = require("../../Model/Employers/selected");
 const userModel = require("../../Model/User/user");
 const send = require("../../EmailSender/send");
 const sent = require("../../EmailSender/send");
-const {isValid,isValidEmail,phonenumber,validUrl}=require("../../Config/function")
+const { isValid, isValidEmail, phonenumber, validUrl } = require("../../Config/function")
 const CompanyType = require("../../Model/Admin/jobmanagment/CompanyType");
 const Industry = require("../../Model/Admin/jobmanagment/industrymanagment");
-const Department=require("../../Model/Admin/Department")
-const JobRole= require("../../Model/Admin/jobmanagment/JobRole") 
-const WorkMode= require("../../Model/Admin/jobmanagment/WorkMode") 
-const Location= require("../../Model/Admin/comapnaylocation") 
-const Salary= require("../../Model/Admin/jobmanagment/Salary") 
-const Education= require("../../Model/Admin/jobmanagment/education") 
-const ExperienceLevel= require("../../Model/Admin/jobmanagment/ExperienceLevel")
+const Department = require("../../Model/Admin/Department")
+const JobRole = require("../../Model/Admin/jobmanagment/JobRole")
+const WorkMode = require("../../Model/Admin/jobmanagment/WorkMode")
+const Location = require("../../Model/Admin/comapnaylocation")
+const Salary = require("../../Model/Admin/jobmanagment/Salary")
+const Education = require("../../Model/Admin/jobmanagment/education")
+const ExperienceLevel = require("../../Model/Admin/jobmanagment/ExperienceLevel")
 const Skill = require("../../Model/Admin/jobmanagment/Skill");
 const { uploadFile2, deleteFile } = require("../../middileware/aws");
 const Chefs = require("../../Model/Admin/jobmanagment/Chefs");
 const Cuisines = require("../../Model/Admin/jobmanagment/Cuisines");
-const user = require("../../Model/User/user"); 
+const user = require("../../Model/User/user");
 const admin = require("firebase-admin");
 const FCMtoken = require("../../Model/User/FCMtoken");
 const SubscriptionUsageService = require("../../services/subscriptionUsageService");
@@ -28,80 +28,80 @@ const SubscriptionValidationService = require("../../services/subscriptionValida
 
 
 class company {
-  
-async register(req, res) {
-  try {
+
+  async register(req, res) {
+    try {
       console.log("📢 Register API Called");
-      console.log("📝 Request Body:", req.body); 
+      console.log("📝 Request Body:", req.body);
 
       const {
-          companyName, jobtitle, averageIncentive, openings, address, email, skill, benefits,
-          reason, experience, interview, category, typeofqualification, description,
-          typeofjob, typeofwork, typeofeducation, education, experiencerequired,
-          gendertype, jobProfile, minSalary, maxSalary, period, location, time,
-          whatsapp, adminId, employerId, salarytype, interviewername,
-          companywebsite, companymobile, companyindustry, companytype, department,
-          companyaddress, requirements, responsibilities, workSchedule, locationDetails,
-          preferredQualifications, additionalNotes
+        companyName, jobtitle, averageIncentive, openings, address, email, skill, benefits,
+        reason, experience, interview, category, typeofqualification, description,
+        typeofjob, typeofwork, typeofeducation, education, experiencerequired,
+        gendertype, jobProfile, minSalary, maxSalary, period, location, time,
+        whatsapp, adminId, employerId, salarytype, interviewername,
+        companywebsite, companymobile, companyindustry, companytype, department,
+        companyaddress, requirements, responsibilities, workSchedule, locationDetails,
+        preferredQualifications, additionalNotes
       } = req.body;
       console.log("📥 Received Request Body:", req.body);
-     
+
       // Validate employer subscription: enforce post_job limits before creating
       try {
-          if (!employerId) throw new Error('Missing employerId');
-          const currentUsage = await SubscriptionValidationService.getCurrentUsage(employerId, 'monthly');
-          const validation = await SubscriptionValidationService.validateAction(employerId, 'post_job', currentUsage);
-          if (!validation.allowed) {
-              const statusCode = validation.upgradeRequired ? 402 : 403;
-              return res.status(statusCode).json({
-                  success: false,
-                  error: validation.reason || 'Usage limit exceeded',
-                  message: validation.message || 'You have reached your job posting limit.',
-                  remainingUsage: validation.remainingUsage || 0,
-                  totalLimit: validation.totalLimit || null,
-                  upgradeRequired: !!validation.upgradeRequired
-              });
-          }
+        if (!employerId) throw new Error('Missing employerId');
+        const currentUsage = await SubscriptionValidationService.getCurrentUsage(employerId, 'monthly');
+        const validation = await SubscriptionValidationService.validateAction(employerId, 'post_job', currentUsage);
+        if (!validation.allowed) {
+          const statusCode = validation.upgradeRequired ? 402 : 403;
+          return res.status(statusCode).json({
+            success: false,
+            error: validation.reason || 'Usage limit exceeded',
+            message: validation.message || 'You have reached your job posting limit.',
+            remainingUsage: validation.remainingUsage || 0,
+            totalLimit: validation.totalLimit || null,
+            upgradeRequired: !!validation.upgradeRequired
+          });
+        }
       } catch (limitErr) {
-          console.log('Warning: post_job validation issue:', limitErr?.message || limitErr);
-          // Fail-open: optionally restrict or proceed. Proceeding to avoid blocking due to transient errors.
+        console.log('Warning: post_job validation issue:', limitErr?.message || limitErr);
+        // Fail-open: optionally restrict or proceed. Proceeding to avoid blocking due to transient errors.
       }
 
       let obj = {
-          companyName, jobtitle, averageIncentive, openings, address, email, reason,
-          experience, interview, period, description, typeofjob, typeofwork, 
-          typeofeducation, education, experiencerequired, gendertype, jobProfile, 
-          minSalary, maxSalary, skill, benefits, category, typeofqualification, 
-          location, time, whatsapp, adminId, employerId, salarytype, interviewername,
-          // Added new fields below
-          companywebsite, companymobile, companyindustry, companytype, department,
-          companyaddress, requirements, responsibilities, workSchedule, locationDetails,
-          preferredQualifications, additionalNotes
+        companyName, jobtitle, averageIncentive, openings, address, email, reason,
+        experience, interview, period, description, typeofjob, typeofwork,
+        typeofeducation, education, experiencerequired, gendertype, jobProfile,
+        minSalary, maxSalary, skill, benefits, category, typeofqualification,
+        location, time, whatsapp, adminId, employerId, salarytype, interviewername,
+        // Added new fields below
+        companywebsite, companymobile, companyindustry, companytype, department,
+        companyaddress, requirements, responsibilities, workSchedule, locationDetails,
+        preferredQualifications, additionalNotes
       };
-      
+
       // Handle logo upload to S3
       if (req.files && req.files.length > 0) {
-          const logoFile = req.files.find(file => file.fieldname === "logo");
-          
-          if (logoFile) {
-              try {
-                  // Upload logo to S3
-                  const logoUrl = await uploadFile2(logoFile, "company-logos");
-                  obj["logo"] = logoUrl;
-              } catch (uploadError) {
-                  console.error("Error uploading logo to S3:", uploadError);
-                  return res.status(500).json({ 
-                      success: false, 
-                      message: "Failed to upload company logo", 
-                      error: uploadError.message 
-                  });
-              }
+        const logoFile = req.files.find(file => file.fieldname === "logo");
+
+        if (logoFile) {
+          try {
+            // Upload logo to S3
+            const logoUrl = await uploadFile2(logoFile, "company-logos");
+            obj["logo"] = logoUrl;
+          } catch (uploadError) {
+            console.error("Error uploading logo to S3:", uploadError);
+            return res.status(500).json({
+              success: false,
+              message: "Failed to upload company logo",
+              error: uploadError.message
+            });
           }
+        }
       }
-      
+
       // Save the job in DB
       const newJob = await jobModel.create(obj);
-      console.log("✅ New Job Saved:", newJob); 
+      console.log("✅ New Job Saved:", newJob);
 
       // Record employer usage for post_job (non-blocking)
       try {
@@ -109,13 +109,13 @@ async register(req, res) {
         // Reuse recordUsage logic via internal call
         await SubscriptionValidationController.recordUsage({
           body: { userId: employerId, action: 'post_job', metadata: { jobId: newJob._id } }
-        }, { status: () => ({ json: () => {} }) });
+        }, { status: () => ({ json: () => { } }) });
       } catch (uErr) {
         console.log('Warning: could not record post_job usage:', uErr?.message || uErr);
       }
 
       let msg =
-          `This is a new ${companyName} company registered post by email id is ${email}
+        `This is a new ${companyName} company registered post by email id is ${email}
           Job profile is ${jobProfile} or salary ${minSalary}-${maxSalary}/${period},
           location is ${location} and website Link.
           <h3>Thank you <br>Labor Link Team</h3>`;
@@ -123,32 +123,32 @@ async register(req, res) {
       sent.sendMail("Admin", "amitparnets@gmail.com", msg);
       console.log("📧 Email Sent Successfully");
 
-      return res.status(200).json({ 
-          success: true, 
-          message: "Successfully registered",
-          data: newJob
+      return res.status(200).json({
+        success: true,
+        message: "Successfully registered",
+        data: newJob
       });
 
-  } catch (err) {
+    } catch (err) {
       console.error("❌ Error in Register:", err); // Log error
-      return res.status(500).json({ 
-          success: false, 
-          message: "Internal Server Error", 
-          error: err.message 
+      return res.status(500).json({
+        success: false,
+        message: "Internal Server Error",
+        error: err.message
       });
+    }
   }
-} 
-  async registeredjobbyId(req, res){
+  async registeredjobbyId(req, res) {
     try {
       const { jobId } = req.params;
-  
+
       // Find job by ID and populate employer details
       const job = await jobModel.findById(jobId).populate("employer", "name email company");
-  
+
       if (!job) {
         return res.status(404).json({ message: "Job not found" });
       }
-  
+
       res.status(200).json(job);
     } catch (error) {
       res.status(500).json({ message: "Error fetching job details", error });
@@ -173,7 +173,7 @@ async register(req, res) {
         experience,
         category,
         typeofqualification,
-        interview, 
+        interview,
         description,
         typeofjob,
         typeofwork,
@@ -192,15 +192,15 @@ async register(req, res) {
         adminId,
         employerId,
         salarytype,
-        interviewername 
+        interviewername
       } = req.body;
-      
+
       // Get existing job to check for logo that might need to be deleted
       const existingJob = await jobModel.findById(jobId);
       if (!existingJob) {
         return res.status(404).json({ success: false, message: "Job not found" });
       }
-      
+
       let obj = {};
       if (CompanyName) {
         obj["companyName"] = CompanyName;
@@ -208,7 +208,7 @@ async register(req, res) {
       if (averageIncentive) {
         obj["averageIncentive"] = averageIncentive;
       }
-     
+
       if (openings) {
         obj["openings"] = openings;
       }
@@ -224,7 +224,7 @@ async register(req, res) {
       if (fee) {
         obj["fee"] = fee;
       }
-    
+
       if (benefits) {
         obj["benefits"] = benefits;
       }
@@ -234,7 +234,7 @@ async register(req, res) {
       if (reason) {
         obj["reason"] = reason;
       }
-      
+
       if (minSalary) {
         obj["minSalary"] = minSalary;
       }
@@ -292,18 +292,18 @@ async register(req, res) {
       if (skill) {
         obj["skill"] = skill;
       }
-      
+
       if (description) {
         obj["description"] = description;
       }
       if (isVerify) {
         obj["isVerify"] = isVerify;
       }
-      
+
       // Handle logo upload to S3
       if (req.files && req.files.length > 0) {
         const logoFile = req.files.find(file => file.fieldname === "logo");
-        
+
         if (logoFile) {
           try {
             // If existing logo is an S3 URL, delete it
@@ -315,21 +315,21 @@ async register(req, res) {
                 // Continue with the update even if delete fails
               }
             }
-            
+
             // Upload new logo to S3
             const logoUrl = await uploadFile2(logoFile, "company-logos");
             obj["logo"] = logoUrl;
           } catch (uploadError) {
             console.error("Error uploading logo to S3:", uploadError);
-            return res.status(500).json({ 
-              success: false, 
-              message: "Failed to upload company logo", 
-              error: uploadError.message 
+            return res.status(500).json({
+              success: false,
+              message: "Failed to upload company logo",
+              error: uploadError.message
             });
           }
         }
       }
-      
+
       console.log("check It", obj, jobId);
 
       let updateUser = await jobModel.findOneAndUpdate(
@@ -337,99 +337,99 @@ async register(req, res) {
         { $set: obj },
         { new: true }
       );
-      
+
       if (!updateUser) {
         return res.status(400).json({ success: false, message: "Update failed" });
       }
-      
-      return res.status(200).json({ 
-        success: true, 
+
+      return res.status(200).json({
+        success: true,
         message: "Successfully updated",
         data: updateUser
       });
     } catch (err) {
       console.error("Error updating job:", err);
-      return res.status(500).json({ 
-        success: false, 
-        message: "Internal Server Error", 
-        error: err.message 
+      return res.status(500).json({
+        success: false,
+        message: "Internal Server Error",
+        error: err.message
       });
     }
   }
 
-   async AddSkillJ(req,res){
-        try{
-            const {skill,employerId}=req.body;
-            let obj={skill}
-        
-            let add=await jobModel.findOneAndUpdate({employerId:employerId},{$push:{skillSet:obj}},{new:true});
-            if(!add)return res.status(400).json({success:"Something went worng"});
-            return res.status(200).json({success:"Successfully added"})
-        }catch(err){
-            console.log(err);
-        }
+  async AddSkillJ(req, res) {
+    try {
+      const { skill, employerId } = req.body;
+      let obj = { skill }
+
+      let add = await jobModel.findOneAndUpdate({ employerId: employerId }, { $push: { skillSet: obj } }, { new: true });
+      if (!add) return res.status(400).json({ success: "Something went worng" });
+      return res.status(200).json({ success: "Successfully added" })
+    } catch (err) {
+      console.log(err);
     }
-    async removeSkillJ(req,res){
-        try{
-            let removeId=req.params.removeId;
-            let employerId=req.params.employerId;
-            let add=await jobModel.findOneAndUpdate({employerId:employerId},{$pull:{skillSet:{_id:removeId}}},{new:true});
-            if(!add)return res.status(400).json({success:"Something went worng"});
-            return res.status(200).json({success:"Successfully deleted"})   ;
-        }catch(err){
-            console.log(err);
-        }
+  }
+  async removeSkillJ(req, res) {
+    try {
+      let removeId = req.params.removeId;
+      let employerId = req.params.employerId;
+      let add = await jobModel.findOneAndUpdate({ employerId: employerId }, { $pull: { skillSet: { _id: removeId } } }, { new: true });
+      if (!add) return res.status(400).json({ success: "Something went worng" });
+      return res.status(200).json({ success: "Successfully deleted" });
+    } catch (err) {
+      console.log(err);
     }
-    async AddBenefits(req,res){
-        try{
-            const {benefits,employerId,level}=req.body;
-            let obj={benefits,level}
-        
-            let add=await jobModel.findOneAndUpdate({employerId:employerId},{$push:{benefitsSet:obj}},{new:true});
-            if(!add)return res.status(400).json({success:"Something went worng"});
-            return res.status(200).json({success:"Successfully added"})
-        }catch(err){
-            console.log(err);
-        }
+  }
+  async AddBenefits(req, res) {
+    try {
+      const { benefits, employerId, level } = req.body;
+      let obj = { benefits, level }
+
+      let add = await jobModel.findOneAndUpdate({ employerId: employerId }, { $push: { benefitsSet: obj } }, { new: true });
+      if (!add) return res.status(400).json({ success: "Something went worng" });
+      return res.status(200).json({ success: "Successfully added" })
+    } catch (err) {
+      console.log(err);
     }
-     async makEverifyUnverify(req,res){
-        try {
-            const {userId,status,reasion,isDelete}=req.body;
-            let obj={status}
-           
-                obj["reasion"]=reasion
-         
-            if(isDelete){
-                obj["isDelete"]=isDelete
-              }
-            let data=await jobModel.findOneAndUpdate({_id:userId},{$set:obj},{new:true});
-            if(!data) return res.status(400).json({error:"Something went wong!"});
-            if(data.status=="Approved"){
-                send.sendMail(data.interviewername,data.email, `Your job is approved now,
+  }
+  async makEverifyUnverify(req, res) {
+    try {
+      const { userId, status, reasion, isDelete } = req.body;
+      let obj = { status }
+
+      obj["reasion"] = reasion
+
+      if (isDelete) {
+        obj["isDelete"] = isDelete
+      }
+      let data = await jobModel.findOneAndUpdate({ _id: userId }, { $set: obj }, { new: true });
+      if (!data) return res.status(400).json({ error: "Something went wong!" });
+      if (data.status == "Approved") {
+        send.sendMail(data.interviewername, data.email, `Your job is approved now,
                 <h3>Thank you <br>Labor Link Team</h3>
                 `);
-            }else{
-                send.sendMail(data.interviewername,data.email, `Your job is ${data.status} because ${data.reasion} please wait for admin approval,
+      } else {
+        send.sendMail(data.interviewername, data.email, `Your job is ${data.status} because ${data.reasion} please wait for admin approval,
                 <h3>Thank you <br>Labor Link Team</h3>
                 `);
-            }
-            return res.status(200).json({success:"success"})
-        } catch (error) {
-            console.log(error);
-        }
+      }
+      return res.status(200).json({ success: "success" })
+    } catch (error) {
+      console.log(error);
     }
-    async removeBenefits(req,res){
-        try{
-            let removeId=req.params.removeId;
-            let employerId=req.params.employerId;
-            let add=await jobModel.findOneAndUpdate({employerId:employerId},{$pull:{benefitsSet:{_id:removeId}}},{new:true});
-            if(!add)return res.status(400).json({success:"Something went worng"});
-            return res.status(200).json({success:"Successfully deleted"})   ;
-        }catch(err){
-            console.log(err);
-        }
+  }
+  async removeBenefits(req, res) {
+    try {
+      let removeId = req.params.removeId;
+      let employerId = req.params.employerId;
+      let add = await jobModel.findOneAndUpdate({ employerId: employerId }, { $pull: { benefitsSet: { _id: removeId } } }, { new: true });
+      if (!add) return res.status(400).json({ success: "Something went worng" });
+      return res.status(200).json({ success: "Successfully deleted" });
+    } catch (err) {
+      console.log(err);
     }
-     
+  }
+
 
   async getAllJobs(req, res) {
     try {
@@ -447,16 +447,16 @@ async register(req, res) {
       let totalLimit;
       let userType = 'employee'; // Default to employee
       let searchAction = 'search_job'; // Default action
-      
+
       if (userId && isSearchIntent) {
         try {
           // Determine user type by checking both user and employer collections
           const userModel = require('../Model/User/user');
           const EmployerModel = require('../Model/Employers/employers');
-          
+
           const user = await userModel.findById(userId);
           const employer = await EmployerModel.findById(userId);
-          
+
           if (employer) {
             userType = 'employer';
             searchAction = 'search_candidates';
@@ -464,9 +464,9 @@ async register(req, res) {
             userType = 'employee';
             searchAction = 'search_job';
           }
-          
+
           console.log(`🔍 User ${userId} is ${userType}, using action: ${searchAction}`);
-          
+
           const currentUsage = await require("../../services/subscriptionUsageService").getCurrentUsage(userId, 'daily');
           const validation = await SubscriptionValidationService.validateAction(userId, searchAction, currentUsage);
           if (!validation.allowed) {
@@ -486,7 +486,7 @@ async register(req, res) {
             const SubscriptionValidationController = require('../subscriptionValidationController');
             await SubscriptionValidationController.recordUsage({
               body: { userId, action: searchAction, metadata: { endpoint: 'getAllJobs', userType } }
-            }, { status: () => ({ json: () => {} }) });
+            }, { status: () => ({ json: () => { } }) });
           } catch (recErr) {
             console.log(`Warning: could not record ${searchAction} usage:`, recErr?.message || recErr);
           }
@@ -555,8 +555,8 @@ async register(req, res) {
         remainingSearches = Math.max(0, (remainingBefore || 0) - 1);
       }
 
-      return res.status(200).json({ 
-        success: true, 
+      return res.status(200).json({
+        success: true,
         data: findData,
         meta: {
           remainingSearches,
@@ -579,18 +579,18 @@ async register(req, res) {
       console.log(err);
     }
   }
-  async getJobByEmployerId(req,res){
+  async getJobByEmployerId(req, res) {
     try {
-      let employerId=req.params.employerId
-      let data=await jobModel.find({employerId:employerId});
-      return res.status(200).json({success:data});
+      let employerId = req.params.employerId
+      let data = await jobModel.find({ employerId: employerId });
+      return res.status(200).json({ success: data });
     } catch (error) {
       console.log(error);
     }
   }
 
- 
-  
+
+
   async getJobByfilter(req, res) {
     try {
       const {
@@ -659,13 +659,13 @@ async register(req, res) {
       if (skill) {
         obj["skill"] = { $regex: skill, $options: "i" };
       }
-      console.log("swagat nhi karoge hamara",obj)
+      console.log("swagat nhi karoge hamara", obj)
       if (Object.keys(req.body).length <= 0) {
         let findData = await jobModel
           .find({ isVerify: true })
           .sort({ _id: -1 });
-          console.log("A");
-        if (findData.length <= 0)return res.status(400).json({ success: "Data not found" });
+        console.log("A");
+        if (findData.length <= 0) return res.status(400).json({ success: "Data not found" });
         return res.status(200).json({ success: findData });
       } else {
         if (Object.keys(obj).length <= 0) {
@@ -674,16 +674,16 @@ async register(req, res) {
               isVerify: true,
             })
             .sort({ _id: -1 });
-            console.log("B");
+          console.log("B");
           if (findData.length <= 0)
             return res.status(400).json({ success: "Data not found" });
           return res.status(200).json({ success: findData });
         } else {
-          obj["isVerify"]=true
+          obj["isVerify"] = true
           let findData = await jobModel
             .find(obj)
             .sort({ _id: -1 });
-            console.log("C");
+          console.log("C");
           if (findData.length <= 0)
             return res.status(400).json({ success: "Data not found" });
           return res.status(200).json({ success: findData });
@@ -714,35 +714,35 @@ async register(req, res) {
       console.log(err);
     }
   }
-   async makeBlockUnBlock(req,res){
-        try {
-            const {userId,reasion,isBlock}=req.body;
-            let obj={isBlock}
-                obj["reasion"]=reasion
-        
-            let data=await jobModel.findOneAndUpdate({_id:userId},{$set:obj},{new:true});
-            if(!data) return res.status(400).json({error:"Something went wong!"});
-            if(data.isBlock==false){
-                send.sendMail(data.interviewername,data.email, `Your job is un-bloked now,
+  async makeBlockUnBlock(req, res) {
+    try {
+      const { userId, reasion, isBlock } = req.body;
+      let obj = { isBlock }
+      obj["reasion"] = reasion
+
+      let data = await jobModel.findOneAndUpdate({ _id: userId }, { $set: obj }, { new: true });
+      if (!data) return res.status(400).json({ error: "Something went wong!" });
+      if (data.isBlock == false) {
+        send.sendMail(data.interviewername, data.email, `Your job is un-bloked now,
                 <h3>Thank you <br>Labor Link Team</h3>
                 `);
-            }else{
-                send.sendMail(data.interviewername,data.email, `Your job is blocked  please contact admin,
+      } else {
+        send.sendMail(data.interviewername, data.email, `Your job is blocked  please contact admin,
                 <h3>Thank you <br>Labor Link Team</h3>
                 `);
-            }
-            return res.status(200).json({success:"success"})
-        } catch (error) {
-            console.log(error);
-        }
+      }
+      return res.status(200).json({ success: "success" })
+    } catch (error) {
+      console.log(error);
     }
+  }
   async deleteJob(req, res) {
     try {
       let jobId = req.params.jobId;
       let add = await jobModel.deleteOne({ _id: jobId });
       if (add.deletedCount <= 0)
         return res.status(400).json({ success: "Data not found" });
-          await applyModel.deleteMany({companyId:jobId})
+      await applyModel.deleteMany({ companyId: jobId })
       return res.status(200).json({ success: "Successfully deleted" });
     } catch (err) {
       console.log(err);
@@ -751,7 +751,7 @@ async register(req, res) {
   async getJobById(req, res) {
     try {
       let jobId = req.params.jobId;
-      console.log(jobId,"this is jobid")
+      console.log(jobId, "this is jobid")
       let data = await jobModel.findById(jobId);
       if (!data) return res.status(400).json({ success: "data not found" });
       // Optional: enforce company views per day when a userId is provided
@@ -775,7 +775,7 @@ async register(req, res) {
             const SubscriptionValidationController = require('../subscriptionValidationController');
             await SubscriptionValidationController.recordUsage({
               body: { userId, action: 'view_company_details', metadata: { endpoint: 'getJobById', jobId } }
-            }, { status: () => ({ json: () => {} }) });
+            }, { status: () => ({ json: () => { } }) });
           } catch (recErr) {
             console.log('Warning: could not record company view usage:', recErr?.message || recErr);
           }
@@ -789,12 +789,12 @@ async register(req, res) {
     }
   }
 
-  
+
   async getApplyList(req, res) {
     try {
-      const{jobId}=req.params
+      const { jobId } = req.params
       console.log("Received companyId:", jobId, "Type:", typeof jobId);
-  
+
       // Optional: validate employer candidate search limit if employerId provided
       try {
         const employerId = req.query && req.query.employerId;
@@ -817,14 +817,14 @@ async register(req, res) {
       }
 
       let findData = await applyModel
-          .find({ companyId: jobId }) // Ensure conversion
-          .sort({ _id: -1 })
-          .populate("userId");
-    
+        .find({ companyId: jobId }) // Ensure conversion
+        .sort({ _id: -1 })
+        .populate("userId");
+
       if (!findData || findData.length === 0) {
-          return res.status(400).json({ success: false, message: "Data not found" });
+        return res.status(200).json({ success: true, data: [], message: "No applications found" });
       }
-  
+
       // Record employer candidate search usage if employerId provided (query)
       try {
         const employerId = req.query && req.query.employerId;
@@ -837,378 +837,378 @@ async register(req, res) {
       }
 
       return res.status(200).json({ success: true, data: findData });
-  } catch (err) {
+    } catch (err) {
       console.error("Server Error:", err);
       return res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+
   }
-  
-} 
- 
- 
- 
-
-// async addShortList(req, res) {
-//   try {
-//     const { userId, companyId } = req.body;
-//     console.log("Received request with the rdfjk:", userId, companyId);
-
-//     let data = await applyModel
-//     .findOne({ userId: mongoose.Types.ObjectId(userId), companyId: mongoose.Types.ObjectId(companyId) })
-//     .populate("userId")
-//       .populate("companyId");
-//       console.log("Query result:", data);  
-//     if (!data) {
-//       return res.status(404).json({ error: "Application record not found" });
-//     }
-//     if (data.status === "Shortlisted") {
-//       return res.status(400).json({ message: "Already shortlisted" });
-//     }
-
-//     let update = await applyModel.findOneAndUpdate(
-//       { userId: userId, companyId: companyId },
-//       { $set: { status: "Shortlisted" } },
-//       { new: true }
-//     );
-
-//     console.log(update, "Updated document");
-
-//     if (!update) {
-//       return res.status(400).json({ success: false, message: "Something went wrong" });
-//     }
-
-// //Email
-//     if (data.userId && data.companyId) {
-//       sent.sendMail(
-//         data.userId.fullName,
-//         data.userId.email,
-//         ` Congratulations! Your profile has been shortlisted for the position of  ${data.companyId.jobProfile} in ${data.companyId.companyName}<h3>Our team will connect with you shortly to discuss the next steps.</h3>`
-//       );
-//     } else {
-//       console.log("Missing user or company data, email not sent.");
-//     } 
-     
-// //whatsapp
-//   if (data.userId && data.companyId) {
-//       sent.sendWhatsAppShortlisted(
-//         data.userId.fullName,
-//         data.userId.phone,
-//         ` ${data.companyId.jobProfile} in ${data.companyId.companyName}.`
-//       );
-//     } else {
-//       console.log("Missing user or company data, email not sent.");
-//     }  
-     
-//     //sms
-//      if (data.userId && data.companyId) {
-//       sent.sendShortlistedSMS(
-//           data.userId.phone,
-// `Hello ${data.userId.fullName}, Congratulations! Your profile has been shortlisted for the position of ${data.companyId.jobProfile}. Our team will connect with you shortly to discuss the next steps. Thank You For Choosing LaborLink`
-//       );
-//     } else {
-//       console.log("Missing user or company data, sms not sent.");
-//     }
-//     return res.status(200).json({ success: true, message: "Successfully shortlisted" });
-//   } catch (err) {
-//     console.error("Error in addShortList:", err);
-//     return res.status(500).json({ success: false, error: "Internal server error" });
-//   }
-// }   
- 
-  
 
 
 
 
-async addShortList(req, res) {
-  try {
-    const { userId, companyId, employerId } = req.body;
-    console.log("Received request:", userId, companyId);
+  // async addShortList(req, res) {
+  //   try {
+  //     const { userId, companyId } = req.body;
+  //     console.log("Received request with the rdfjk:", userId, companyId);
 
-    // Validate required ids
-    if (!userId || !companyId) {
-      return res.status(400).json({ success: false, error: 'userId and companyId are required' });
-    }
-    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(companyId)) {
-      return res.status(400).json({ success: false, error: 'Invalid userId or companyId format' });
-    }
+  //     let data = await applyModel
+  //     .findOne({ userId: mongoose.Types.ObjectId(userId), companyId: mongoose.Types.ObjectId(companyId) })
+  //     .populate("userId")
+  //       .populate("companyId");
+  //       console.log("Query result:", data);  
+  //     if (!data) {
+  //       return res.status(404).json({ error: "Application record not found" });
+  //     }
+  //     if (data.status === "Shortlisted") {
+  //       return res.status(400).json({ message: "Already shortlisted" });
+  //     }
 
-    // Enforce application review limit for employer if provided
+  //     let update = await applyModel.findOneAndUpdate(
+  //       { userId: userId, companyId: companyId },
+  //       { $set: { status: "Shortlisted" } },
+  //       { new: true }
+  //     );
+
+  //     console.log(update, "Updated document");
+
+  //     if (!update) {
+  //       return res.status(400).json({ success: false, message: "Something went wrong" });
+  //     }
+
+  // //Email
+  //     if (data.userId && data.companyId) {
+  //       sent.sendMail(
+  //         data.userId.fullName,
+  //         data.userId.email,
+  //         ` Congratulations! Your profile has been shortlisted for the position of  ${data.companyId.jobProfile} in ${data.companyId.companyName}<h3>Our team will connect with you shortly to discuss the next steps.</h3>`
+  //       );
+  //     } else {
+  //       console.log("Missing user or company data, email not sent.");
+  //     } 
+
+  // //whatsapp
+  //   if (data.userId && data.companyId) {
+  //       sent.sendWhatsAppShortlisted(
+  //         data.userId.fullName,
+  //         data.userId.phone,
+  //         ` ${data.companyId.jobProfile} in ${data.companyId.companyName}.`
+  //       );
+  //     } else {
+  //       console.log("Missing user or company data, email not sent.");
+  //     }  
+
+  //     //sms
+  //      if (data.userId && data.companyId) {
+  //       sent.sendShortlistedSMS(
+  //           data.userId.phone,
+  // `Hello ${data.userId.fullName}, Congratulations! Your profile has been shortlisted for the position of ${data.companyId.jobProfile}. Our team will connect with you shortly to discuss the next steps. Thank You For Choosing LaborLink`
+  //       );
+  //     } else {
+  //       console.log("Missing user or company data, sms not sent.");
+  //     }
+  //     return res.status(200).json({ success: true, message: "Successfully shortlisted" });
+  //   } catch (err) {
+  //     console.error("Error in addShortList:", err);
+  //     return res.status(500).json({ success: false, error: "Internal server error" });
+  //   }
+  // }   
+
+
+
+
+
+
+  async addShortList(req, res) {
     try {
-      if (employerId) {
-        const currentUsage = await SubscriptionValidationService.getCurrentUsage(employerId, 'daily');
-        const validation = await SubscriptionValidationService.validateAction(employerId, 'application_review', currentUsage);
-        if (!validation.allowed) {
-          const statusCode = validation.upgradeRequired ? 402 : 403;
-          return res.status(statusCode).json({
-            success: false,
-            error: validation.reason || 'Application review limit reached',
-            upgradeRequired: !!validation.upgradeRequired,
-            remainingUsage: validation.remainingUsage || 0
-          });
-        }
+      const { userId, companyId, employerId } = req.body;
+      console.log("Received request:", userId, companyId);
+
+      // Validate required ids
+      if (!userId || !companyId) {
+        return res.status(400).json({ success: false, error: 'userId and companyId are required' });
       }
-    } catch (vErr) {
-      console.log('Warning: application_review validation error:', vErr?.message || vErr);
+      if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(companyId)) {
+        return res.status(400).json({ success: false, error: 'Invalid userId or companyId format' });
+      }
+
+      // Enforce application review limit for employer if provided
+      try {
+        if (employerId) {
+          const currentUsage = await SubscriptionValidationService.getCurrentUsage(employerId, 'daily');
+          const validation = await SubscriptionValidationService.validateAction(employerId, 'application_review', currentUsage);
+          if (!validation.allowed) {
+            const statusCode = validation.upgradeRequired ? 402 : 403;
+            return res.status(statusCode).json({
+              success: false,
+              error: validation.reason || 'Application review limit reached',
+              upgradeRequired: !!validation.upgradeRequired,
+              remainingUsage: validation.remainingUsage || 0
+            });
+          }
+        }
+      } catch (vErr) {
+        console.log('Warning: application_review validation error:', vErr?.message || vErr);
+      }
+
+      let data = await applyModel
+        .findOne({ userId: mongoose.Types.ObjectId(userId), companyId: mongoose.Types.ObjectId(companyId) })
+        .populate("userId")
+        .populate("companyId");
+
+      if (!data) {
+        return res.status(404).json({ error: "Application record not found" });
+      }
+      if (data.status === "Shortlisted") {
+        return res.status(400).json({ message: "Already shortlisted" });
+      }
+
+      let update = await applyModel.findOneAndUpdate(
+        { userId, companyId },
+        { $set: { status: "Shortlisted" } },
+        { new: true }
+      );
+
+      if (!update) {
+        return res.status(400).json({ success: false, message: "Something went wrong" });
+      }
+
+      // ✅ Email
+      if (data.userId && data.companyId) {
+        sent.sendMail(
+          data.userId.fullName,
+          data.userId.email,
+          `Congratulations! Your profile has been shortlisted for the position of ${data.companyId.jobProfile} in ${data.companyId.companyName}<h3>Our team will connect with you shortly to discuss the next steps.</h3>`
+        );
+      }
+
+      // ✅ WhatsApp
+      if (data.userId && data.companyId) {
+        sent.sendWhatsAppShortlisted(
+          data.userId.fullName,
+          data.userId.phone,
+          `${data.companyId.jobProfile} in ${data.companyId.companyName}.`
+        );
+      }
+
+      // ✅ SMS
+      if (data.userId && data.companyId) {
+        sent.sendShortlistedSMS(
+          data.userId.phone,
+          `Hello ${data.userId.fullName}, Congratulations! Your profile has been shortlisted for the position of ${data.companyId.jobProfile}. Our team will connect with you shortly to discuss the next steps. Thank You For Choosing LaborLink`
+        );
+      }
+
+      // ✅ Push Notification (FCM)
+      const fcmRecords = await FCMtoken.find({
+        employeeId: data.userId._id,
+        isActive: true
+      });
+
+      if (fcmRecords.length > 0) {
+        const tokens = fcmRecords.map(r => r.fcmToken).filter(Boolean);
+        console.log("tokenssssssss", tokens)
+
+        if (tokens.length > 0) {
+          const message = {
+            notification: {
+              title: "🎉 Shortlisted!",
+              body: `Hi ${data.userId.fullName}, you’ve been shortlisted for ${data.companyId.jobProfile} at ${data.companyId.companyName}.`,
+            },
+            data: {
+              type: "shortlist",
+              userId: String(userId),
+              companyId: String(companyId),
+            },
+            tokens, // 👈 send to multiple devices
+          };
+
+          try {
+            const response = await admin.messaging().sendEachForMulticast(message);
+            console.log(`✅ Firebase  Notification sent: ${response.successCount} success, ${response.failureCount} failed`);
+          } catch (fcmError) {
+            console.error("❌ FCM Notification Error:", fcmError);
+          }
+        }
+      } else {
+        console.log("⚠️ No active FCM token found for this employee");
+      }
+
+      // Record application review usage
+      try {
+        if (employerId) {
+          const SubscriptionUsageService = require("../../services/subscriptionUsageService");
+          await SubscriptionUsageService.recordUsage(String(employerId), 'application_review', { endpoint: 'addShortList', companyId, candidateId: String(userId) });
+        }
+      } catch (recErr) {
+        console.log('Warning: could not record application_review usage:', recErr?.message || recErr);
+      }
+
+      return res.status(200).json({ success: true, message: "Successfully shortlisted" });
+    } catch (err) {
+      console.error("Error in addShortList:", err);
+      return res.status(500).json({ success: false, error: "Internal server error" });
+    }
+  }
+
+
+
+  async addSelect(req, res) {
+    console.log(req.body, "this is body");
+
+    const { userId, companyId } = req.body;
+    console.log("Received request:", { userId, companyId });
+
+    // Validate input
+    if (!userId || !companyId) {
+      return res.status(400).json({ error: "User ID and Company ID are required" });
     }
 
+
+    let userObjectId, companyObjectId;
+    try {
+      userObjectId = new mongoose.Types.ObjectId(userId);
+      companyObjectId = new mongoose.Types.ObjectId(companyId);
+    } catch {
+      return res.status(400).json({ error: "Invalid ObjectId format" });
+    }
+
+    // Debug logs
+    const apps = await applyModel.find({ userId: userObjectId });
+    console.log("Apps with this userId:", apps);
+
+    const apps2 = await applyModel.find({ companyId: companyObjectId });
+    console.log("Apps with this companyId:", apps2);
+
+    // Fetch application
     let data = await applyModel
-      .findOne({ userId: mongoose.Types.ObjectId(userId), companyId: mongoose.Types.ObjectId(companyId) })
+      .findOne({ userId: userObjectId, companyId: companyObjectId })
       .populate("userId")
-      .populate("companyId");
+      .populate("companyId")
+      .lean();
+
+    console.log("Fetched data:", data);
 
     if (!data) {
-      return res.status(404).json({ error: "Application record not found" });
-    }
-    if (data.status === "Shortlisted") {
-      return res.status(400).json({ message: "Already shortlisted" });
+      return res.status(404).json({ error: "No application found" });
     }
 
-    let update = await applyModel.findOneAndUpdate(
-      { userId, companyId },
-      { $set: { status: "Shortlisted" } },
+    // Check if already selected - OPTION 1: Return success if already selected
+    if (data.status === "Selected") {
+      console.log("User already selected, returning success");
+      return res.status(200).json({ success: "User already selected" });
+    }
+
+    // Update status
+    const update = await applyModel.findOneAndUpdate(
+      { userId: userObjectId, companyId: companyObjectId },
+      { $set: { status: "Selected" } },
       { new: true }
     );
 
     if (!update) {
-      return res.status(400).json({ success: false, message: "Something went wrong" });
+      return res.status(400).json({ error: "Something went wrong" });
     }
 
-    // ✅ Email
-    if (data.userId && data.companyId) {
-      sent.sendMail(
-        data.userId.fullName,
-        data.userId.email,
-        `Congratulations! Your profile has been shortlisted for the position of ${data.companyId.jobProfile} in ${data.companyId.companyName}<h3>Our team will connect with you shortly to discuss the next steps.</h3>`
-      );
-    }
+    console.log("Update successful:", update);
 
-    // ✅ WhatsApp
-    if (data.userId && data.companyId) {
-      sent.sendWhatsAppShortlisted(
-        data.userId.fullName,
-        data.userId.phone,
-        `${data.companyId.jobProfile} in ${data.companyId.companyName}.`
-      );
-    }
-
-    // ✅ SMS
-    if (data.userId && data.companyId) {
-      sent.sendShortlistedSMS(
-        data.userId.phone,
-        `Hello ${data.userId.fullName}, Congratulations! Your profile has been shortlisted for the position of ${data.companyId.jobProfile}. Our team will connect with you shortly to discuss the next steps. Thank You For Choosing LaborLink`
-      );
-    }
-
-    // ✅ Push Notification (FCM)
-    const fcmRecords = await FCMtoken.find({
-      employeeId: data.userId._id,
-      isActive: true
-    });
-
-    if (fcmRecords.length > 0) {
-      const tokens = fcmRecords.map(r => r.fcmToken).filter(Boolean); 
-      console.log("tokenssssssss",tokens)
-
-      if (tokens.length > 0) {
-        const message = {
-          notification: {
-            title: "🎉 Shortlisted!",
-            body: `Hi ${data.userId.fullName}, you’ve been shortlisted for ${data.companyId.jobProfile} at ${data.companyId.companyName}.`,
-          },
-          data: {
-            type: "shortlist",
-            userId: String(userId),
-            companyId: String(companyId),
-          },
-          tokens, // 👈 send to multiple devices
-        };
-
-        try {
-          const response = await admin.messaging().sendEachForMulticast(message);
-          console.log(`✅ Firebase  Notification sent: ${response.successCount} success, ${response.failureCount} failed`);
-        } catch (fcmError) {
-          console.error("❌ FCM Notification Error:", fcmError);
-        }
-      }
-    } else {
-      console.log("⚠️ No active FCM token found for this employee");
-    }
-
-    // Record application review usage
-    try {
-      if (employerId) {
-        const SubscriptionUsageService = require("../../services/subscriptionUsageService");
-        await SubscriptionUsageService.recordUsage(String(employerId), 'application_review', { endpoint: 'addShortList', companyId, candidateId: String(userId) });
-      }
-    } catch (recErr) {
-      console.log('Warning: could not record application_review usage:', recErr?.message || recErr);
-    }
-
-    return res.status(200).json({ success: true, message: "Successfully shortlisted" });
-  } catch (err) {
-    console.error("Error in addShortList:", err);
-    return res.status(500).json({ success: false, error: "Internal server error" });
-  }
-}
-
-
-
-async addSelect(req, res) {
-  console.log(req.body, "this is body");
-
-  const { userId, companyId } = req.body;
-  console.log("Received request:", { userId, companyId });
-
-  // Validate input
-  if (!userId || !companyId) {
-    return res.status(400).json({ error: "User ID and Company ID are required" });
-  }
-  
-
-  let userObjectId, companyObjectId;
-  try {
-    userObjectId = new mongoose.Types.ObjectId(userId);
-    companyObjectId = new mongoose.Types.ObjectId(companyId);
-  } catch {
-    return res.status(400).json({ error: "Invalid ObjectId format" });
-  }
-
-  // Debug logs
-  const apps = await applyModel.find({ userId: userObjectId });
-  console.log("Apps with this userId:", apps);
-
-  const apps2 = await applyModel.find({ companyId: companyObjectId });
-  console.log("Apps with this companyId:", apps2);
-
-  // Fetch application
-  let data = await applyModel
-    .findOne({ userId: userObjectId, companyId: companyObjectId })
-    .populate("userId")
-    .populate("companyId")
-    .lean();
-
-  console.log("Fetched data:", data);
-
-  if (!data) {
-    return res.status(404).json({ error: "No application found" });
-  }
-
-  // Check if already selected - OPTION 1: Return success if already selected
-  if (data.status === "Selected") {
-    console.log("User already selected, returning success");
-    return res.status(200).json({ success: "User already selected" });
-  }
-
-  // Update status
-  const update = await applyModel.findOneAndUpdate(
-    { userId: userObjectId, companyId: companyObjectId },
-    { $set: { status: "Selected" } },
-    { new: true }
-  );
-
-  if (!update) {
-    return res.status(400).json({ error: "Something went wrong" });
-  }
-
-  console.log("Update successful:", update);
-
-  // Send Email
-  await sent.sendMail(
-    data.userId.fullName,
-    data.userId.email,
-    `We are pleased to inform you that you have been selected for the position of ${data.companyId.jobProfile} in ${data.companyId.companyName}. Our HR team will contact you with the joining formalities and offer details. Congratulations once again!<br><br>
+    // Send Email
+    await sent.sendMail(
+      data.userId.fullName,
+      data.userId.email,
+      `We are pleased to inform you that you have been selected for the position of ${data.companyId.jobProfile} in ${data.companyId.companyName}. Our HR team will contact you with the joining formalities and offer details. Congratulations once again!<br><br>
      <h3>Thank you <br>Labor Link Team</h3>`
-  );
-  console.log("Email sent successfully");
+    );
+    console.log("Email sent successfully");
 
-  // Send WhatsApp
-  await sent.sendSelectedWhatsapp(
-    data.userId.fullName,
-    data.userId.phone,
-    `${data.companyId.jobProfile} in ${data.companyId.companyName}. `
-  );
-  console.log("WhatsApp message sent successfully");  
-   
-  // SMS 
-  await sent.sendSelectedSMS(
-    data.userId.phone,
-    `Congratulations ${data.userId.fullName} You have been selected for the role of ${data.companyId.jobProfile} at ${data.companyId.companyName}. Please check your offer details for the next steps - Labor Link`
-  );
-  console.log("SMS sent successfully"); 
+    // Send WhatsApp
+    await sent.sendSelectedWhatsapp(
+      data.userId.fullName,
+      data.userId.phone,
+      `${data.companyId.jobProfile} in ${data.companyId.companyName}. `
+    );
+    console.log("WhatsApp message sent successfully");
 
-  return res.status(200).json({ success: "Successfully Selected" });
-}    
- 
+    // SMS 
+    await sent.sendSelectedSMS(
+      data.userId.phone,
+      `Congratulations ${data.userId.fullName} You have been selected for the role of ${data.companyId.jobProfile} at ${data.companyId.companyName}. Please check your offer details for the next steps - Labor Link`
+    );
+    console.log("SMS sent successfully");
 
-async getSelectData(req, res) {
+    return res.status(200).json({ success: "Successfully Selected" });
+  }
+
+
+  async getSelectData(req, res) {
     try {
-        // let companyId = new mongoose.Types.ObjectId(req.params.companyId); // Convert to ObjectId
-        let companyId = req.params.companyId
-        console.log(companyId,"this is company id")
-        const hash = await applyModel 
-        .find({ companyId, status: "Selected" }) 
+      // let companyId = new mongoose.Types.ObjectId(req.params.companyId); // Convert to ObjectId
+      let companyId = req.params.companyId
+      console.log(companyId, "this is company id")
+      const hash = await applyModel
+        .find({ companyId, status: "Selected" })
         .populate("userId");
-        console.log(hash, "this is hash");
+      console.log(hash, "this is hash");
 
-        // if (hash.length <= 0) {
-        //     return res.status(400).json({ success: false, message: "Data not found hjjhg" });
-        // }
-        
-        return res.status(200).json({ success: true, data: hash });
+      // if (hash.length <= 0) {
+      //     return res.status(400).json({ success: false, message: "Data not found hjjhg" });
+      // }
+
+      return res.status(200).json({ success: true, data: hash });
     } catch (err) {
-        console.log(err);
-        return res.status(500).json({ success: false, message: "Internal Server Error" });
+      console.log(err);
+      return res.status(500).json({ success: false, message: "Internal Server Error" });
     }
-}
+  }
 
 
-async getShortlistingData(req, res) {
-  try {
+  async getShortlistingData(req, res) {
+    try {
       const { jobId } = req.params;  // Changed from companyId to jobId to match route
       console.log("Fetching shortlisted applications for jobId:", jobId);
 
       if (!mongoose.Types.ObjectId.isValid(jobId)) {
-          return res.status(400).json({ 
-              success: false, 
-              message: "Invalid job ID format" 
-          });
+        return res.status(400).json({
+          success: false,
+          message: "Invalid job ID format"
+        });
       }
 
       // Match the case from your schema enum
       const shortlistingData = await applyModel
-          .find({ 
-              companyId: new mongoose.Types.ObjectId(jobId), 
-              status: "Shortlisted",  // Matches the enum case in schema
-              isDelete: false  // Add this to exclude deleted applications
-          })
-          .populate("userId")
-          .sort({ appliedOn: -1 });  // Optional: sort by latest first
+        .find({
+          companyId: new mongoose.Types.ObjectId(jobId),
+          status: "Shortlisted",  // Matches the enum case in schema
+          isDelete: false  // Add this to exclude deleted applications
+        })
+        .populate("userId")
+        .sort({ appliedOn: -1 });  // Optional: sort by latest first
 
       if (!shortlistingData || shortlistingData.length === 0) {
-          return res.status(200).json({ 
-              success: true, 
-              data: [],
-              message: "No shortlisted applications found" 
-          });
+        return res.status(200).json({
+          success: true,
+          data: [],
+          message: "No shortlisted applications found"
+        });
       }
 
-      return res.status(200).json({ 
-          success: true, 
-          data: shortlistingData 
+      return res.status(200).json({
+        success: true,
+        data: shortlistingData
       });
 
-  } catch (err) {
+    } catch (err) {
       console.error("Error in getShortlistingData:", err);
-      return res.status(500).json({ 
-          success: false, 
-          message: "Internal Server Error",
-          error: err.message 
+      return res.status(500).json({
+        success: false,
+        message: "Internal Server Error",
+        error: err.message
       });
+    }
   }
-}
 
 
-async AllAplliedDetals(req, res) {
+  async AllAplliedDetals(req, res) {
     try {
       let data = await applyModel
         .find()
@@ -1223,10 +1223,10 @@ async AllAplliedDetals(req, res) {
   }
 
 
-async rejectApply(req, res) {
+  async rejectApply(req, res) {
     try {
       const { userId, companyId, employerId } = req.body;
-      console.log(companyId,"lililili")
+      console.log(companyId, "lililili")
 
       // Validate required ids
       if (!userId || !companyId) {
@@ -1265,12 +1265,12 @@ async rejectApply(req, res) {
         data.userId.name,
         data.userId.email,
         "This " +
-          data.companyId.CompanyName +
-          " company rejected you for position " +
-          data.companyId.jobProfile +
-          ", thanks for showing your interest."+"<h3>Thank you <br>Labor Link Team</h3>"
+        data.companyId.CompanyName +
+        " company rejected you for position " +
+        data.companyId.jobProfile +
+        ", thanks for showing your interest." + "<h3>Thank you <br>Labor Link Team</h3>"
       );
-      await applyModel.findOneAndUpdate({_id:data._id},{$set:{status:"Rejected"}})
+      await applyModel.findOneAndUpdate({ _id: data._id }, { $set: { status: "Rejected" } })
 
       // Record application review usage
       try {
@@ -1287,44 +1287,44 @@ async rejectApply(req, res) {
     }
   }
 
-async getRejectedApplications(req, res) {
+  async getRejectedApplications(req, res) {
     try {
-        const { companyId } = req.params; // Get companyId from URL params
-        console.log("Received companyId:", companyId); // Debugging
+      const { companyId } = req.params; // Get companyId from URL params
+      console.log("Received companyId:", companyId); // Debugging
 
-        // Check if companyId is provided
-        if (!companyId) {
-            return res.status(400).json({ error: "companyId is required" });
-        }
+      // Check if companyId is provided
+      if (!companyId) {
+        return res.status(400).json({ error: "companyId is required" });
+      }
 
-        // Validate companyId format
-        if (!mongoose.Types.ObjectId.isValid(companyId)) {
-            return res.status(400).json({ error: "Invalid companyId format" });
-        }
+      // Validate companyId format
+      if (!mongoose.Types.ObjectId.isValid(companyId)) {
+        return res.status(400).json({ error: "Invalid companyId format" });
+      }
 
-        // Find all rejected applications for the given company
-        let rejectedApplications = await applyModel
-            .find({ companyId: companyId, status: "Rejected" })
-            .populate("userId") // Populate user details
-            .populate("companyId"); // Populate company details
-        if (!rejectedApplications || rejectedApplications.length === 0) {
-          console.log("rejectedApplications.length : " , rejectedApplications.length)
-            return res.status(404).json({ error: "No rejected applications found" });
-        }
+      // Find all rejected applications for the given company
+      let rejectedApplications = await applyModel
+        .find({ companyId: companyId, status: "Rejected" })
+        .populate("userId") // Populate user details
+        .populate("companyId"); // Populate company details
+      if (!rejectedApplications || rejectedApplications.length === 0) {
+        console.log("rejectedApplications.length : ", rejectedApplications.length)
+        return res.status(200).json({ success: true, data: [], message: "No rejected applications found" });
+      }
 
-        return res.status(200).json({ success: true, data: rejectedApplications });
+      return res.status(200).json({ success: true, data: rejectedApplications });
     } catch (err) {
-        console.error("Error in getRejectedApplications:", err);
-        return res.status(500).json({ error: "Internal server error" });
+      console.error("Error in getRejectedApplications:", err);
+      return res.status(500).json({ error: "Internal server error" });
     }
-}
+  }
 
-async deleteApply(req,res){
+  async deleteApply(req, res) {
     try {
-      let applyId=req.params.applyId;
-      let data=await applyModel.deleteOne({_id:applyId});
-      if(data.deletedCount===0) return res.status(400).json({error:"Data not found"});
-      return res.status(200).json({success:"Successfully deleted"})
+      let applyId = req.params.applyId;
+      let data = await applyModel.deleteOne({ _id: applyId });
+      if (data.deletedCount === 0) return res.status(400).json({ error: "Data not found" });
+      return res.status(200).json({ success: "Successfully deleted" })
     } catch (error) {
       console.log(error)
     }
@@ -1356,7 +1356,7 @@ async deleteApply(req,res){
       }
       let update = await jobModel.findOneAndUpdate(
         { _id: companyId },
-        { $set: { isVerify: true ,isBlock:false} },
+        { $set: { isVerify: true, isBlock: false } },
         { new: true }
       );
       if (!update)
@@ -1366,14 +1366,14 @@ async deleteApply(req,res){
           verify.employerId.name,
           verify.email,
           "This " +
-            verify.companyName +
-            " company is successfully approved post for position " +
-            verify.jobProfile +
-            "<h3>Thank you <br>Labor Link Team</h3>"
+          verify.companyName +
+          " company is successfully approved post for position " +
+          verify.jobProfile +
+          "<h3>Thank you <br>Labor Link Team</h3>"
         );
       }
       let user = await userModel.find({
-          industry: verify.category 
+        industry: verify.category
       });
       let am = user.map((i) => {
         return i.email;
@@ -1382,10 +1382,10 @@ async deleteApply(req,res){
         "Employees",
         am,
         "This " +
-          verify.companyName +
-          " company is new post for position " +
-          verify.jobProfile +
-          "<h3>Thank you <br>Labor Link Team</h3>"
+        verify.companyName +
+        " company is new post for position " +
+        verify.jobProfile +
+        "<h3>Thank you <br>Labor Link Team</h3>"
       );
       return res.status(200).json({ success: "Successfully approved" });
     } catch (err) {
@@ -1403,7 +1403,7 @@ async deleteApply(req,res){
       // }
       let update = await jobModel.findOneAndUpdate(
         { _id: companyId },
-        { $set: { isVerify: false ,isBlock:true } },
+        { $set: { isVerify: false, isBlock: true } },
         { new: true }
       );
       if (!update)
@@ -1413,10 +1413,10 @@ async deleteApply(req,res){
           verify.employerId.name,
           verify.email,
           "This " +
-            verify.companyName +
-            " company is not approved post for position " +
-            verify.jobProfile +
-            "<h3>Thank you <br>Labor Link Team</h3>"
+          verify.companyName +
+          " company is not approved post for position " +
+          verify.jobProfile +
+          "<h3>Thank you <br>Labor Link Team</h3>"
         );
       }
       return res.status(200).json({ success: "Successfully block!" });
@@ -1429,18 +1429,18 @@ async deleteApply(req,res){
     try {
       const jobs = await jobModel.aggregate([
         { $match: { isDelete: false, isVerify: true, isBlock: false } },
-        { 
-          $lookup: { 
-            from: "applies", localField: "_id", foreignField: "companyId", as: "applications" 
-          } 
+        {
+          $lookup: {
+            from: "applies", localField: "_id", foreignField: "companyId", as: "applications"
+          }
         },
         { $addFields: { applicationCount: { $size: "$applications" } } },
         { $sort: { applicationCount: -1 } },
         { $limit: 10 },
-        { 
-          $lookup: { 
-            from: "employers", localField: "employerId", foreignField: "_id", as: "employer" 
-          } 
+        {
+          $lookup: {
+            from: "employers", localField: "employerId", foreignField: "_id", as: "employer"
+          }
         },
         { $unwind: "$employer" },
         {
@@ -1456,1305 +1456,1305 @@ async deleteApply(req,res){
             "companyName": "$employer.companyName", // Ensure company name is included
           }
         }
-        
+
       ]);
-  
+
       return res.status(200).json(jobs.length ? { success: true, data: jobs } : { error: "No jobs found" });
     } catch (error) {
       res.status(500).json({ error: "Internal server error" });
     }
   }
-  
+
   async getSuggestedJobs(req, res) {
     console.log("Getting Suggested Jobs...");
     try {
       const { userId } = req.params;
-      console.log(userId,"jajs")
-  
+      console.log(userId, "jajs")
+
       if (!mongoose.Types.ObjectId.isValid(userId)) {
         return res.status(400).json({ message: "Invalid user ID format" });
       }
-     
-  
+
+
       // Fetch user with skills
       const user = await userModel.findById(userId)
       // console.log(user,"User from DB:")
       if (!user) return res.status(404).json({ message: "User not found" });
-      console.log(user,"yusdna")
+      console.log(user, "yusdna")
       if (!user.skills || user.skills.length === 0) {
         return res.status(400).json({ message: "User has no skills listed" });
       }
-  
+
       // Extract skill names (since skills are stored as an array of strings)
       const userSkills = user.skills; // No need for `.map(s => s.skill)`
-  
+
       // Fetch jobs matching skills and sort by highest salary
       const jobs = await jobModel
         .find({ skill: { $in: userSkills } }) // Match jobs where any skill matches
         .sort({ "preferredSalary.min": -1 }) // Sort by highest min salary
         .limit(10);
-  
+
       if (jobs.length === 0) {
         return res.status(404).json({ message: "No matching jobs found" });
       }
-  
+
       return res.status(200).json({ getSuggestedJobs: jobs });
     } catch (error) {
       console.error("Error in getSuggestedJobs:", error);
       return res.status(500).json({ message: "Server error", details: error.message });
     }
   }
-  
-      async getRecommendedJobs(req, res) {
-        try {
-            const { userId } = req.params;
 
-            if (!mongoose.Types.ObjectId.isValid(userId)) {
-                return res.status(400).json({ message: "Invalid user ID format" });
-            }
-
-            // Fetch user
-            const user = await userModel.findById(userId);
-            if (!user) return res.status(404).json({ message: "User not found" });
-            console.log("User : " , user)
-            if (!user.skills || user.skills.length === 0) {
-                return res.status(400).json({ message: "User has no skills listed" });
-            }
-
-            // Extract skill names from objects
-            const userSkills = user.skills.map(s => s.skill);
-
-          
-
-            // Fetch jobs matching user skills
-            const jobs = await jobModel.find({
-                skills: { $in: userSkills } // Query jobs where at least one skill matches
-            });
-
-       
-
-            return res.json({ recommendedJobs: jobs });
-        } catch (error) {
-            console.error("Error in getRecommendedJobs:", error);
-            return res.status(500).json({ error: "Something went wrong", details: error.message });
-        }
-       }
-      async getHighestPayingJob (req, res){
-        try {
-          // Find the highest-paying job (no filtering by role)
-          const highestPayingJob = await jobModel.find().sort({ salary: -1 }).limit(15);;
-
-          if (!highestPayingJob) {
-            return res.status(404).json({ message: "No jobs found" });
-          }
-
-          res.status(200).json(highestPayingJob);
-        } catch (error) {
-          console.error("Error in getHighestPayingJob:", error);
-          res.status(500).json({ message: "Server error", details: error.message });
-        }
-      };
-      
-
-      async searchJobsByUserRole(req, res) {
-        try {
-          const { userId } = req.params;
-          console.log("Received userId:", userId);
-      
-          // Validate userId format before conversion
-          if (!mongoose.Types.ObjectId.isValid(userId)) {
-            return res.status(400).json({ success: false, message: "Invalid userId format" });
-          }
-      
-          const objectId = new mongoose.Types.ObjectId(userId);
-      
-          // Find user and their role
-          const user = await userModel.findById(objectId);
-          console.log("User found:", user);
-      
-          if (!user) {
-            return res.status(404).json({ success: false, message: "User not found" });
-          }
-      
-          // Extract user's role
-          const userRole = user.role;
-          console.log("User Role:", userRole);
-      
-          // Find jobs matching the user's role
-          const jobs = await jobModel.find({ role: userRole });
-          console.log("Jobs found:", jobs);
-      
-          if (!jobs.length) {
-            return res.status(404).json({ success: false, message: "No jobs found for this role" });
-          }
-      
-          // Return jobs data
-          res.json({ success: true, data: jobs });
-      
-        } catch (error) {
-          console.error("Error searching jobs:", error);
-          res.status(500).json({ success: false, message: "Internal Server Error" });
-        }
-      }
-      
-      
-
-
-
-
-      async addCompanyType(req, res) {
-        try {
-            const { type } = req.body;
-            if (!type) {
-                return res.status(400).json({ error: "Company type is required" });
-            }
-    
-            // Check if a deleted type already exists
-            let existingType = await CompanyType.findOne({ type }).lean();
-    
-            if (existingType) {
-                // If the type exists but was previously deleted, just reactivate it
-                const updatedType = await CompanyType.findOneAndUpdate(
-                    { type },
-                    { action: true, updatedAt: new Date() }, // Reactivating and updating timestamp
-                    { new: true }
-                );
-                return res.status(200).json({ success: true, data: updatedType });
-            }
-    
-            // Fetch last typeId and generate a new one
-            const lastRecord = await CompanyType.findOne().sort({ typeId: -1 }).lean();
-            let newIdNumber = 1;
-            if (lastRecord?.typeId) {
-                const match = lastRecord.typeId.match(/\d+/);
-                newIdNumber = match ? parseInt(match[0], 10) + 1 : 1;
-            }
-            const newTypeId = `CT${String(newIdNumber).padStart(3, "0")}`;
-    
-            // Create new company type
-            const newCompanyType = await CompanyType.create({
-                type,
-                typeId: newTypeId, 
-                action: true,
-            });
-    
-            return res.status(201).json({
-                success: true,
-                data: newCompanyType
-            });
-        } catch (error) {
-            console.error("Error adding company type:", error);
-            return res.status(500).json({
-                error: "Internal server error",
-                details: error.message
-            });
-        }
-    }      
-      async addIndustry (req, res){
-        try {
-          const { id, industryName } = req.body;
-      
-          if (!industryName) {
-            return res.status(400).json({ error: "Industry name is required" });
-          }
-      
-          if (id) {
-            // Update existing industry
-            if (!mongoose.Types.ObjectId.isValid(id)) {
-              return res.status(400).json({
-                error: "Invalid industry ID format",
-                details: "The provided ID is not a valid MongoDB ObjectId"
-              });
-            }
-      
-            // Check if the new industry name already exists (excluding the current record)
-            const existingIndustry = await Industry.findOne({
-              industryName: industryName,
-              _id: { $ne: id }
-            });
-      
-            if (existingIndustry) {
-              return res.status(400).json({ error: "Industry name already exists" });
-            }
-      
-            const updatedIndustry = await Industry.findByIdAndUpdate(
-              id,
-              {
-                industryName,
-                updatedAt: new Date()
-              },
-              {
-                new: true,
-                runValidators: true
-              }
-            );
-      
-            if (!updatedIndustry) {
-              return res.status(404).json({ error: "Industry not found" });
-            }
-      
-            return res.status(200).json({
-              success: true,
-              data: updatedIndustry
-            });
-          } else {
-            // Add new industry
-            const newIndustry = new Industry({ industryName });
-            await newIndustry.save();
-            return res.status(201).json({
-              success: true,
-              data: newIndustry
-            });
-          }
-        } catch (error) {
-          console.error("Error saving industry:", error);
-          return res.status(500).json({
-            error: "Internal server error",
-            details: error.message
-          });
-        }
-      };
-      async addDepartment(req, res) {
-        try {
-            const { departmentName } = req.body;
-            if (!departmentName) {
-                return res.status(400).json({ error: "Department name is required" });
-            }
-    
-            // Check if department already exists
-            const existingDepartment = await Department.findOne({ departmentName });
-            if (existingDepartment) {
-                return res.status(400).json({ error: "Department already exists" });
-            }
-    
-            // Fetch last departmentId and generate a new one
-            const lastRecord = await Department.findOne().sort({ departmentId: -1 }).lean();
-            let newIdNumber = 1;
-            if (lastRecord?.departmentId) {
-                const match = lastRecord.departmentId.match(/\d+/); // Extract numeric part
-                newIdNumber = match ? parseInt(match[0], 10) + 1 : 1;
-            }
-            const newDepartmentId = `D${String(newIdNumber).padStart(3, "0")}`;
-    
-            // Create new department
-            const newDepartment = await Department.create({
-                departmentName,
-                departmentId: newDepartmentId,  // ✅ Explicitly set departmentId
-                action: true,
-            });
-    
-            return res.status(201).json({
-                success: true,
-                data: newDepartment
-            });
-        } catch (error) {
-            console.error("Error adding department:", error);
-            return res.status(500).json({
-                error: "Internal server error",
-                details: error.message
-            });
-        }
-    }
-      async addJobRole(req, res) {
-        try {
-          const { jobRole } = req.body;
-          if (!jobRole) {
-            return res.status(400).json({ error: "Job role is required" });
-          }
-
-          const newJobRole = await JobRole.create({ 
-            jobRole, 
-            action: true 
-          });
-
-          return res.status(201).json({
-            success: true,
-            data: newJobRole
-          });
-        } catch (error) {
-          console.error("Error adding job role:", error);
-          return res.status(500).json({ error: "Internal server error" });
-        }
-      }
-      async  addJobRole (req, res)  {
-        try {
-          const { id, jobRole } = req.body;
-      
-          if (!jobRole) {
-            return res.status(400).json({ error: 'Job role is required' });
-          }
-      
-          if (id) {
-            // Update existing job role
-            const updatedRole = await JobRole.findByIdAndUpdate(
-              id,
-              { jobRole },
-              { new: true }
-            );
-            if (!updatedRole) {
-              return res.status(404).json({ error: 'Job role not found' });
-            }
-            return res.status(200).json({ success: true, data: updatedRole });
-          } else {
-            // Add new job role
-            const newRole = new JobRole({ jobRole });
-            await newRole.save();
-            return res.status(201).json({ success: true, data: newRole });
-          }
-        } catch (error) {
-          console.error('Error saving job role:', error);
-          return res.status(500).json({ error: 'Internal server error' });
-        }
-      };
-      async addWorkMode(req, res) {
-        try {
-            const { workMode } = req.body;
-            if (!workMode) {
-                return res.status(400).json({ error: "Work mode is required" });
-            }
-    
-            // Check if a deleted work mode already exists
-            let existingMode = await WorkMode.findOne({ workMode }).lean();
-    
-            if (existingMode) {
-                // If the work mode exists but was previously deleted, reactivate it
-                const updatedMode = await WorkMode.findOneAndUpdate(
-                    { workMode },
-                    { action: true, updatedAt: new Date() }, // Reactivate it
-                    { new: true }
-                );
-                return res.status(200).json({ success: true, data: updatedMode });
-            }
-    
-            // Create new work mode if it does not exist
-            const newWorkMode = await WorkMode.create({ 
-                workMode, 
-                action: true 
-            });
-    
-            return res.status(201).json({
-                success: true,
-                data: newWorkMode
-            });
-        } catch (error) {
-            console.error("Error adding work mode:", error);
-            return res.status(500).json({ error: "Internal server error" });
-        }
-    }
-    
-      async addEducation(req, res) {
-        const education = new Education({
-          qualification: req.body.qualification,
-        });
-      
-        try {
-          const newEducation = await education.save();
-          res.status(201).json(newEducation);
-        } catch (error) {
-          res.status(400).json({ message: error.message });
-        }
-      }
-      async addSkill(req, res) {
-        try {
-          console.log("Received body:", req.body); // Debugging step ✅
-          
-          const { skillName } = req.body;
-      
-          if (!skillName) {
-            return res.status(400).json({ error: "Skill name is required" });
-          }
-      
-          // ✅ Check if skill already exists
-          const existingSkill = await Skill.findOne({ skillName: { $regex: new RegExp(`^${skillName}$`, "i") } });
-          if (existingSkill) {
-            return res.status(400).json({ error: "Skill already exists" });
-          }
-      
-          // ✅ Fetch last skillId correctly
-          const lastRecord = await Skill.find().sort({ createdAt: -1 }).limit(1).lean();
-          let newIdNumber = 1;
-          if (lastRecord.length > 0 && lastRecord[0].skillId) {
-            const match = lastRecord[0].skillId.match(/\d+/);
-            newIdNumber = match ? parseInt(match[0], 10) + 1 : 1;
-          }
-          const newSkillId = `SK${String(newIdNumber).padStart(3, "0")}`;
-      
-          // ✅ Create new skill
-          const newSkill = await Skill.create({
-            skillName,
-            skillId: newSkillId,
-            action: true,
-          });
-      
-          return res.status(201).json({
-            success: true,
-            data: newSkill,
-          });
-        } catch (error) {
-          console.error("Error adding skill:", error);
-          return res.status(500).json({
-            error: "Internal server error",
-            details: error.message,
-          });
-        }
-      }
-      async addChef(req, res) {
-        try {
-          console.log("Received body:", req.body); // Debugging step ✅
-          
-          const { chefCategory } = req.body;
-      
-          if (!chefCategory) {
-            return res.status(400).json({ error: "Chefs name is required" });
-          }
-      
-          // ✅ Check if skill already exists
-          const existingSkill = await Chefs.findOne({ chefCategory: { $regex: new RegExp(`^${chefCategory}$`, "i") } });
-          if (existingSkill) {
-            return res.status(400).json({ error: "chefCategory already exists" });
-          }
-      
-          // ✅ Fetch last skillId correctly
-          const lastRecord = await Chefs.find().sort({ createdAt: -1 }).limit(1).lean();
-          let newIdNumber = 1;
-          if (lastRecord.length > 0 && lastRecord[0].chefId) {
-            const match = lastRecord[0].chefId.match(/\d+/);
-            newIdNumber = match ? parseInt(match[0], 10) + 1 : 1;
-          }
-          const newSkillId = `SK${String(newIdNumber).padStart(3, "0")}`;
-      
-          // ✅ Create new skill
-          const newSkill = await Chefs.create({
-            chefCategory,
-            chefId: newSkillId,
-            action: true,
-          });
-      
-          return res.status(201).json({
-            success: true,
-            data: newSkill,
-          });
-        } catch (error) {
-          console.error("Error adding Chefs:", error);
-          return res.status(500).json({
-            error: "Internal server error",
-            details: error.message,
-          });
-        }
-      }      
-      async addCuisine(req, res) {
+  async getRecommendedJobs(req, res) {
     try {
-        console.log("Received body:", req.body);
+      const { userId } = req.params;
 
-        const { Cuisine } = req.body;
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ message: "Invalid user ID format" });
+      }
 
-        if (!Cuisine) {
-            return res.status(400).json({ error: "Cuisine name is required" });
-        }
+      // Fetch user
+      const user = await userModel.findById(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      console.log("User : ", user)
+      if (!user.skills || user.skills.length === 0) {
+        return res.status(400).json({ message: "User has no skills listed" });
+      }
 
-        // Check if the Cuisine already exists (case-insensitive)
-        const existingCuisine = await Cuisines.findOne({
-            Cuisine: { $regex: new RegExp(`^${Cuisine}$`, "i") }
-        });
+      // Extract skill names from objects
+      const userSkills = user.skills.map(s => s.skill);
 
-        if (existingCuisine) {
-            return res.status(400).json({ error: "Cuisine already exists" });
-        }
 
-        const newCuisine = await Cuisines.create({
-            Cuisine,
-            action: true
-        });
 
-        return res.status(201).json({
-            success: true,
-            data: newCuisine
-        });
+      // Fetch jobs matching user skills
+      const jobs = await jobModel.find({
+        skills: { $in: userSkills } // Query jobs where at least one skill matches
+      });
+
+
+
+      return res.json({ recommendedJobs: jobs });
+    } catch (error) {
+      console.error("Error in getRecommendedJobs:", error);
+      return res.status(500).json({ error: "Something went wrong", details: error.message });
+    }
+  }
+  async getHighestPayingJob(req, res) {
+    try {
+      // Find the highest-paying job (no filtering by role)
+      const highestPayingJob = await jobModel.find().sort({ salary: -1 }).limit(15);;
+
+      if (!highestPayingJob) {
+        return res.status(404).json({ message: "No jobs found" });
+      }
+
+      res.status(200).json(highestPayingJob);
+    } catch (error) {
+      console.error("Error in getHighestPayingJob:", error);
+      res.status(500).json({ message: "Server error", details: error.message });
+    }
+  };
+
+
+  async searchJobsByUserRole(req, res) {
+    try {
+      const { userId } = req.params;
+      console.log("Received userId:", userId);
+
+      // Validate userId format before conversion
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ success: false, message: "Invalid userId format" });
+      }
+
+      const objectId = new mongoose.Types.ObjectId(userId);
+
+      // Find user and their role
+      const user = await userModel.findById(objectId);
+      console.log("User found:", user);
+
+      if (!user) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+
+      // Extract user's role
+      const userRole = user.role;
+      console.log("User Role:", userRole);
+
+      // Find jobs matching the user's role
+      const jobs = await jobModel.find({ role: userRole });
+      console.log("Jobs found:", jobs);
+
+      if (!jobs.length) {
+        return res.status(404).json({ success: false, message: "No jobs found for this role" });
+      }
+
+      // Return jobs data
+      res.json({ success: true, data: jobs });
 
     } catch (error) {
-        console.error("Error adding Cuisine:", error);
-        return res.status(500).json({
-            error: "Internal server error",
-            details: error.message
-        });
+      console.error("Error searching jobs:", error);
+      res.status(500).json({ success: false, message: "Internal Server Error" });
     }
-}
-async getCompanyTypes(req, res) {
-        try {
-            const companyTypes = await CompanyType.find({ action: true })
-                .select('_id type typeId')  // ✅ Add typeId
-                .sort({ type: 1 });
-    
-            return res.status(200).json({
-                success: true,
-                count: companyTypes.length,
-                data: companyTypes
-            });
-        } catch (error) {
-            console.error("Error fetching company types:", error);
-            return res.status(500).json({
-                error: "Internal server error",
-                details: error.message
-            });
-        }
-    }
- async getIndustries  (req, res)  {
-        try {
-          const industries = await Industry.find({}).sort({ industryName: 1 }); // Fetch all industries from the database
-          res.status(200).json({
-            success: true,
-            data: industries, // Ensure the data is returned in the correct format
-          });
-        } catch (error) {
-          console.error("Error fetching industries:", error);
-          res.status(500).json({
-            error: "Internal server error",
-            details: error.message,
-          });
-        }
-      };
-async getDepartments(req, res) {
-        try {
-            const departments = await Department.find({ action: true })
-                .select('_id departmentName departmentId')  // ✅ Include departmentId
-                .sort({ departmentName: 1 });
-    
-            return res.status(200).json({
-                success: true,
-                count: departments.length,  // ✅ Add count like getCompanyTypes
-                data: departments
-            });
-        } catch (error) {
-            console.error("Error fetching departments:", error);
-            return res.status(500).json({
-                error: "Internal server error",
-                details: error.message
-            });
-        }
-    }
-  async getJobRoles  (req, res)  {
-      try {
-        const roles = await JobRole.find({}).sort({ jobRole: 1 });;
-        console.log(roles,"sdsd")
-        return res.status(200).json({ success: true, data: roles });
-      } catch (error) {
-        console.error('Error fetching job roles:', error);
-        return res.status(500).json({ error: 'Internal server error' });
-      }
-    };
-
-async getWorkModes(req, res) {
-      try {
-          const workModes = await WorkMode.find({ action: true })
-              .select('_id workMode') // Include _id and workMode
-              .sort({ workMode: 1 });
-  
-          return res.status(200).json({
-              success: true,
-              count: workModes.length, // Add count
-              data: workModes, // Return full objects
-          });
-      } catch (error) {
-          console.error("Error fetching work modes:", error);
-          return res.status(500).json({ error: "Internal server error" });
-      }
   }
-  
 
-async getEducations(req, res) {
-        try {
-          const educations = await Education.find().sort({ qualification: 1 });;
-          res.json(educations);
-        } catch (error) {
-          res.status(500).json({ message: error.message });
-        }
-      };
-      async getSkills(req, res) {
-        try {
-          const skills = await Skill.find({ action: true })
-            .select('_id skillName') // Select only necessary fields
-            .sort({ skillName: 1 }); // Sort by skillName
-      
-          return res.status(200).json({
-            success: true,
-            count: skills.length,
-            data: skills
-          });
-        } catch (error) {
-          console.error("Error fetching skills:", error);
-          return res.status(500).json({
-            error: "Internal server error",
-            details: error.message
-          });
-        }
-      }
-async getChefs(req, res) {
-  try {
-    const chefs = await Chefs.find({ action: true })
-      .select('_id chefCategory chefId') // include chefId for sorting
-      .sort({ chefCategory: 1 });
 
-    return res.status(200).json({
-      success: true,
-      count: chefs.length,
-      data: chefs
-    });
-  } catch (error) {
-    console.error("Error fetching chefs:", error);
-    return res.status(500).json({
-      error: "Internal server error",
-      details: error.message
-    });
-  }
-}
 
-async getCuisine(req, res) {
-  try {
-    const cuisines = await Cuisines.find({ action: true })
-      .select('_id Cuisine CuisineId') // fields relevant to Cuisine
-      .sort({ Cuisine: 1 }); // sort by CuisineId ascending
 
-    return res.status(200).json({
-      success: true,
-      count: cuisines.length,
-      data: cuisines
-    });
-  } catch (error) {
-    console.error("Error fetching cuisines:", error);
-    return res.status(500).json({
-      error: "Internal server error",
-      details: error.message
-    });
-  }
-}
-async editCompanyType(req, res) {
-        try {
-          const { id } = req.params;
-          const { type, action } = req.body;
 
-          // Validate ObjectId
-          if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ 
-              error: "Invalid ID format",
-              details: "The provided ID is not a valid MongoDB ObjectId"
-            });
-          }
 
-          if (!type) {
-            return res.status(400).json({ error: "Company type is required" });
-          }
-
-          // Check if new type already exists (excluding current record)
-          const existingType = await CompanyType.findOne({ 
-            type: type, 
-            _id: { $ne: id } 
-          });
-          
-          if (existingType) {
-            return res.status(400).json({ error: "Company type already exists" });
-          }
-
-          const updatedType = await CompanyType.findByIdAndUpdate(
-            id,
-            { 
-              type, 
-              action: action !== undefined ? action : true,
-              updatedAt: new Date()
-            },
-            { 
-              new: true,
-              runValidators: true 
-            }
-          );
-
-          if (!updatedType) {
-            return res.status(404).json({ error: "Company type not found" });
-          }
-
-          return res.status(200).json({
-            success: true,
-            data: updatedType
-          });
-        } catch (error) {
-          console.error("Error updating company type:", error);
-          return res.status(500).json({ 
-            error: "Internal server error",
-            details: error.message 
-          });
-        }
-      }
-async editIndustry  (req, res) {
-        try {
-          const { id } = req.params;
-          const { industryName } = req.body;
-      
-          // Validate ObjectId
-          if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({
-              error: "Invalid industry ID format",
-              details: "The provided ID is not a valid MongoDB ObjectId"
-            });
-          }
-      
-          if (!industryName) {
-            return res.status(400).json({ error: "Industry name is required" });
-          }
-      
-          // Check if the new industry name already exists (excluding the current record)
-          const existingIndustry = await Industry.findOne({
-            industryName: industryName,
-            _id: { $ne: id }
-          });
-      
-          if (existingIndustry) {
-            return res.status(400).json({ error: "Industry name already exists" });
-          }
-      
-          const updatedIndustry = await Industry.findByIdAndUpdate(
-            id,
-            {
-              industryName,
-              updatedAt: new Date()
-            },
-            {
-              new: true,
-              runValidators: true
-            }
-          );
-      
-          if (!updatedIndustry) {
-            return res.status(404).json({ error: "Industry not found" });
-          }
-      
-          return res.status(200).json({
-            success: true,
-            data: updatedIndustry
-          });
-        } catch (error) {
-          console.error("Error updating industry:", error);
-          return res.status(500).json({
-            error: "Internal server error",
-            details: error.message
-          });
-        }
-      };
-async editDepartment(req, res) {
-        try {
-            const { id } = req.params;
-            const { departmentName, action } = req.body;
-    
-            // Validate ObjectId
-            if (!mongoose.Types.ObjectId.isValid(id)) {
-                return res.status(400).json({
-                    error: "Invalid department ID format",
-                    details: "The provided ID is not a valid MongoDB ObjectId"
-                });
-            }
-    
-            if (!departmentName) {
-                return res.status(400).json({ error: "Department name is required" });
-            }
-    
-            // Check if the new department name already exists (excluding the current record)
-            const existingDepartment = await Department.findOne({
-                departmentName: departmentName,
-                _id: { $ne: id }
-            });
-    
-            if (existingDepartment) {
-                return res.status(400).json({ error: "Department name already exists" });
-            }
-    
-            const updatedDepartment = await Department.findByIdAndUpdate(
-                id,
-                {
-                    departmentName,
-                    action: action !== undefined ? action : true,
-                    updatedAt: new Date()
-                },
-                {
-                    new: true,
-                    runValidators: true
-                }
-            );
-    
-            if (!updatedDepartment) {
-                return res.status(404).json({ error: "Department not found" });
-            }
-    
-            return res.status(200).json({
-                success: true,
-                data: updatedDepartment
-            });
-        } catch (error) {
-            console.error("Error updating department:", error);
-            return res.status(500).json({
-                error: "Internal server error",
-                details: error.message
-            });
-        }
-    }
-async editJobRole(req, res) {
-        try {
-          const { id } = req.params;
-          const { jobRole, action } = req.body;
-
-          if (!jobRole) {
-            return res.status(400).json({ error: "Job role is required" });
-          }
-
-          const updatedJobRole = await JobRole.findByIdAndUpdate(
-            id,
-            { jobRole, action },
-            { new: true }
-          );
-
-          if (!updatedJobRole) {
-            return res.status(404).json({ error: "Job role not found" });
-          }
-
-          return res.status(200).json({
-            success: true,
-            data: updatedJobRole
-          });
-        } catch (error) {
-          console.error("Error updating job role:", error);
-          return res.status(500).json({ error: "Internal server error" });
-        }
-      }
-async editWorkMode(req, res) {
-        try {
-          const { id } = req.params;
-          const { workMode, action } = req.body;
-
-          if (!workMode) {
-            return res.status(400).json({ error: "Work mode is required" });
-          }
-
-          const updatedWorkMode = await WorkMode.findByIdAndUpdate(
-            id,
-            { workMode, action },
-            { new: true }
-          );
-
-          if (!updatedWorkMode) {
-            return res.status(404).json({ error: "Work mode not found" });
-          }
-
-          return res.status(200).json({
-            success: true,
-            data: updatedWorkMode
-          });
-        } catch (error) {
-          console.error("Error updating work mode:", error);
-          return res.status(500).json({ error: "Internal server error" });
-        }
-      }
-async editEducation(req, res) {
-        try {
-          const education = await Education.findByIdAndUpdate(req.params.id, req.body, { new: true });
-          res.json(education);
-        } catch (error) {
-          res.status(400).json({ message: error.message });
-        }
-      };
-      
-async editSkill(req, res) {
-        try {
-            const { id } = req.params;
-            const { skillName, action } = req.body;
-    
-            // Validate ObjectId
-            if (!mongoose.Types.ObjectId.isValid(id)) {
-                return res.status(400).json({
-                    error: "Invalid skill ID format",
-                    details: "The provided ID is not a valid MongoDB ObjectId"
-                });
-            }
-    
-            if (!skillName) {
-                return res.status(400).json({ error: "Skill name is required" });
-            }
-    
-            // Check if skill name already exists (excluding the current record)
-            const existingSkill = await Skill.findOne({
-                skillName,
-                _id: { $ne: id }
-            });
-    
-            if (existingSkill) {
-                return res.status(400).json({ error: "Skill name already exists" });
-            }
-    
-            const updatedSkill = await Skill.findByIdAndUpdate(
-                id,
-                {
-                    skillName,
-                    action: action !== undefined ? action : true,
-                    updatedAt: new Date()
-                },
-                {
-                    new: true,
-                    runValidators: true
-                }
-            );
-    
-            if (!updatedSkill) {
-                return res.status(404).json({ error: "Skill not found" });
-            }
-    
-            return res.status(200).json({
-                success: true,
-                data: updatedSkill
-            });
-        } catch (error) {
-            console.error("Error updating skill:", error);
-            return res.status(500).json({
-                error: "Internal server error",
-                details: error.message
-            });
-        }
-    }
-      async editChef(req, res) {
-        try {
-            const { id } = req.params;
-            const { chefCategory, action } = req.body;
-    
-            // Validate ObjectId
-            if (!mongoose.Types.ObjectId.isValid(id)) {
-                return res.status(400).json({
-                    error: "Invalid skill ID format",
-                    details: "The provided ID is not a valid MongoDB ObjectId"
-                });
-            }
-    
-            if (!chefCategory) {
-                return res.status(400).json({ error: "Skill name is required" });
-            }
-    
-            // Check if skill name already exists (excluding the current record)
-            const existingSkill = await Chefs.findOne({
-                chefCategory,
-                _id: { $ne: id }
-            });
-    
-            if (existingSkill) {
-                return res.status(400).json({ error: "Skill name already exists" });
-            }
-    
-            const updatedSkill = await Chefs.findByIdAndUpdate(
-                id,
-                {
-                    chefCategory,
-                    action: action !== undefined ? action : true,
-                    updatedAt: new Date()
-                },
-                {
-                    new: true,
-                    runValidators: true
-                }
-            );
-    
-            if (!updatedSkill) {
-                return res.status(404).json({ error: "Skill not found" });
-            }
-    
-            return res.status(200).json({
-                success: true,
-                data: updatedSkill
-            });
-        } catch (error) {
-            console.error("Error updating chefCategory:", error);
-            return res.status(500).json({
-                error: "Internal server error",
-                details: error.message
-            });
-        }
-    }
-    async editCuisine(req, res) {
+  async addCompanyType(req, res) {
     try {
-        const { id } = req.params;
-        const { Cuisine: cuisineName, action } = req.body;
+      const { type } = req.body;
+      if (!type) {
+        return res.status(400).json({ error: "Company type is required" });
+      }
 
-        // Validate ObjectId
+      // Check if a deleted type already exists
+      let existingType = await CompanyType.findOne({ type }).lean();
+
+      if (existingType) {
+        // If the type exists but was previously deleted, just reactivate it
+        const updatedType = await CompanyType.findOneAndUpdate(
+          { type },
+          { action: true, updatedAt: new Date() }, // Reactivating and updating timestamp
+          { new: true }
+        );
+        return res.status(200).json({ success: true, data: updatedType });
+      }
+
+      // Fetch last typeId and generate a new one
+      const lastRecord = await CompanyType.findOne().sort({ typeId: -1 }).lean();
+      let newIdNumber = 1;
+      if (lastRecord?.typeId) {
+        const match = lastRecord.typeId.match(/\d+/);
+        newIdNumber = match ? parseInt(match[0], 10) + 1 : 1;
+      }
+      const newTypeId = `CT${String(newIdNumber).padStart(3, "0")}`;
+
+      // Create new company type
+      const newCompanyType = await CompanyType.create({
+        type,
+        typeId: newTypeId,
+        action: true,
+      });
+
+      return res.status(201).json({
+        success: true,
+        data: newCompanyType
+      });
+    } catch (error) {
+      console.error("Error adding company type:", error);
+      return res.status(500).json({
+        error: "Internal server error",
+        details: error.message
+      });
+    }
+  }
+  async addIndustry(req, res) {
+    try {
+      const { id, industryName } = req.body;
+
+      if (!industryName) {
+        return res.status(400).json({ error: "Industry name is required" });
+      }
+
+      if (id) {
+        // Update existing industry
         if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({
-                error: "Invalid Cuisine ID format",
-                details: "The provided ID is not a valid MongoDB ObjectId"
-            });
+          return res.status(400).json({
+            error: "Invalid industry ID format",
+            details: "The provided ID is not a valid MongoDB ObjectId"
+          });
         }
 
-        if (!cuisineName) {
-            return res.status(400).json({ error: "Cuisine name is required" });
-        }
-
-        // Check if Cuisine name already exists (case-insensitive, excluding current record)
-        const existingCuisine = await Cuisines.findOne({
-            Cuisine: { $regex: new RegExp(`^${cuisineName}$`, "i") },
-            _id: { $ne: id }
+        // Check if the new industry name already exists (excluding the current record)
+        const existingIndustry = await Industry.findOne({
+          industryName: industryName,
+          _id: { $ne: id }
         });
 
-        if (existingCuisine) {
-            return res.status(400).json({ error: "Cuisine name already exists" });
+        if (existingIndustry) {
+          return res.status(400).json({ error: "Industry name already exists" });
         }
 
-        // Update the Cuisine
-        const updatedCuisine = await Cuisines.findByIdAndUpdate(
-            id,
-            {
-                Cuisine: cuisineName,
-                action: action !== undefined ? action : true
-            },
-            {
-                new: true,
-                runValidators: true
-            }
+        const updatedIndustry = await Industry.findByIdAndUpdate(
+          id,
+          {
+            industryName,
+            updatedAt: new Date()
+          },
+          {
+            new: true,
+            runValidators: true
+          }
         );
 
-        if (!updatedCuisine) {
-            return res.status(404).json({ error: "Cuisine not found" });
+        if (!updatedIndustry) {
+          return res.status(404).json({ error: "Industry not found" });
         }
 
         return res.status(200).json({
-            success: true,
-            data: updatedCuisine
+          success: true,
+          data: updatedIndustry
         });
+      } else {
+        // Add new industry
+        const newIndustry = new Industry({ industryName });
+        await newIndustry.save();
+        return res.status(201).json({
+          success: true,
+          data: newIndustry
+        });
+      }
     } catch (error) {
-        console.error("Error updating Cuisine:", error);
-        return res.status(500).json({
-            error: "Internal server error",
-            details: error.message
+      console.error("Error saving industry:", error);
+      return res.status(500).json({
+        error: "Internal server error",
+        details: error.message
+      });
+    }
+  };
+  async addDepartment(req, res) {
+    try {
+      const { departmentName } = req.body;
+      if (!departmentName) {
+        return res.status(400).json({ error: "Department name is required" });
+      }
+
+      // Check if department already exists
+      const existingDepartment = await Department.findOne({ departmentName });
+      if (existingDepartment) {
+        return res.status(400).json({ error: "Department already exists" });
+      }
+
+      // Fetch last departmentId and generate a new one
+      const lastRecord = await Department.findOne().sort({ departmentId: -1 }).lean();
+      let newIdNumber = 1;
+      if (lastRecord?.departmentId) {
+        const match = lastRecord.departmentId.match(/\d+/); // Extract numeric part
+        newIdNumber = match ? parseInt(match[0], 10) + 1 : 1;
+      }
+      const newDepartmentId = `D${String(newIdNumber).padStart(3, "0")}`;
+
+      // Create new department
+      const newDepartment = await Department.create({
+        departmentName,
+        departmentId: newDepartmentId,  // ✅ Explicitly set departmentId
+        action: true,
+      });
+
+      return res.status(201).json({
+        success: true,
+        data: newDepartment
+      });
+    } catch (error) {
+      console.error("Error adding department:", error);
+      return res.status(500).json({
+        error: "Internal server error",
+        details: error.message
+      });
+    }
+  }
+  async addJobRole(req, res) {
+    try {
+      const { jobRole } = req.body;
+      if (!jobRole) {
+        return res.status(400).json({ error: "Job role is required" });
+      }
+
+      const newJobRole = await JobRole.create({
+        jobRole,
+        action: true
+      });
+
+      return res.status(201).json({
+        success: true,
+        data: newJobRole
+      });
+    } catch (error) {
+      console.error("Error adding job role:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+  async addJobRole(req, res) {
+    try {
+      const { id, jobRole } = req.body;
+
+      if (!jobRole) {
+        return res.status(400).json({ error: 'Job role is required' });
+      }
+
+      if (id) {
+        // Update existing job role
+        const updatedRole = await JobRole.findByIdAndUpdate(
+          id,
+          { jobRole },
+          { new: true }
+        );
+        if (!updatedRole) {
+          return res.status(404).json({ error: 'Job role not found' });
+        }
+        return res.status(200).json({ success: true, data: updatedRole });
+      } else {
+        // Add new job role
+        const newRole = new JobRole({ jobRole });
+        await newRole.save();
+        return res.status(201).json({ success: true, data: newRole });
+      }
+    } catch (error) {
+      console.error('Error saving job role:', error);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  };
+  async addWorkMode(req, res) {
+    try {
+      const { workMode } = req.body;
+      if (!workMode) {
+        return res.status(400).json({ error: "Work mode is required" });
+      }
+
+      // Check if a deleted work mode already exists
+      let existingMode = await WorkMode.findOne({ workMode }).lean();
+
+      if (existingMode) {
+        // If the work mode exists but was previously deleted, reactivate it
+        const updatedMode = await WorkMode.findOneAndUpdate(
+          { workMode },
+          { action: true, updatedAt: new Date() }, // Reactivate it
+          { new: true }
+        );
+        return res.status(200).json({ success: true, data: updatedMode });
+      }
+
+      // Create new work mode if it does not exist
+      const newWorkMode = await WorkMode.create({
+        workMode,
+        action: true
+      });
+
+      return res.status(201).json({
+        success: true,
+        data: newWorkMode
+      });
+    } catch (error) {
+      console.error("Error adding work mode:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  async addEducation(req, res) {
+    const education = new Education({
+      qualification: req.body.qualification,
+    });
+
+    try {
+      const newEducation = await education.save();
+      res.status(201).json(newEducation);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+  async addSkill(req, res) {
+    try {
+      console.log("Received body:", req.body); // Debugging step ✅
+
+      const { skillName } = req.body;
+
+      if (!skillName) {
+        return res.status(400).json({ error: "Skill name is required" });
+      }
+
+      // ✅ Check if skill already exists
+      const existingSkill = await Skill.findOne({ skillName: { $regex: new RegExp(`^${skillName}$`, "i") } });
+      if (existingSkill) {
+        return res.status(400).json({ error: "Skill already exists" });
+      }
+
+      // ✅ Fetch last skillId correctly
+      const lastRecord = await Skill.find().sort({ createdAt: -1 }).limit(1).lean();
+      let newIdNumber = 1;
+      if (lastRecord.length > 0 && lastRecord[0].skillId) {
+        const match = lastRecord[0].skillId.match(/\d+/);
+        newIdNumber = match ? parseInt(match[0], 10) + 1 : 1;
+      }
+      const newSkillId = `SK${String(newIdNumber).padStart(3, "0")}`;
+
+      // ✅ Create new skill
+      const newSkill = await Skill.create({
+        skillName,
+        skillId: newSkillId,
+        action: true,
+      });
+
+      return res.status(201).json({
+        success: true,
+        data: newSkill,
+      });
+    } catch (error) {
+      console.error("Error adding skill:", error);
+      return res.status(500).json({
+        error: "Internal server error",
+        details: error.message,
+      });
+    }
+  }
+  async addChef(req, res) {
+    try {
+      console.log("Received body:", req.body); // Debugging step ✅
+
+      const { chefCategory } = req.body;
+
+      if (!chefCategory) {
+        return res.status(400).json({ error: "Chefs name is required" });
+      }
+
+      // ✅ Check if skill already exists
+      const existingSkill = await Chefs.findOne({ chefCategory: { $regex: new RegExp(`^${chefCategory}$`, "i") } });
+      if (existingSkill) {
+        return res.status(400).json({ error: "chefCategory already exists" });
+      }
+
+      // ✅ Fetch last skillId correctly
+      const lastRecord = await Chefs.find().sort({ createdAt: -1 }).limit(1).lean();
+      let newIdNumber = 1;
+      if (lastRecord.length > 0 && lastRecord[0].chefId) {
+        const match = lastRecord[0].chefId.match(/\d+/);
+        newIdNumber = match ? parseInt(match[0], 10) + 1 : 1;
+      }
+      const newSkillId = `SK${String(newIdNumber).padStart(3, "0")}`;
+
+      // ✅ Create new skill
+      const newSkill = await Chefs.create({
+        chefCategory,
+        chefId: newSkillId,
+        action: true,
+      });
+
+      return res.status(201).json({
+        success: true,
+        data: newSkill,
+      });
+    } catch (error) {
+      console.error("Error adding Chefs:", error);
+      return res.status(500).json({
+        error: "Internal server error",
+        details: error.message,
+      });
+    }
+  }
+  async addCuisine(req, res) {
+    try {
+      console.log("Received body:", req.body);
+
+      const { Cuisine } = req.body;
+
+      if (!Cuisine) {
+        return res.status(400).json({ error: "Cuisine name is required" });
+      }
+
+      // Check if the Cuisine already exists (case-insensitive)
+      const existingCuisine = await Cuisines.findOne({
+        Cuisine: { $regex: new RegExp(`^${Cuisine}$`, "i") }
+      });
+
+      if (existingCuisine) {
+        return res.status(400).json({ error: "Cuisine already exists" });
+      }
+
+      const newCuisine = await Cuisines.create({
+        Cuisine,
+        action: true
+      });
+
+      return res.status(201).json({
+        success: true,
+        data: newCuisine
+      });
+
+    } catch (error) {
+      console.error("Error adding Cuisine:", error);
+      return res.status(500).json({
+        error: "Internal server error",
+        details: error.message
+      });
+    }
+  }
+  async getCompanyTypes(req, res) {
+    try {
+      const companyTypes = await CompanyType.find({ action: true })
+        .select('_id type typeId')  // ✅ Add typeId
+        .sort({ type: 1 });
+
+      return res.status(200).json({
+        success: true,
+        count: companyTypes.length,
+        data: companyTypes
+      });
+    } catch (error) {
+      console.error("Error fetching company types:", error);
+      return res.status(500).json({
+        error: "Internal server error",
+        details: error.message
+      });
+    }
+  }
+  async getIndustries(req, res) {
+    try {
+      const industries = await Industry.find({}).sort({ industryName: 1 }); // Fetch all industries from the database
+      res.status(200).json({
+        success: true,
+        data: industries, // Ensure the data is returned in the correct format
+      });
+    } catch (error) {
+      console.error("Error fetching industries:", error);
+      res.status(500).json({
+        error: "Internal server error",
+        details: error.message,
+      });
+    }
+  };
+  async getDepartments(req, res) {
+    try {
+      const departments = await Department.find({ action: true })
+        .select('_id departmentName departmentId')  // ✅ Include departmentId
+        .sort({ departmentName: 1 });
+
+      return res.status(200).json({
+        success: true,
+        count: departments.length,  // ✅ Add count like getCompanyTypes
+        data: departments
+      });
+    } catch (error) {
+      console.error("Error fetching departments:", error);
+      return res.status(500).json({
+        error: "Internal server error",
+        details: error.message
+      });
+    }
+  }
+  async getJobRoles(req, res) {
+    try {
+      const roles = await JobRole.find({}).sort({ jobRole: 1 });;
+      console.log(roles, "sdsd")
+      return res.status(200).json({ success: true, data: roles });
+    } catch (error) {
+      console.error('Error fetching job roles:', error);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  };
+
+  async getWorkModes(req, res) {
+    try {
+      const workModes = await WorkMode.find({ action: true })
+        .select('_id workMode') // Include _id and workMode
+        .sort({ workMode: 1 });
+
+      return res.status(200).json({
+        success: true,
+        count: workModes.length, // Add count
+        data: workModes, // Return full objects
+      });
+    } catch (error) {
+      console.error("Error fetching work modes:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+
+  async getEducations(req, res) {
+    try {
+      const educations = await Education.find().sort({ qualification: 1 });;
+      res.json(educations);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  };
+  async getSkills(req, res) {
+    try {
+      const skills = await Skill.find({ action: true })
+        .select('_id skillName') // Select only necessary fields
+        .sort({ skillName: 1 }); // Sort by skillName
+
+      return res.status(200).json({
+        success: true,
+        count: skills.length,
+        data: skills
+      });
+    } catch (error) {
+      console.error("Error fetching skills:", error);
+      return res.status(500).json({
+        error: "Internal server error",
+        details: error.message
+      });
+    }
+  }
+  async getChefs(req, res) {
+    try {
+      const chefs = await Chefs.find({ action: true })
+        .select('_id chefCategory chefId') // include chefId for sorting
+        .sort({ chefCategory: 1 });
+
+      return res.status(200).json({
+        success: true,
+        count: chefs.length,
+        data: chefs
+      });
+    } catch (error) {
+      console.error("Error fetching chefs:", error);
+      return res.status(500).json({
+        error: "Internal server error",
+        details: error.message
+      });
+    }
+  }
+
+  async getCuisine(req, res) {
+    try {
+      const cuisines = await Cuisines.find({ action: true })
+        .select('_id Cuisine CuisineId') // fields relevant to Cuisine
+        .sort({ Cuisine: 1 }); // sort by CuisineId ascending
+
+      return res.status(200).json({
+        success: true,
+        count: cuisines.length,
+        data: cuisines
+      });
+    } catch (error) {
+      console.error("Error fetching cuisines:", error);
+      return res.status(500).json({
+        error: "Internal server error",
+        details: error.message
+      });
+    }
+  }
+  async editCompanyType(req, res) {
+    try {
+      const { id } = req.params;
+      const { type, action } = req.body;
+
+      // Validate ObjectId
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({
+          error: "Invalid ID format",
+          details: "The provided ID is not a valid MongoDB ObjectId"
         });
-    }
-     }
-      // Delete functions
-      async deleteCompanyType(req, res) {
-        try {
-          const { id } = req.params;
-
-          // Validate ObjectId
-          if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ 
-              error: "Invalid ID format",
-              details: "The provided ID is not a valid MongoDB ObjectId"
-            });
-          }
-
-          const deletedType = await CompanyType.findById(id);
-          
-          if (!deletedType) {
-            return res.status(404).json({ error: "Company type not found" });
-          }
-
-          // Check if this company type is being used anywhere
-          // Add your business logic here to check references
-
-          await CompanyType.findByIdAndDelete(id);
-
-          return res.status(200).json({
-            success: true,
-            message: "Company type deleted successfully",
-            data: deletedType
-          });
-        } catch (error) {
-          console.error("Error deleting company type:", error);
-          return res.status(500).json({ 
-            error: "Internal server error",
-            details: error.message 
-          });
-        }
       }
 
-      async deleteIndustry(req, res) {
-        try {
-          const { id } = req.params;
-          const deletedIndustry = await Industry.findByIdAndDelete(id);
-
-          if (!deletedIndustry) {
-            return res.status(404).json({ error: "Industry not found" });
-          }
-
-          return res.status(200).json({
-            success: true,
-            message: "Industry deleted successfully"
-          });
-        } catch (error) {
-          console.error("Error deleting industry:", error);
-          return res.status(500).json({ error: "Internal server error" });
-        }
+      if (!type) {
+        return res.status(400).json({ error: "Company type is required" });
       }
 
-      async deleteDepartment(req, res) {
-          try {
-              const { id } = req.params;
-      
-              // Validate if the id is a valid ObjectId
-              if (!mongoose.Types.ObjectId.isValid(id)) {
-                  return res.status(400).json({ error: "Invalid department ID" });
-              }
-      
-              const deletedDepartment = await Department.findByIdAndDelete(id);
-      
-              if (!deletedDepartment) {
-                  return res.status(404).json({ error: "Department not found" });
-              }
-      
-              return res.status(200).json({
-                  success: true,
-                  message: "Department deleted successfully"
-              });
-          } catch (error) {
-              console.error("Error deleting department:", error);
-              return res.status(500).json({ error: "Internal server error" });
-          }
-      }
-      
-      async deleteJobRole  (req, res) {
-        try {
-          const { id } = req.params;
-          const deletedRole = await JobRole.findByIdAndDelete(id);
-          if (!deletedRole) {
-            return res.status(404).json({ error: 'Job role not found' });
-          }
-          return res.status(200).json({ success: true, data: deletedRole });
-        } catch (error) {
-          console.error('Error deleting job role:', error);
-          return res.status(500).json({ error: 'Internal server error' });
-        }
-      };
+      // Check if new type already exists (excluding current record)
+      const existingType = await CompanyType.findOne({
+        type: type,
+        _id: { $ne: id }
+      });
 
-      async deleteWorkMode(req, res) {
-        try {
-            const { id } = req.params;  // Capture _id from URL
-            console.log("Received delete request for _id:", id);
-    
-            // Find and delete using _id
-            const deletedWorkMode = await WorkMode.findByIdAndDelete(id);
-    
-            // if (!deletedWorkMode) {
-            //     return res.status(404).json({ error: "Work mode not found" });
-            // }
-    
-            return res.status(200).json({
-                success: true,
-                message: "Work mode deleted successfully",
-                deletedWorkMode // Optionally return the deleted item
-            });
-        } catch (error) {
-            console.error("Error deleting work mode:", error);
-            // Check if error is due to invalid ObjectId
-            if (error.name === 'CastError') {
-                return res.status(400).json({ error: "Invalid work mode ID format" });
-            }
-            return res.status(500).json({ error: "Internal server error" });
-        }
-    }
-    
-    
-
-      async deleteEducation(req, res) {
-        try {
-          await Education.findByIdAndDelete(req.params.id);
-          res.json({ message: 'Education deleted successfully' });
-        } catch (error) {
-          res.status(500).json({ message: error.message });
-        }
+      if (existingType) {
+        return res.status(400).json({ error: "Company type already exists" });
       }
 
-      async deleteSkill(req, res) {
-        try {
-            const { id } = req.params;
-    
-            // Validate ObjectId
-            if (!mongoose.Types.ObjectId.isValid(id)) {
-                return res.status(400).json({
-                    error: "Invalid skill ID format",
-                    details: "The provided ID is not a valid MongoDB ObjectId"
-                });
-            }
-    
-            const deletedSkill = await Skill.findByIdAndDelete(id);
-    
-            if (!deletedSkill) {
-                return res.status(404).json({ error: "Skill not found" });
-            }
-    
-            return res.status(200).json({
-                success: true,
-                message: "Skill deleted successfully"
-            });
-        } catch (error) {
-            console.error("Error deleting skill:", error);
-            return res.status(500).json({
-                error: "Internal server error",
-                details: error.message
-            });
+      const updatedType = await CompanyType.findByIdAndUpdate(
+        id,
+        {
+          type,
+          action: action !== undefined ? action : true,
+          updatedAt: new Date()
+        },
+        {
+          new: true,
+          runValidators: true
         }
-    }
-      async deletechefCategory(req, res) {
-        try {
-            const { id } = req.params;
-    
-            // Validate ObjectId
-            if (!mongoose.Types.ObjectId.isValid(id)) {
-                return res.status(400).json({
-                    error: "Invalid Chefs ID format",
-                    details: "The provided ID is not a valid MongoDB ObjectId"
-                });
-            }
-    
-            const deletedSkill = await Chefs.findByIdAndDelete(id);
-    
-            if (!deletedSkill) {
-                return res.status(404).json({ error: "Skill not found" });
-            }
-    
-            return res.status(200).json({
-                success: true,
-                message: "chefCategory deleted successfully"
-            });
-        } catch (error) {
-            console.error("Error deleting chefCategory:", error);
-            return res.status(500).json({
-                error: "Internal server error",
-                details: error.message
-            });
-        }
-    }
-    
-      async deleteCuisine(req, res) {
-        try {
-            const { id } = req.params;
-    
-            // Validate ObjectId
-            if (!mongoose.Types.ObjectId.isValid(id)) {
-                return res.status(400).json({
-                    error: "Invalid Cuisine ID format",
-                    details: "The provided ID is not a valid MongoDB ObjectId"
-                });
-            }
-    
-            const deletedSkill = await Cuisines.findByIdAndDelete(id);
-    
-            if (!deletedSkill) {
-                return res.status(404).json({ error: "Skill not found" });
-            }
-    
-            return res.status(200).json({
-                success: true,
-                message: "Cuisine deleted successfully"
-            });
-        } catch (error) {
-            console.error("Error deleting chefCategory:", error);
-            return res.status(500).json({
-                error: "Internal server error",
-                details: error.message
-            });
-        }
-    }
-    
+      );
 
+      if (!updatedType) {
+        return res.status(404).json({ error: "Company type not found" });
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: updatedType
+      });
+    } catch (error) {
+      console.error("Error updating company type:", error);
+      return res.status(500).json({
+        error: "Internal server error",
+        details: error.message
+      });
     }
+  }
+  async editIndustry(req, res) {
+    try {
+      const { id } = req.params;
+      const { industryName } = req.body;
+
+      // Validate ObjectId
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({
+          error: "Invalid industry ID format",
+          details: "The provided ID is not a valid MongoDB ObjectId"
+        });
+      }
+
+      if (!industryName) {
+        return res.status(400).json({ error: "Industry name is required" });
+      }
+
+      // Check if the new industry name already exists (excluding the current record)
+      const existingIndustry = await Industry.findOne({
+        industryName: industryName,
+        _id: { $ne: id }
+      });
+
+      if (existingIndustry) {
+        return res.status(400).json({ error: "Industry name already exists" });
+      }
+
+      const updatedIndustry = await Industry.findByIdAndUpdate(
+        id,
+        {
+          industryName,
+          updatedAt: new Date()
+        },
+        {
+          new: true,
+          runValidators: true
+        }
+      );
+
+      if (!updatedIndustry) {
+        return res.status(404).json({ error: "Industry not found" });
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: updatedIndustry
+      });
+    } catch (error) {
+      console.error("Error updating industry:", error);
+      return res.status(500).json({
+        error: "Internal server error",
+        details: error.message
+      });
+    }
+  };
+  async editDepartment(req, res) {
+    try {
+      const { id } = req.params;
+      const { departmentName, action } = req.body;
+
+      // Validate ObjectId
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({
+          error: "Invalid department ID format",
+          details: "The provided ID is not a valid MongoDB ObjectId"
+        });
+      }
+
+      if (!departmentName) {
+        return res.status(400).json({ error: "Department name is required" });
+      }
+
+      // Check if the new department name already exists (excluding the current record)
+      const existingDepartment = await Department.findOne({
+        departmentName: departmentName,
+        _id: { $ne: id }
+      });
+
+      if (existingDepartment) {
+        return res.status(400).json({ error: "Department name already exists" });
+      }
+
+      const updatedDepartment = await Department.findByIdAndUpdate(
+        id,
+        {
+          departmentName,
+          action: action !== undefined ? action : true,
+          updatedAt: new Date()
+        },
+        {
+          new: true,
+          runValidators: true
+        }
+      );
+
+      if (!updatedDepartment) {
+        return res.status(404).json({ error: "Department not found" });
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: updatedDepartment
+      });
+    } catch (error) {
+      console.error("Error updating department:", error);
+      return res.status(500).json({
+        error: "Internal server error",
+        details: error.message
+      });
+    }
+  }
+  async editJobRole(req, res) {
+    try {
+      const { id } = req.params;
+      const { jobRole, action } = req.body;
+
+      if (!jobRole) {
+        return res.status(400).json({ error: "Job role is required" });
+      }
+
+      const updatedJobRole = await JobRole.findByIdAndUpdate(
+        id,
+        { jobRole, action },
+        { new: true }
+      );
+
+      if (!updatedJobRole) {
+        return res.status(404).json({ error: "Job role not found" });
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: updatedJobRole
+      });
+    } catch (error) {
+      console.error("Error updating job role:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+  async editWorkMode(req, res) {
+    try {
+      const { id } = req.params;
+      const { workMode, action } = req.body;
+
+      if (!workMode) {
+        return res.status(400).json({ error: "Work mode is required" });
+      }
+
+      const updatedWorkMode = await WorkMode.findByIdAndUpdate(
+        id,
+        { workMode, action },
+        { new: true }
+      );
+
+      if (!updatedWorkMode) {
+        return res.status(404).json({ error: "Work mode not found" });
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: updatedWorkMode
+      });
+    } catch (error) {
+      console.error("Error updating work mode:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+  async editEducation(req, res) {
+    try {
+      const education = await Education.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      res.json(education);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  };
+
+  async editSkill(req, res) {
+    try {
+      const { id } = req.params;
+      const { skillName, action } = req.body;
+
+      // Validate ObjectId
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({
+          error: "Invalid skill ID format",
+          details: "The provided ID is not a valid MongoDB ObjectId"
+        });
+      }
+
+      if (!skillName) {
+        return res.status(400).json({ error: "Skill name is required" });
+      }
+
+      // Check if skill name already exists (excluding the current record)
+      const existingSkill = await Skill.findOne({
+        skillName,
+        _id: { $ne: id }
+      });
+
+      if (existingSkill) {
+        return res.status(400).json({ error: "Skill name already exists" });
+      }
+
+      const updatedSkill = await Skill.findByIdAndUpdate(
+        id,
+        {
+          skillName,
+          action: action !== undefined ? action : true,
+          updatedAt: new Date()
+        },
+        {
+          new: true,
+          runValidators: true
+        }
+      );
+
+      if (!updatedSkill) {
+        return res.status(404).json({ error: "Skill not found" });
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: updatedSkill
+      });
+    } catch (error) {
+      console.error("Error updating skill:", error);
+      return res.status(500).json({
+        error: "Internal server error",
+        details: error.message
+      });
+    }
+  }
+  async editChef(req, res) {
+    try {
+      const { id } = req.params;
+      const { chefCategory, action } = req.body;
+
+      // Validate ObjectId
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({
+          error: "Invalid skill ID format",
+          details: "The provided ID is not a valid MongoDB ObjectId"
+        });
+      }
+
+      if (!chefCategory) {
+        return res.status(400).json({ error: "Skill name is required" });
+      }
+
+      // Check if skill name already exists (excluding the current record)
+      const existingSkill = await Chefs.findOne({
+        chefCategory,
+        _id: { $ne: id }
+      });
+
+      if (existingSkill) {
+        return res.status(400).json({ error: "Skill name already exists" });
+      }
+
+      const updatedSkill = await Chefs.findByIdAndUpdate(
+        id,
+        {
+          chefCategory,
+          action: action !== undefined ? action : true,
+          updatedAt: new Date()
+        },
+        {
+          new: true,
+          runValidators: true
+        }
+      );
+
+      if (!updatedSkill) {
+        return res.status(404).json({ error: "Skill not found" });
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: updatedSkill
+      });
+    } catch (error) {
+      console.error("Error updating chefCategory:", error);
+      return res.status(500).json({
+        error: "Internal server error",
+        details: error.message
+      });
+    }
+  }
+  async editCuisine(req, res) {
+    try {
+      const { id } = req.params;
+      const { Cuisine: cuisineName, action } = req.body;
+
+      // Validate ObjectId
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({
+          error: "Invalid Cuisine ID format",
+          details: "The provided ID is not a valid MongoDB ObjectId"
+        });
+      }
+
+      if (!cuisineName) {
+        return res.status(400).json({ error: "Cuisine name is required" });
+      }
+
+      // Check if Cuisine name already exists (case-insensitive, excluding current record)
+      const existingCuisine = await Cuisines.findOne({
+        Cuisine: { $regex: new RegExp(`^${cuisineName}$`, "i") },
+        _id: { $ne: id }
+      });
+
+      if (existingCuisine) {
+        return res.status(400).json({ error: "Cuisine name already exists" });
+      }
+
+      // Update the Cuisine
+      const updatedCuisine = await Cuisines.findByIdAndUpdate(
+        id,
+        {
+          Cuisine: cuisineName,
+          action: action !== undefined ? action : true
+        },
+        {
+          new: true,
+          runValidators: true
+        }
+      );
+
+      if (!updatedCuisine) {
+        return res.status(404).json({ error: "Cuisine not found" });
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: updatedCuisine
+      });
+    } catch (error) {
+      console.error("Error updating Cuisine:", error);
+      return res.status(500).json({
+        error: "Internal server error",
+        details: error.message
+      });
+    }
+  }
+  // Delete functions
+  async deleteCompanyType(req, res) {
+    try {
+      const { id } = req.params;
+
+      // Validate ObjectId
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({
+          error: "Invalid ID format",
+          details: "The provided ID is not a valid MongoDB ObjectId"
+        });
+      }
+
+      const deletedType = await CompanyType.findById(id);
+
+      if (!deletedType) {
+        return res.status(404).json({ error: "Company type not found" });
+      }
+
+      // Check if this company type is being used anywhere
+      // Add your business logic here to check references
+
+      await CompanyType.findByIdAndDelete(id);
+
+      return res.status(200).json({
+        success: true,
+        message: "Company type deleted successfully",
+        data: deletedType
+      });
+    } catch (error) {
+      console.error("Error deleting company type:", error);
+      return res.status(500).json({
+        error: "Internal server error",
+        details: error.message
+      });
+    }
+  }
+
+  async deleteIndustry(req, res) {
+    try {
+      const { id } = req.params;
+      const deletedIndustry = await Industry.findByIdAndDelete(id);
+
+      if (!deletedIndustry) {
+        return res.status(404).json({ error: "Industry not found" });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Industry deleted successfully"
+      });
+    } catch (error) {
+      console.error("Error deleting industry:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  async deleteDepartment(req, res) {
+    try {
+      const { id } = req.params;
+
+      // Validate if the id is a valid ObjectId
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ error: "Invalid department ID" });
+      }
+
+      const deletedDepartment = await Department.findByIdAndDelete(id);
+
+      if (!deletedDepartment) {
+        return res.status(404).json({ error: "Department not found" });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Department deleted successfully"
+      });
+    } catch (error) {
+      console.error("Error deleting department:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  async deleteJobRole(req, res) {
+    try {
+      const { id } = req.params;
+      const deletedRole = await JobRole.findByIdAndDelete(id);
+      if (!deletedRole) {
+        return res.status(404).json({ error: 'Job role not found' });
+      }
+      return res.status(200).json({ success: true, data: deletedRole });
+    } catch (error) {
+      console.error('Error deleting job role:', error);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  };
+
+  async deleteWorkMode(req, res) {
+    try {
+      const { id } = req.params;  // Capture _id from URL
+      console.log("Received delete request for _id:", id);
+
+      // Find and delete using _id
+      const deletedWorkMode = await WorkMode.findByIdAndDelete(id);
+
+      // if (!deletedWorkMode) {
+      //     return res.status(404).json({ error: "Work mode not found" });
+      // }
+
+      return res.status(200).json({
+        success: true,
+        message: "Work mode deleted successfully",
+        deletedWorkMode // Optionally return the deleted item
+      });
+    } catch (error) {
+      console.error("Error deleting work mode:", error);
+      // Check if error is due to invalid ObjectId
+      if (error.name === 'CastError') {
+        return res.status(400).json({ error: "Invalid work mode ID format" });
+      }
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+
+
+  async deleteEducation(req, res) {
+    try {
+      await Education.findByIdAndDelete(req.params.id);
+      res.json({ message: 'Education deleted successfully' });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+  async deleteSkill(req, res) {
+    try {
+      const { id } = req.params;
+
+      // Validate ObjectId
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({
+          error: "Invalid skill ID format",
+          details: "The provided ID is not a valid MongoDB ObjectId"
+        });
+      }
+
+      const deletedSkill = await Skill.findByIdAndDelete(id);
+
+      if (!deletedSkill) {
+        return res.status(404).json({ error: "Skill not found" });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Skill deleted successfully"
+      });
+    } catch (error) {
+      console.error("Error deleting skill:", error);
+      return res.status(500).json({
+        error: "Internal server error",
+        details: error.message
+      });
+    }
+  }
+  async deletechefCategory(req, res) {
+    try {
+      const { id } = req.params;
+
+      // Validate ObjectId
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({
+          error: "Invalid Chefs ID format",
+          details: "The provided ID is not a valid MongoDB ObjectId"
+        });
+      }
+
+      const deletedSkill = await Chefs.findByIdAndDelete(id);
+
+      if (!deletedSkill) {
+        return res.status(404).json({ error: "Skill not found" });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "chefCategory deleted successfully"
+      });
+    } catch (error) {
+      console.error("Error deleting chefCategory:", error);
+      return res.status(500).json({
+        error: "Internal server error",
+        details: error.message
+      });
+    }
+  }
+
+  async deleteCuisine(req, res) {
+    try {
+      const { id } = req.params;
+
+      // Validate ObjectId
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({
+          error: "Invalid Cuisine ID format",
+          details: "The provided ID is not a valid MongoDB ObjectId"
+        });
+      }
+
+      const deletedSkill = await Cuisines.findByIdAndDelete(id);
+
+      if (!deletedSkill) {
+        return res.status(404).json({ error: "Skill not found" });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Cuisine deleted successfully"
+      });
+    } catch (error) {
+      console.error("Error deleting chefCategory:", error);
+      return res.status(500).json({
+        error: "Internal server error",
+        details: error.message
+      });
+    }
+  }
+
+
+}
 
 
 
