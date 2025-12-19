@@ -1,6 +1,37 @@
 const SubscriptionValidationService = require('../services/subscriptionValidationService');
 
 /**
+ * Robust helper to extract userId from request with optional priority for employerId
+ */
+const extractUserId = (req, prioritizeEmployer = false) => {
+  if (prioritizeEmployer) {
+    return req.headers['x-employer-id'] ||
+      req.headers['x-user-id'] ||
+      req.body.employerId ||
+      req.query.employerId ||
+      req.params.employerId ||
+      req.body.userId ||
+      req.query.userId ||
+      req.query.id ||
+      req.params.userId ||
+      req.params.id ||
+      req.user?.id ||
+      req.user?._id;
+  }
+
+  return req.headers['x-user-id'] ||
+    req.user?.id ||
+    req.user?._id ||
+    req.body.userId ||
+    req.body.employerId ||
+    req.query.employerId ||
+    req.query.userId ||
+    req.query.id ||
+    req.params.userId ||
+    req.params.id;
+};
+
+/**
  * Middleware to validate subscription before allowing actions
  * @param {String} requiredAction - Action that requires validation
  * @param {Object} options - Additional options
@@ -8,29 +39,29 @@ const SubscriptionValidationService = require('../services/subscriptionValidatio
 const validateSubscription = (requiredAction, options = {}) => {
   return async (req, res, next) => {
     try {
-      // Extract user ID from various sources
-      let userId = req.headers['x-user-id'] ||
-        req.user?.id ||
-        req.user?._id ||
-        req.body.userId ||
-        req.body.employerId ||
-        req.query.employerId ||
-        req.query.userId ||
-        req.query.id ||
-        req.params.userId ||
-        req.params.id;
+      // Employer-only actions that should prioritize employerId
+      const employerActions = [
+        'post_job',
+        'search_candidates',
+        'view_candidate_contact',
+        'premium_job_posting',
+        'candidate_database_access',
+        'analytics_access',
+        'bulk_messaging',
+        'interview_schedule_employer',
+        'application_review'
+      ];
 
-      if (!userId) {
-        console.log(`⚠️ No userId found in request for action: ${requiredAction}`);
-        console.log('Query params:', req.query);
-        console.log('Body params:', req.body ? Object.keys(req.body) : 'none');
-        console.log('Params:', req.params);
-      }
+      const prioritizeEmployer = employerActions.includes(requiredAction);
+      let userId = extractUserId(req, prioritizeEmployer);
+
+      // Special case for apply_job
       if (!userId && requiredAction === 'apply_job') {
         userId = req.body.applicant || req.body.userId;
       }
 
       if (!userId) {
+        console.log(`⚠️ No userId found in request for action: ${requiredAction}`);
         return res.status(401).json({
           success: false,
           error: 'User authentication required',
@@ -53,7 +84,7 @@ const validateSubscription = (requiredAction, options = {}) => {
 
       if (!validation.allowed) {
         console.log(`❌ Subscription validation failed for user ${userId}, action ${requiredAction}:`, validation.reason);
-        const statusCode = validation.upgradeRequired ? 402 : 403; // 402 Payment Required for upgrade needed
+        const statusCode = validation.upgradeRequired ? 402 : 403;
 
         return res.status(statusCode).json({
           success: false,
@@ -88,7 +119,7 @@ const validateSubscription = (requiredAction, options = {}) => {
  */
 const requireActiveSubscription = async (req, res, next) => {
   try {
-    const userId = req.user?.id || req.user?._id || req.body.userId || req.params.userId;
+    const userId = extractUserId(req);
 
     if (!userId) {
       return res.status(401).json({
@@ -122,12 +153,11 @@ const requireActiveSubscription = async (req, res, next) => {
 
 /**
  * Middleware to check specific feature availability
- * @param {String} featureName - Feature to check
  */
 const requireFeature = (featureName) => {
   return async (req, res, next) => {
     try {
-      const userId = req.user?.id || req.user?._id || req.body.userId || req.params.userId;
+      const userId = extractUserId(req);
 
       if (!userId) {
         return res.status(401).json({
@@ -137,7 +167,7 @@ const requireFeature = (featureName) => {
       }
 
       const subscription = await SubscriptionValidationService.getUserActiveSubscription(userId);
-      const hasFeature = subscription.features[featureName];
+      const hasFeature = subscription.features && subscription.features[featureName];
 
       if (!hasFeature) {
         return res.status(402).json({
@@ -167,7 +197,7 @@ const requireFeature = (featureName) => {
  */
 const attachSubscriptionInfo = async (req, res, next) => {
   try {
-    const userId = req.user?.id || req.user?._id || req.body.userId || req.params.userId;
+    const userId = extractUserId(req);
 
     if (userId) {
       const subscription = await SubscriptionValidationService.getUserActiveSubscription(userId);
@@ -178,7 +208,7 @@ const attachSubscriptionInfo = async (req, res, next) => {
 
   } catch (error) {
     console.log('Warning: Could not attach subscription info:', error.message);
-    next(); // Continue anyway - this is non-blocking
+    next();
   }
 };
 
