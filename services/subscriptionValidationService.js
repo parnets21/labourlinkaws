@@ -42,10 +42,14 @@ class SubscriptionValidationService {
 
       console.log('--- Subscription Debug ---');
       console.log('User ID:', userId);
-      console.log('User Type Found:', userType);
+      console.log('User Type Found (from models):', userType);
       console.log('Active Subscription Found:', !!activeSubscription);
       if (activeSubscription) {
         console.log('Plan Name:', activeSubscription.planName);
+        console.log('Subscription record UserType:', activeSubscription.userType);
+        if (activeSubscription.userType !== userType) {
+          console.warn(`⚠️ User type mismatch! Model: ${userType}, Subscription record: ${activeSubscription.userType}`);
+        }
         console.log('Has subscriptionId:', !!activeSubscription.subscriptionId);
         if (activeSubscription.subscriptionId) {
           console.log('Subscription Features from Plan:', JSON.stringify(activeSubscription.subscriptionId.features, null, 2));
@@ -67,12 +71,11 @@ class SubscriptionValidationService {
 
       return {
         hasActiveSubscription: true,
-        userType: activeSubscription.userType || userType,
-        subscriptionType: activeSubscription.userType || userType,
+        userType: userType, // Trust the type detected from the user models
         subscriptionId: activeSubscription._id,
         planName: activeSubscription.planName,
-        features: activeSubscription.features || activeSubscription.subscriptionId?.features || this.getFreeFeatures(activeSubscription.userType || userType),
-        limits: this.extractLimits(activeSubscription.features || activeSubscription.subscriptionId?.features || this.getFreeFeatures(activeSubscription.userType || userType)),
+        features: activeSubscription.features || activeSubscription.subscriptionId?.features || this.getFreeFeatures(userType),
+        limits: this.extractLimits(activeSubscription.features || activeSubscription.subscriptionId?.features || this.getFreeFeatures(userType)),
         startDate: activeSubscription.startDate,
         endDate: activeSubscription.endDate,
         isExpiringSoon: this.isExpiringSoon(activeSubscription.endDate)
@@ -125,6 +128,7 @@ class SubscriptionValidationService {
    */
   static checkActionPermission(subscription, action, currentUsage) {
     const { features, limits, userType } = subscription;
+    console.log(`🔍 Checking permission for action: ${action}, userType: ${userType}`);
 
     // Define comprehensive action mappings based on user type
     const actionMappings = {
