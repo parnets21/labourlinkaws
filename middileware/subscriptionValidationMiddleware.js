@@ -55,12 +55,21 @@ const validateSubscription = (requiredAction, options = {}) => {
       const prioritizeEmployer = employerActions.includes(requiredAction);
       let userId = extractUserId(req, prioritizeEmployer);
 
+      // Actions that can proceed without a userId (permissive discovery)
+      const discoveryActions = ['view_company_details'];
+      const isDiscovery = discoveryActions.includes(requiredAction);
+
       // Special case for apply_job
       if (!userId && requiredAction === 'apply_job') {
         userId = req.body.applicant || req.body.userId;
       }
 
       if (!userId) {
+        if (isDiscovery) {
+          console.log(`ℹ️ No userId found for discovery action: ${requiredAction}. Proceeding permissively.`);
+          return next();
+        }
+
         console.log(`⚠️ No userId found in request for action: ${requiredAction}`);
         return res.status(401).json({
           success: false,
