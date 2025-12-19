@@ -142,12 +142,10 @@ class SubscriptionValidationService {
       },
       'search_job': {
         limitKey: 'jobSearchPerDay',
-        userType: 'employee',
         featureKey: 'enableJobSearch'
       },
       'view_company_details': {
         limitKey: 'companyViewsPerDay',
-        userType: 'employee',
         featureKey: 'profileCreation'
       },
       'contact_employer': {
