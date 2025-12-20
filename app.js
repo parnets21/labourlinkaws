@@ -23,10 +23,13 @@ console.log('🔧 Production mode:', process.env.PRODUCTION || 'false');
 setupConnectionEvents();
 connectDB();
 
-// Middleware
+// Middleware - MUST be applied BEFORE routes
 app.use(cookieParser());
+app.use(morgan("dev"));
+app.use(cors()); // CORS must be before routes
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.static(path.join(__dirname, 'Public')));
 
 //import route
 const user = require("./Routes/User/user");
@@ -57,11 +60,6 @@ const analyticsRoutes = require("./Routes/analyticsRoutes")
 const iapRoutes = require("./Routes/iapRoutes")
 const supportRoutes = require("./Routes/supportRoutes")
 
-
-app.use('/api/user', locationRoutes);
-app.use('/api/admin/analytics', analyticsRoutes);
-
-
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   const { getConnectionInfo } = require('./Config/database');
@@ -78,13 +76,9 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-//middleware
-app.use(morgan("dev"));
-app.use(cors());
-// app.use(express.static("Public"));
-app.use(express.static(path.join(__dirname, 'Public')));
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+// Mount routes AFTER middleware
+app.use('/api/user', locationRoutes);
+app.use('/api/admin/analytics', analyticsRoutes);
 
 //create route,
 app.use("/api/user", user);
