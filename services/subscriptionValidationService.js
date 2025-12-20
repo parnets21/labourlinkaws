@@ -1,4 +1,4 @@
-const UserSubscription = require('../Model/userSubscription');
+const UserSubscription = require('../Model/User/userSubscription');
 const Subscription = require('../Model/subscription');
 const userModel = require('../Model/User/user');
 const EmployerModel = require('../Model/Employers/employers');

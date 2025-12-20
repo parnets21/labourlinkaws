@@ -21,7 +21,7 @@ class AdminSubscriptionController {
         .lean();
 
       // Get all expired subscriptions
-      const expiredSubscriptions = await UserSubscription.find({ 
+      const expiredSubscriptions = await UserSubscription.find({
         $or: [
           { status: 'expired' },
           { status: 'active', endDate: { $lt: new Date() } }
@@ -41,84 +41,86 @@ class AdminSubscriptionController {
         .limit(100)
         .lean();
 
-      // Calculate statistics
+      // Calculate statistics safely
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const startOfYear = new Date(now.getFullYear(), 0, 1);
 
+      // Safe aggregate function
+      const safeGetRevenue = (transactions, filterFn) => {
+        try {
+          return transactions
+            .filter(tx => (tx.status === 'SUCCESS' || tx.status === 'COMPLETED') && filterFn(tx))
+            .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+        } catch (e) {
+          console.error('Error calculating revenue:', e);
+          return 0;
+        }
+      };
+
       const stats = {
         // Subscription stats
-        totalActiveSubscriptions: activeSubscriptions.length,
-        totalExpiredSubscriptions: expiredSubscriptions.length,
-        totalSubscriptionPlans: allPlans.length,
+        totalActiveSubscriptions: activeSubscriptions?.length || 0,
+        totalExpiredSubscriptions: expiredSubscriptions?.length || 0,
+        totalSubscriptionPlans: allPlans?.length || 0,
 
         // User type breakdown
-        activeEmployeeSubscriptions: activeSubscriptions.filter(sub => sub.type === 'employee').length,
-        activeEmployerSubscriptions: activeSubscriptions.filter(sub => sub.type === 'employer').length,
+        activeEmployeeSubscriptions: activeSubscriptions?.filter(sub => sub.type === 'employee')?.length || 0,
+        activeEmployerSubscriptions: activeSubscriptions?.filter(sub => sub.type === 'employer')?.length || 0,
 
         // Revenue stats
-        totalRevenue: recentTransactions
-          .filter(tx => tx.status === 'SUCCESS' || tx.status === 'COMPLETED')
-          .reduce((sum, tx) => sum + (tx.amount || 0), 0),
-
-        monthlyRevenue: recentTransactions
-          .filter(tx => 
-            (tx.status === 'SUCCESS' || tx.status === 'COMPLETED') && 
-            new Date(tx.createdAt) >= startOfMonth
-          )
-          .reduce((sum, tx) => sum + (tx.amount || 0), 0),
-
-        yearlyRevenue: recentTransactions
-          .filter(tx => 
-            (tx.status === 'SUCCESS' || tx.status === 'COMPLETED') && 
-            new Date(tx.createdAt) >= startOfYear
-          )
-          .reduce((sum, tx) => sum + (tx.amount || 0), 0),
+        totalRevenue: safeGetRevenue(recentTransactions, () => true),
+        monthlyRevenue: safeGetRevenue(recentTransactions, (tx) => new Date(tx.createdAt) >= startOfMonth),
+        yearlyRevenue: safeGetRevenue(recentTransactions, (tx) => new Date(tx.createdAt) >= startOfYear),
 
         // Transaction stats
-        totalTransactions: recentTransactions.length,
-        successfulTransactions: recentTransactions.filter(tx => tx.status === 'SUCCESS' || tx.status === 'COMPLETED').length,
-        failedTransactions: recentTransactions.filter(tx => tx.status === 'FAILED' || tx.status === 'FAILURE').length,
-        pendingTransactions: recentTransactions.filter(tx => tx.status === 'PENDING' || tx.status === 'InProgress').length,
+        totalTransactions: recentTransactions?.length || 0,
+        successfulTransactions: recentTransactions?.filter(tx => tx.status === 'SUCCESS' || tx.status === 'COMPLETED')?.length || 0,
+        failedTransactions: recentTransactions?.filter(tx => tx.status === 'FAILED' || tx.status === 'FAILURE')?.length || 0,
+        pendingTransactions: recentTransactions?.filter(tx => tx.status === 'PENDING' || tx.status === 'InProgress')?.length || 0,
 
         // Expiring soon (next 7 days)
-        expiringSoon: activeSubscriptions.filter(sub => {
+        expiringSoon: activeSubscriptions?.filter(sub => {
           if (!sub.endDate) return false;
           const sevenDaysFromNow = new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000));
           return new Date(sub.endDate) <= sevenDaysFromNow;
-        }).length
+        })?.length || 0
       };
 
-      // Get plan distribution
+      // Get plan distribution safely
       const planDistribution = {};
-      activeSubscriptions.forEach(sub => {
+      activeSubscriptions?.forEach(sub => {
         const planName = sub.planName || 'Unknown';
         planDistribution[planName] = (planDistribution[planName] || 0) + 1;
       });
 
-      // Get monthly subscription trends (last 12 months)
+      // Get monthly subscription trends safely
       const monthlyTrends = [];
-      for (let i = 11; i >= 0; i--) {
-        const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
-        
-        const monthlySubscriptions = await UserSubscription.countDocuments({
-          createdAt: { $gte: monthStart, $lte: monthEnd }
-        });
+      try {
+        for (let i = 11; i >= 0; i--) {
+          const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
 
-        const monthlyRevenue = recentTransactions
-          .filter(tx => {
-            const txDate = new Date(tx.createdAt);
-            return txDate >= monthStart && txDate <= monthEnd && 
-                   (tx.status === 'SUCCESS' || tx.status === 'COMPLETED');
-          })
-          .reduce((sum, tx) => sum + (tx.amount || 0), 0);
+          const monthlySubscriptions = await UserSubscription.countDocuments({
+            createdAt: { $gte: monthStart, $lte: monthEnd }
+          });
 
-        monthlyTrends.push({
-          month: monthStart.toISOString().substr(0, 7), // YYYY-MM format
-          subscriptions: monthlySubscriptions,
-          revenue: monthlyRevenue
-        });
+          const monthlyRevenue = recentTransactions
+            ?.filter(tx => {
+              const txDate = new Date(tx.createdAt);
+              return txDate >= monthStart && txDate <= monthEnd &&
+                (tx.status === 'SUCCESS' || tx.status === 'COMPLETED');
+            })
+            ?.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0) || 0;
+
+          monthlyTrends.push({
+            month: monthStart.toISOString().substr(0, 7), // YYYY-MM format
+            subscriptions: monthlySubscriptions,
+            revenue: monthlyRevenue
+          });
+        }
+      } catch (trendError) {
+        console.error('Error fetching monthly trends:', trendError);
       }
 
       return res.status(200).json({
@@ -127,10 +129,10 @@ class AdminSubscriptionController {
           stats,
           planDistribution,
           monthlyTrends,
-          recentTransactions: recentTransactions.slice(0, 20), // Latest 20 transactions
-          activeSubscriptions: activeSubscriptions.slice(0, 50), // Latest 50 active subscriptions
-          expiredSubscriptions: expiredSubscriptions.slice(0, 20), // Latest 20 expired
-          subscriptionPlans: allPlans
+          recentTransactions: recentTransactions?.slice(0, 20) || [],
+          activeSubscriptions: activeSubscriptions?.slice(0, 50) || [],
+          expiredSubscriptions: expiredSubscriptions?.slice(0, 20) || [],
+          subscriptionPlans: allPlans || []
         }
       });
 
@@ -178,7 +180,7 @@ class AdminSubscriptionController {
             // Try to find user in both schemas
             userDetails = await userModel.findById(subscription.userId).lean();
             let userType = 'employee';
-            
+
             if (!userDetails) {
               userDetails = await EmployerModel.findById(subscription.userId).lean();
               if (userDetails) userType = 'employer';
@@ -193,8 +195,8 @@ class AdminSubscriptionController {
             usageData = await SubscriptionValidationService.getCurrentUsage(subscription.userId);
 
             // Get user's transaction history
-            const userTransactions = await PhonepeTransaction.find({ 
-              userId: subscription.userId 
+            const userTransactions = await PhonepeTransaction.find({
+              userId: subscription.userId
             })
               .sort({ createdAt: -1 })
               .limit(10)
@@ -202,10 +204,10 @@ class AdminSubscriptionController {
 
             // Calculate subscription health
             const now = new Date();
-            const isActive = subscription.status === 'active' && 
-                           (!subscription.endDate || new Date(subscription.endDate) > now);
-            
-            const daysRemaining = subscription.endDate ? 
+            const isActive = subscription.status === 'active' &&
+              (!subscription.endDate || new Date(subscription.endDate) > now);
+
+            const daysRemaining = subscription.endDate ?
               Math.ceil((new Date(subscription.endDate) - now) / (1000 * 60 * 60 * 24)) : null;
 
             return {
@@ -419,7 +421,7 @@ class AdminSubscriptionController {
             // Try to find user in both schemas
             userDetails = await userModel.findById(transaction.userId).lean();
             let userType = 'employee';
-            
+
             if (!userDetails) {
               userDetails = await EmployerModel.findById(transaction.userId).lean();
               if (userDetails) userType = 'employer';
@@ -433,12 +435,12 @@ class AdminSubscriptionController {
             // If search is provided, filter by user details
             if (search && userDetails) {
               const searchRegex = new RegExp(search, 'i');
-              const userMatchesSearch = 
+              const userMatchesSearch =
                 (userDetails.name && userDetails.name.match(searchRegex)) ||
                 (userDetails.fullName && userDetails.fullName.match(searchRegex)) ||
                 (userDetails.email && userDetails.email.match(searchRegex)) ||
                 (userDetails.CompanyName && userDetails.CompanyName.match(searchRegex));
-              
+
               if (!userMatchesSearch) {
                 return null; // Skip this transaction if user doesn't match search
               }
@@ -496,17 +498,17 @@ class AdminSubscriptionController {
       // Calculate transaction statistics
       const stats = {
         totalTransactions: filteredTransactions.length,
-        successfulTransactions: await PhonepeTransaction.countDocuments({ 
-          ...query, 
-          $or: [{ status: 'SUCCESS' }, { status: 'COMPLETED' }] 
+        successfulTransactions: await PhonepeTransaction.countDocuments({
+          ...query,
+          $or: [{ status: 'SUCCESS' }, { status: 'COMPLETED' }]
         }),
-        failedTransactions: await PhonepeTransaction.countDocuments({ 
-          ...query, 
-          $or: [{ status: 'FAILED' }, { status: 'FAILURE' }] 
+        failedTransactions: await PhonepeTransaction.countDocuments({
+          ...query,
+          $or: [{ status: 'FAILED' }, { status: 'FAILURE' }]
         }),
-        pendingTransactions: await PhonepeTransaction.countDocuments({ 
-          ...query, 
-          $or: [{ status: 'PENDING' }, { status: 'InProgress' }] 
+        pendingTransactions: await PhonepeTransaction.countDocuments({
+          ...query,
+          $or: [{ status: 'PENDING' }, { status: 'InProgress' }]
         }),
         totalAmount: filteredTransactions
           .filter(tx => tx.status === 'SUCCESS' || tx.status === 'COMPLETED')
@@ -559,7 +561,7 @@ class AdminSubscriptionController {
 
       const updatedSubscription = await UserSubscription.findByIdAndUpdate(
         subscriptionId,
-        { 
+        {
           ...updateData,
           lastModifiedBy: 'admin',
           lastModifiedAt: new Date()
@@ -596,15 +598,15 @@ class AdminSubscriptionController {
   async getPlanPerformance(req, res) {
     try {
       const plans = await Subscription.find({ isActive: true }).lean();
-      
+
       const planPerformance = await Promise.all(
         plans.map(async (plan) => {
-          const subscriptions = await UserSubscription.find({ 
-            subscriptionId: plan._id 
+          const subscriptions = await UserSubscription.find({
+            subscriptionId: plan._id
           }).lean();
 
-          const activeSubscriptions = subscriptions.filter(sub => 
-            sub.status === 'active' && 
+          const activeSubscriptions = subscriptions.filter(sub =>
+            sub.status === 'active' &&
             (!sub.endDate || new Date(sub.endDate) > new Date())
           );
 
@@ -624,7 +626,7 @@ class AdminSubscriptionController {
               expiredSubscriptions: subscriptions.length - activeSubscriptions.length,
               totalRevenue: revenue,
               averageRevenuePerUser: activeSubscriptions.length > 0 ? revenue / activeSubscriptions.length : 0,
-              conversionRate: transactions.length > 0 ? 
+              conversionRate: transactions.length > 0 ?
                 (transactions.filter(tx => tx.status === 'SUCCESS' || tx.status === 'COMPLETED').length / transactions.length) * 100 : 0
             }
           };
@@ -657,14 +659,14 @@ class AdminSubscriptionController {
       const mongoose = require('mongoose');
       if (mongoose.connection.readyState !== 1) {
         console.log('Database not connected, returning fallback data');
-        
+
         const now = new Date();
         const flowData = {
           funnel: [
-            { 
-              stage: 'Website Visitors', 
-              count: 15000, 
-              percentage: 100, 
+            {
+              stage: 'Website Visitors',
+              count: 15000,
+              percentage: 100,
               icon: 'Eye',
               insights: [
                 'Database connection unavailable',
@@ -673,10 +675,10 @@ class AdminSubscriptionController {
                 'Peak time: Business hours'
               ]
             },
-            { 
-              stage: 'Plan Page Views', 
-              count: 4500, 
-              percentage: 30, 
+            {
+              stage: 'Plan Page Views',
+              count: 4500,
+              percentage: 30,
               icon: 'Activity',
               insights: [
                 'Avg. time: 3.2 min',
@@ -685,10 +687,10 @@ class AdminSubscriptionController {
                 'Views today: 450'
               ]
             },
-            { 
-              stage: 'Payment Initiated', 
-              count: 1800, 
-              percentage: 40, 
+            {
+              stage: 'Payment Initiated',
+              count: 1800,
+              percentage: 40,
               icon: 'ShoppingCart',
               insights: [
                 'Decision time: 4.5 min',
@@ -697,10 +699,10 @@ class AdminSubscriptionController {
                 'Peak conversions: 14:00 hrs'
               ]
             },
-            { 
-              stage: 'Payment Completed', 
-              count: 1440, 
-              percentage: 80, 
+            {
+              stage: 'Payment Completed',
+              count: 1440,
+              percentage: 80,
               icon: 'DollarSign',
               insights: [
                 'Success rate: 80.0%',
@@ -709,10 +711,10 @@ class AdminSubscriptionController {
                 'Revenue today: ₹2,160,000'
               ]
             },
-            { 
-              stage: 'Active Subscriptions', 
-              count: 1296, 
-              percentage: 90, 
+            {
+              stage: 'Active Subscriptions',
+              count: 1296,
+              percentage: 90,
               icon: 'UserCheck',
               insights: [
                 'Activation: 90.0%',
@@ -729,28 +731,28 @@ class AdminSubscriptionController {
             successToActive: 90
           },
           dropOffReasons: [
-            { 
-              reason: 'Price concerns', 
+            {
+              reason: 'Price concerns',
               percentage: 30,
               solution: 'Offer trial periods and flexible pricing'
             },
-            { 
-              reason: 'Payment gateway issues', 
+            {
+              reason: 'Payment gateway issues',
               percentage: 20,
               solution: 'Add more payment options and improve UX'
             },
-            { 
-              reason: 'Feature limitations', 
+            {
+              reason: 'Feature limitations',
               percentage: 25,
               solution: 'Better feature comparison and demos'
             },
-            { 
-              reason: 'Trust and security concerns', 
+            {
+              reason: 'Trust and security concerns',
               percentage: 15,
               solution: 'Add security badges and testimonials'
             },
-            { 
-              reason: 'Mobile experience issues', 
+            {
+              reason: 'Mobile experience issues',
               percentage: 10,
               solution: 'Optimize mobile checkout flow'
             }
@@ -814,29 +816,29 @@ class AdminSubscriptionController {
         totalSubscriptions,
         recentTransactions
       ] = await Promise.all([
-        PhonepeTransaction.countDocuments({ 
-          createdAt: { $gte: thirtyDaysAgo } 
+        PhonepeTransaction.countDocuments({
+          createdAt: { $gte: thirtyDaysAgo }
         }).maxTimeMS(5000),
-        PhonepeTransaction.countDocuments({ 
+        PhonepeTransaction.countDocuments({
           createdAt: { $gte: thirtyDaysAgo },
           status: { $in: ['SUCCESS', 'COMPLETED'] }
         }).maxTimeMS(5000),
-        PhonepeTransaction.countDocuments({ 
+        PhonepeTransaction.countDocuments({
           createdAt: { $gte: thirtyDaysAgo },
           status: { $in: ['FAILED', 'FAILURE'] }
         }).maxTimeMS(5000),
-        PhonepeTransaction.countDocuments({ 
+        PhonepeTransaction.countDocuments({
           createdAt: { $gte: thirtyDaysAgo },
           status: { $in: ['PENDING', 'InProgress'] }
         }).maxTimeMS(5000),
-        UserSubscription.countDocuments({ 
+        UserSubscription.countDocuments({
           status: 'active',
           endDate: { $gt: now }
         }).maxTimeMS(5000),
-        UserSubscription.countDocuments({ 
+        UserSubscription.countDocuments({
           createdAt: { $gte: thirtyDaysAgo }
         }).maxTimeMS(5000),
-        PhonepeTransaction.find({ 
+        PhonepeTransaction.find({
           createdAt: { $gte: sevenDaysAgo }
         }).lean().maxTimeMS(5000)
       ]);
@@ -848,11 +850,11 @@ class AdminSubscriptionController {
       const paymentCompleted = successfulTransactions;
       const activeSubscriptions = Math.min(totalActiveSubscriptions, paymentCompleted);
 
-      // Calculate conversion rates
-      const planViewRate = planViews / estimatedVisitors;
-      const paymentInitiationRate = paymentInitiated / planViews;
-      const paymentSuccessRate = successfulTransactions / Math.max(totalTransactions, 1);
-      const subscriptionActivationRate = activeSubscriptions / Math.max(successfulTransactions, 1);
+      // Calculate conversion rates safely
+      const planViewRate = estimatedVisitors > 0 ? planViews / estimatedVisitors : 0;
+      const paymentInitiationRate = planViews > 0 ? paymentInitiated / planViews : 0;
+      const paymentSuccessRate = Math.max(totalTransactions, 1) > 0 ? (successfulTransactions || 0) / Math.max(totalTransactions, 1) : 0;
+      const subscriptionActivationRate = Math.max(successfulTransactions, 1) > 0 ? (activeSubscriptions || 0) / Math.max(successfulTransactions, 1) : 0;
 
       // Generate time-based insights
       const currentHour = now.getHours();
@@ -862,7 +864,7 @@ class AdminSubscriptionController {
 
       // Calculate today's metrics
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const todayTransactions = recentTransactions.filter(tx => 
+      const todayTransactions = recentTransactions.filter(tx =>
         new Date(tx.createdAt) >= todayStart
       );
       const todayRevenue = todayTransactions
@@ -1009,18 +1011,18 @@ class AdminSubscriptionController {
 
     } catch (error) {
       console.error('Get subscription flow error:', error);
-      
+
       // If it's a database timeout or connection error, return fallback data
       if (error.message.includes('buffering timed out') || error.message.includes('connection')) {
         console.log('Database timeout, returning fallback data');
-        
+
         const now = new Date();
         const flowData = {
           funnel: [
-            { 
-              stage: 'Website Visitors', 
-              count: 15000, 
-              percentage: 100, 
+            {
+              stage: 'Website Visitors',
+              count: 15000,
+              percentage: 100,
               icon: 'Eye',
               insights: [
                 'Database timeout occurred',
@@ -1029,10 +1031,10 @@ class AdminSubscriptionController {
                 'Peak time: Business hours'
               ]
             },
-            { 
-              stage: 'Plan Page Views', 
-              count: 4500, 
-              percentage: 30, 
+            {
+              stage: 'Plan Page Views',
+              count: 4500,
+              percentage: 30,
               icon: 'Activity',
               insights: [
                 'Avg. time: 3.2 min',
@@ -1041,10 +1043,10 @@ class AdminSubscriptionController {
                 'Views today: 450'
               ]
             },
-            { 
-              stage: 'Payment Initiated', 
-              count: 1800, 
-              percentage: 40, 
+            {
+              stage: 'Payment Initiated',
+              count: 1800,
+              percentage: 40,
               icon: 'ShoppingCart',
               insights: [
                 'Decision time: 4.5 min',
@@ -1053,10 +1055,10 @@ class AdminSubscriptionController {
                 'Peak conversions: 14:00 hrs'
               ]
             },
-            { 
-              stage: 'Payment Completed', 
-              count: 1440, 
-              percentage: 80, 
+            {
+              stage: 'Payment Completed',
+              count: 1440,
+              percentage: 80,
               icon: 'DollarSign',
               insights: [
                 'Success rate: 80.0%',
@@ -1065,10 +1067,10 @@ class AdminSubscriptionController {
                 'Revenue today: ₹2,160,000'
               ]
             },
-            { 
-              stage: 'Active Subscriptions', 
-              count: 1296, 
-              percentage: 90, 
+            {
+              stage: 'Active Subscriptions',
+              count: 1296,
+              percentage: 90,
               icon: 'UserCheck',
               insights: [
                 'Activation: 90.0%',
@@ -1085,28 +1087,28 @@ class AdminSubscriptionController {
             successToActive: 90
           },
           dropOffReasons: [
-            { 
-              reason: 'Price concerns', 
+            {
+              reason: 'Price concerns',
               percentage: 30,
               solution: 'Offer trial periods and flexible pricing'
             },
-            { 
-              reason: 'Payment gateway issues', 
+            {
+              reason: 'Payment gateway issues',
               percentage: 20,
               solution: 'Add more payment options and improve UX'
             },
-            { 
-              reason: 'Feature limitations', 
+            {
+              reason: 'Feature limitations',
               percentage: 25,
               solution: 'Better feature comparison and demos'
             },
-            { 
-              reason: 'Trust and security concerns', 
+            {
+              reason: 'Trust and security concerns',
               percentage: 15,
               solution: 'Add security badges and testimonials'
             },
-            { 
-              reason: 'Mobile experience issues', 
+            {
+              reason: 'Mobile experience issues',
               percentage: 10,
               solution: 'Optimize mobile checkout flow'
             }
@@ -1154,7 +1156,7 @@ class AdminSubscriptionController {
           message: 'Using fallback data due to database timeout'
         });
       }
-      
+
       return res.status(500).json({
         success: false,
         error: 'Failed to fetch subscription flow data',
@@ -1170,14 +1172,14 @@ class AdminSubscriptionController {
     try {
       const now = new Date();
       const currentHour = now.getHours();
-      
+
       // Generate realistic fallback data
       const flowData = {
         funnel: [
-          { 
-            stage: 'Website Visitors', 
-            count: 15000, 
-            percentage: 100, 
+          {
+            stage: 'Website Visitors',
+            count: 15000,
+            percentage: 100,
             icon: 'Eye',
             insights: [
               'Database connection unavailable',
@@ -1186,10 +1188,10 @@ class AdminSubscriptionController {
               'Peak time: Business hours'
             ]
           },
-          { 
-            stage: 'Plan Page Views', 
-            count: 4500, 
-            percentage: 30, 
+          {
+            stage: 'Plan Page Views',
+            count: 4500,
+            percentage: 30,
             icon: 'Activity',
             insights: [
               'Avg. time: 3.2 min',
@@ -1198,10 +1200,10 @@ class AdminSubscriptionController {
               'Views today: 450'
             ]
           },
-          { 
-            stage: 'Payment Initiated', 
-            count: 1800, 
-            percentage: 40, 
+          {
+            stage: 'Payment Initiated',
+            count: 1800,
+            percentage: 40,
             icon: 'ShoppingCart',
             insights: [
               'Decision time: 4.5 min',
@@ -1210,10 +1212,10 @@ class AdminSubscriptionController {
               'Peak conversions: 14:00 hrs'
             ]
           },
-          { 
-            stage: 'Payment Completed', 
-            count: 1440, 
-            percentage: 80, 
+          {
+            stage: 'Payment Completed',
+            count: 1440,
+            percentage: 80,
             icon: 'DollarSign',
             insights: [
               'Success rate: 80.0%',
@@ -1222,10 +1224,10 @@ class AdminSubscriptionController {
               'Revenue today: ₹2,160,000'
             ]
           },
-          { 
-            stage: 'Active Subscriptions', 
-            count: 1296, 
-            percentage: 90, 
+          {
+            stage: 'Active Subscriptions',
+            count: 1296,
+            percentage: 90,
             icon: 'UserCheck',
             insights: [
               'Activation: 90.0%',
@@ -1242,28 +1244,28 @@ class AdminSubscriptionController {
           successToActive: 90
         },
         dropOffReasons: [
-          { 
-            reason: 'Price concerns', 
+          {
+            reason: 'Price concerns',
             percentage: 30,
             solution: 'Offer trial periods and flexible pricing'
           },
-          { 
-            reason: 'Payment gateway issues', 
+          {
+            reason: 'Payment gateway issues',
             percentage: 20,
             solution: 'Add more payment options and improve UX'
           },
-          { 
-            reason: 'Feature limitations', 
+          {
+            reason: 'Feature limitations',
             percentage: 25,
             solution: 'Better feature comparison and demos'
           },
-          { 
-            reason: 'Trust and security concerns', 
+          {
+            reason: 'Trust and security concerns',
             percentage: 15,
             solution: 'Add security badges and testimonials'
           },
-          { 
-            reason: 'Mobile experience issues', 
+          {
+            reason: 'Mobile experience issues',
             percentage: 10,
             solution: 'Optimize mobile checkout flow'
           }
@@ -1325,7 +1327,7 @@ class AdminSubscriptionController {
    */
   generateFlowRecommendations(paymentSuccessRate, planViewRate, currentHour, todayTransactions) {
     const recommendations = [];
-    
+
     // Dynamic recommendations based on current metrics
     if (paymentSuccessRate < 0.85) {
       recommendations.push({
@@ -1335,7 +1337,7 @@ class AdminSubscriptionController {
         impact: Math.floor(15 + Math.random() * 10)
       });
     }
-    
+
     if (planViewRate < 0.20) {
       recommendations.push({
         title: 'Improve Plan Visibility',
@@ -1344,7 +1346,7 @@ class AdminSubscriptionController {
         impact: Math.floor(12 + Math.random() * 8)
       });
     }
-    
+
     if (currentHour >= 9 && currentHour <= 17) {
       recommendations.push({
         title: 'Add Live Chat Support',
@@ -1353,7 +1355,7 @@ class AdminSubscriptionController {
         impact: Math.floor(8 + Math.random() * 5)
       });
     }
-    
+
     if (todayTransactions < 5) {
       recommendations.push({
         title: 'Increase Marketing Efforts',
@@ -1362,21 +1364,21 @@ class AdminSubscriptionController {
         impact: Math.floor(20 + Math.random() * 10)
       });
     }
-    
+
     recommendations.push({
       title: 'A/B Test Pricing Display',
       description: 'Test different pricing formats and highlight savings',
       priority: 'medium',
       impact: Math.floor(10 + Math.random() * 8)
     });
-    
+
     recommendations.push({
       title: 'Mobile Experience Enhancement',
       description: 'Optimize for mobile users (60%+ of traffic)',
       priority: 'medium',
       impact: Math.floor(8 + Math.random() * 7)
     });
-    
+
     return recommendations;
   }
 }
