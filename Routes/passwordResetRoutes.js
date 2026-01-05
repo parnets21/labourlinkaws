@@ -1,6 +1,11 @@
 const express = require("express");
 const router = express.Router();
-const passwordResetController = require("../Controller/passwordResetController");
+const { 
+  sendForgotPasswordOTP, 
+  verifyOTP, 
+  resetPassword, 
+  resendOTP 
+} = require("../Controller/passwordResetController");
 
 console.log("🔐 Password reset routes loading...");
 
@@ -45,25 +50,25 @@ router.post("/debug-email", async (req, res) => {
 // Send OTP for forgot password
 router.post("/send-otp", (req, res) => {
   console.log("🔐 send-otp route hit");
-  return passwordResetController.sendForgotPasswordOTP(req, res);
+  return sendForgotPasswordOTP(req, res);
 });
 
 // Verify OTP
 router.post("/verify-otp", (req, res) => {
   console.log("🔐 verify-otp route hit");
-  return passwordResetController.verifyOTP(req, res);
+  return verifyOTP(req, res);
 });
 
 // Reset password with token
 router.post("/reset-password", (req, res) => {
   console.log("🔐 reset-password route hit");
-  return passwordResetController.resetPassword(req, res);
+  return resetPassword(req, res);
 });
 
 // Resend OTP
 router.post("/resend-otp", (req, res) => {
   console.log("🔐 resend-otp route hit");
-  return passwordResetController.resendOTP(req, res);
+  return resendOTP(req, res);
 });
 
 console.log("🔐 Password reset routes loaded successfully");
