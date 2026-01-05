@@ -108,6 +108,7 @@ app.use("/api/subscription-validation", subscriptionValidation)
 app.use("/api/admin/subscriptions", adminSubscriptionRoutes)
 app.use("/api/user", iapRoutes)
 app.use("/api/support", supportRoutes)
+console.log("🔐 Registering password reset routes at /api/auth");
 app.use("/api/auth", passwordResetRoutes)
 
 const employerController = require("./Controller/Employers/employers");
@@ -116,8 +117,20 @@ setInterval(() => {
   employerController.deleteOfline();
   employeeController.deleteOfline();
 }, 60000)
+
+// Serve static files from React build
 app.use(express.static(path.join(__dirname, 'build')));
 
+// API 404 handler - must come after all API routes
+app.use('/api/*', (req, res) => {
+  res.status(404).json({ 
+    error: 'API endpoint not found',
+    path: req.path,
+    method: req.method
+  });
+});
+
+// Catch-all handler: send back React's index.html file for non-API routes
 app.get("*", (req, res) => {
   return res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });

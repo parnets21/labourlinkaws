@@ -14,35 +14,49 @@ class PasswordResetController {
   // Send OTP for forgot password
   async sendForgotPasswordOTP(req, res) {
     try {
+      console.log("Password Reset - Send OTP endpoint hit");
+      console.log("Request body:", req.body);
+      
       const { email, userType } = req.body;
 
       // Validation
       if (!isValid(email)) {
+        console.log("Validation failed: Email is invalid");
         return res.status(400).json({ error: "Please enter your email!" });
       }
       if (!isValidEmail(email)) {
+        console.log("Validation failed: Email format is invalid");
         return res.status(400).json({ error: "Please enter a valid email!" });
       }
       if (!userType || !['jobseeker', 'employer'].includes(userType)) {
+        console.log("Validation failed: Invalid user type:", userType);
         return res.status(400).json({ error: "Please specify user type (jobseeker or employer)!" });
       }
+
+      console.log(`Looking for ${userType} with email: ${email.toLowerCase()}`);
 
       // Check if user exists based on userType
       let user;
       if (userType === 'jobseeker') {
         user = await userModel.findOne({ email: email.toLowerCase(), isDelete: false });
+        console.log("Jobseeker search result:", user ? "Found" : "Not found");
       } else {
         user = await employerModel.findOne({ email: email.toLowerCase(), isDelete: false });
+        console.log("Employer search result:", user ? "Found" : "Not found");
       }
 
       if (!user) {
+        console.log(`No ${userType} found with email: ${email}`);
         return res.status(404).json({ 
           error: `No ${userType} account found with this email address!` 
         });
       }
 
+      console.log("User found:", user.email);
+
       // Check if user is blocked
       if (user.isBlock) {
+        console.log("User is blocked");
         return res.status(403).json({ 
           error: "Your account is blocked. Please contact support." 
         });
@@ -50,6 +64,7 @@ class PasswordResetController {
 
       // Generate OTP
       const otp = this.generateOTP();
+      console.log("Generated OTP:", otp);
 
       // Delete any existing OTPs for this email and userType
       await OTP.deleteMany({ 
@@ -57,14 +72,16 @@ class PasswordResetController {
         userType, 
         purpose: 'forgot_password' 
       });
+      console.log("Deleted existing OTPs");
 
       // Save new OTP
-      await OTP.create({
+      const otpRecord = await OTP.create({
         email: email.toLowerCase(),
         otp,
         userType,
         purpose: 'forgot_password'
       });
+      console.log("Created new OTP record:", otpRecord._id);
 
       // Send OTP via email
       const userName = user.fullName || user.name || 'User';
@@ -93,7 +110,9 @@ class PasswordResetController {
         </div>
       `;
 
+      console.log("Attempting to send email to:", email);
       await send.sendMail(userName, email, emailMessage);
+      console.log("Email sent successfully");
 
       return res.status(200).json({
         success: true,

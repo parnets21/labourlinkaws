@@ -2,6 +2,11 @@ const express = require("express");
 const router = express.Router();
 const passwordResetController = require("../Controller/passwordResetController");
 
+// Test route to verify the API is working
+router.get("/test", (req, res) => {
+  res.json({ message: "Password reset API is working", timestamp: new Date().toISOString() });
+});
+
 // Send OTP for forgot password
 router.post("/send-otp", passwordResetController.sendForgotPasswordOTP);
 
