@@ -265,7 +265,10 @@ const verifyOTP = async (req, res) => {
     let user;
     if (userType === 'jobseeker') {
       user = await userModel.findOneAndUpdate(
-        { email: email.toLowerCase(), isDelete: false },
+        { 
+          email: { $regex: new RegExp(`^${email.toLowerCase()}$`, 'i') }, 
+          isDelete: false 
+        },
         { 
           resetPasswordToken: resetToken,
           resetPasswordExpires: resetTokenExpiry
@@ -274,7 +277,10 @@ const verifyOTP = async (req, res) => {
       );
     } else {
       user = await employerModel.findOneAndUpdate(
-        { email: email.toLowerCase(), isDelete: false },
+        { 
+          email: { $regex: new RegExp(`^${email.toLowerCase()}$`, 'i') }, 
+          isDelete: false 
+        },
         { 
           resetPasswordToken: resetToken,
           resetPasswordExpires: resetTokenExpiry
@@ -336,14 +342,14 @@ const resetPassword = async (req, res) => {
     let user;
     if (userType === 'jobseeker') {
       user = await userModel.findOne({
-        email: email.toLowerCase(),
+        email: { $regex: new RegExp(`^${email.toLowerCase()}$`, 'i') },
         resetPasswordToken: resetToken,
         resetPasswordExpires: { $gt: Date.now() },
         isDelete: false
       });
     } else {
       user = await employerModel.findOne({
-        email: email.toLowerCase(),
+        email: { $regex: new RegExp(`^${email.toLowerCase()}$`, 'i') },
         resetPasswordToken: resetToken,
         resetPasswordExpires: { $gt: Date.now() },
         isDelete: false
@@ -428,29 +434,45 @@ const resetPassword = async (req, res) => {
 // Resend OTP
 const resendOTP = async (req, res) => {
   try {
+    console.log("🔄 Resend OTP function called");
+    console.log("Request body:", req.body);
+    
     const { email, userType } = req.body;
 
     // Validation
     if (!isValid(email)) {
+      console.log("Validation failed: Email is invalid");
       return res.status(400).json({ error: "Please enter your email!" });
     }
     if (!userType || !['jobseeker', 'employer'].includes(userType)) {
+      console.log("Validation failed: Invalid user type:", userType);
       return res.status(400).json({ error: "Please specify user type!" });
     }
+
+    console.log(`Looking for ${userType} with email: ${email.toLowerCase()}`);
 
     // Check if user exists
     let user;
     if (userType === 'jobseeker') {
-      user = await userModel.findOne({ email: email.toLowerCase(), isDelete: false });
+      user = await userModel.findOne({ 
+        email: { $regex: new RegExp(`^${email.toLowerCase()}$`, 'i') }, 
+        isDelete: false 
+      });
     } else {
-      user = await employerModel.findOne({ email: email.toLowerCase(), isDelete: false });
+      user = await employerModel.findOne({ 
+        email: { $regex: new RegExp(`^${email.toLowerCase()}$`, 'i') }, 
+        isDelete: false 
+      });
     }
 
     if (!user) {
+      console.log(`No ${userType} found with email: ${email}`);
       return res.status(404).json({ 
         error: `No ${userType} account found with this email address!` 
       });
     }
+
+    console.log("User found for resend:", user.email);
 
     // Check rate limiting - allow resend only after 1 minute
     const recentOTP = await OTP.findOne({
@@ -461,14 +483,17 @@ const resendOTP = async (req, res) => {
 
     if (recentOTP) {
       const timeSinceLastOTP = (Date.now() - recentOTP.createdAt) / 1000; // in seconds
+      console.log("Time since last OTP:", timeSinceLastOTP, "seconds");
       if (timeSinceLastOTP < 60) { // 1 minute
         const waitTime = Math.ceil(60 - timeSinceLastOTP);
+        console.log("Rate limit hit, wait time:", waitTime);
         return res.status(429).json({ 
           error: `Please wait ${waitTime} seconds before requesting a new OTP.` 
         });
       }
     }
 
+    console.log("Calling sendForgotPasswordOTP from resend");
     // Call sendForgotPasswordOTP directly
     return sendForgotPasswordOTP(req, res);
 
