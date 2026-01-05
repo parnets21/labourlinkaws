@@ -33,6 +33,11 @@ const employerSchema = new Schema(
     lastUpdated: { type: Date, default: Date.now },
     EmployerImg:String,
     fcmToken: { type: String },
+    
+    // Password reset fields
+    resetPasswordToken: { type: String },
+    resetPasswordExpires: { type: Date },
+    
     // Additional fields
     isPrime: { type: Boolean, default: false },
     isApproved: { type: Boolean, default: false }, // Only approved employers can post jobs

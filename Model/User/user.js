@@ -89,6 +89,10 @@ const userSchema = new Schema(
     },
     fcmToken: { type: String }, // 🔥 Used for FCM push notifications
 
+    // Password reset fields
+    resetPasswordToken: { type: String },
+    resetPasswordExpires: { type: Date },
+
   },
   { timestamps: true }
 );

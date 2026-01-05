@@ -1232,12 +1232,12 @@ at ${process.env.NODE_SENDER_MAIL}</p>
         iapProductId
       } = req.body;
 
-      console.log('=== ACTIVATE SUBSCRIPTION REQUEST ===');
-      console.log('User ID:', userId);
-      console.log('Transaction ID:', transactionId);
-      console.log('Payment Method:', paymentMethod);
-      console.log('Plan Name:', planName);
-      console.log('Full Request Body:', JSON.stringify(req.body, null, 2));
+      // console.log('=== ACTIVATE SUBSCRIPTION REQUEST ===');
+      // console.log('User ID:', userId);
+      // console.log('Transaction ID:', transactionId);
+      // console.log('Payment Method:', paymentMethod);
+      // console.log('Plan Name:', planName);
+      // console.log('Full Request Body:', JSON.stringify(req.body, null, 2));
 
       // Validate required fields
       if (!userId) {
@@ -1278,7 +1278,7 @@ at ${process.env.NODE_SENDER_MAIL}</p>
 
       // Check if transaction already exists for THIS USER to prevent duplicates
       // This allows multiple users on the same device to have different subscriptions
-      console.log('Checking for existing subscription with userId:', userId, 'transactionId:', finalTransactionId);
+      // console.log('Checking for existing subscription with userId:', userId, 'transactionId:', finalTransactionId);
       const existingSubscription = await UserSubscription.findOne({
         userId,
         transactionId: finalTransactionId
@@ -1293,10 +1293,10 @@ at ${process.env.NODE_SENDER_MAIL}</p>
           isDuplicate: true
         });
       }
-      console.log('✅ No existing subscription found, proceeding with new subscription');
+      // console.log('✅ No existing subscription found, proceeding with new subscription');
 
       // Validate user exists - check both employee and employer schemas
-      console.log('Looking for user with ID:', userId);
+      // console.log('Looking for user with ID:', userId);
 
       let user = await userModel.findById(userId);
       let userType = 'employee';
@@ -1313,7 +1313,7 @@ at ${process.env.NODE_SENDER_MAIL}</p>
       }
 
       if (!user) {
-        console.error('User not found in both employee and employer schemas:', userId);
+        // console.error('User not found in both employee and employer schemas:', userId);
 
         // Debug information
         const userCount = await userModel.countDocuments();
@@ -1327,7 +1327,7 @@ at ${process.env.NODE_SENDER_MAIL}</p>
         const deletedEmployer = await EmployerModel.findOne({ _id: userId, isDelete: true });
 
         if (deletedEmployee || deletedEmployer) {
-          console.log('User found but marked as deleted in', deletedEmployee ? 'employee' : 'employer', 'schema');
+          // console.log('User found but marked as deleted in', deletedEmployee ? 'employee' : 'employer', 'schema');
           return res.status(404).json({
             success: false,
             error: 'User account is deactivated'
@@ -1488,17 +1488,17 @@ at ${process.env.NODE_SENDER_MAIL}</p>
 
       // Create new user subscription - unified for both payment methods
       try {
-        console.log('=== CREATING SUBSCRIPTION ===');
-        console.log('Subscription Data:', JSON.stringify(subscriptionData, null, 2));
+        // console.log('=== CREATING SUBSCRIPTION ===');
+        // console.log('Subscription Data:', JSON.stringify(subscriptionData, null, 2));
 
         const userSubscription = await UserSubscription.create(subscriptionData);
 
-        console.log('✅ Subscription activated successfully!');
-        console.log('Subscription ID:', userSubscription._id);
-        console.log('Transaction ID:', userSubscription.transactionId);
-        console.log('User ID:', userSubscription.userId);
-        console.log('Plan Name:', userSubscription.planName);
-        console.log('Payment Method:', userSubscription.paymentMethod);
+        // console.log('✅ Subscription activated successfully!');
+        // console.log('Subscription ID:', userSubscription._id);
+        // console.log('Transaction ID:', userSubscription.transactionId);
+        // console.log('User ID:', userSubscription.userId);
+        // console.log('Plan Name:', userSubscription.planName);
+        // console.log('Payment Method:', userSubscription.paymentMethod);
 
         return res.status(200).json({
           success: true,

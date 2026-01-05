@@ -59,6 +59,7 @@ const adminSubscriptionRoutes = require("./Routes/Admin/adminSubscriptionRoutes"
 const analyticsRoutes = require("./Routes/analyticsRoutes")
 const iapRoutes = require("./Routes/iapRoutes")
 const supportRoutes = require("./Routes/supportRoutes")
+const passwordResetRoutes = require("./Routes/passwordResetRoutes")
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -107,6 +108,7 @@ app.use("/api/subscription-validation", subscriptionValidation)
 app.use("/api/admin/subscriptions", adminSubscriptionRoutes)
 app.use("/api/user", iapRoutes)
 app.use("/api/support", supportRoutes)
+app.use("/api/auth", passwordResetRoutes)
 
 const employerController = require("./Controller/Employers/employers");
 const employeeController = require("./Controller/User/user");
