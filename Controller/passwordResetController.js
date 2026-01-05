@@ -38,17 +38,81 @@ class PasswordResetController {
       // Check if user exists based on userType
       let user;
       if (userType === 'jobseeker') {
-        user = await userModel.findOne({ email: email.toLowerCase(), isDelete: false });
+        // Try multiple search strategies for jobseeker
+        user = await userModel.findOne({ 
+          email: { $regex: new RegExp(`^${email.toLowerCase()}$`, 'i') }, 
+          isDelete: false 
+        });
         console.log("Jobseeker search result:", user ? "Found" : "Not found");
+        
+        // If not found, try without isDelete filter for debugging
+        if (!user) {
+          const userWithoutDeleteFilter = await userModel.findOne({ 
+            email: { $regex: new RegExp(`^${email.toLowerCase()}$`, 'i') }
+          });
+          console.log("Jobseeker without delete filter:", userWithoutDeleteFilter ? `Found (isDelete: ${userWithoutDeleteFilter.isDelete})` : "Not found at all");
+          
+          // Also check if this email exists as an employer
+          const employerCheck = await employerModel.findOne({ 
+            email: { $regex: new RegExp(`^${email.toLowerCase()}$`, 'i') }
+          });
+          console.log("Email exists as employer:", employerCheck ? `Yes (isDelete: ${employerCheck.isDelete})` : "No");
+        }
       } else {
-        user = await employerModel.findOne({ email: email.toLowerCase(), isDelete: false });
+        // Try multiple search strategies for employer
+        user = await employerModel.findOne({ 
+          email: { $regex: new RegExp(`^${email.toLowerCase()}$`, 'i') }, 
+          isDelete: false 
+        });
         console.log("Employer search result:", user ? "Found" : "Not found");
+        
+        // If not found, try without isDelete filter for debugging
+        if (!user) {
+          const userWithoutDeleteFilter = await employerModel.findOne({ 
+            email: { $regex: new RegExp(`^${email.toLowerCase()}$`, 'i') }
+          });
+          console.log("Employer without delete filter:", userWithoutDeleteFilter ? `Found (isDelete: ${userWithoutDeleteFilter.isDelete})` : "Not found at all");
+          
+          // Also check if this email exists as a jobseeker
+          const jobseekerCheck = await userModel.findOne({ 
+            email: { $regex: new RegExp(`^${email.toLowerCase()}$`, 'i') }
+          });
+          console.log("Email exists as jobseeker:", jobseekerCheck ? `Yes (isDelete: ${jobseekerCheck.isDelete})` : "No");
+        }
       }
 
       if (!user) {
         console.log(`No ${userType} found with email: ${email}`);
+        
+        // Check if email exists in the other user type
+        let otherUserType = userType === 'jobseeker' ? 'employer' : 'jobseeker';
+        let otherUser;
+        
+        if (userType === 'jobseeker') {
+          otherUser = await employerModel.findOne({ 
+            email: { $regex: new RegExp(`^${email.toLowerCase()}$`, 'i') }, 
+            isDelete: false 
+          });
+        } else {
+          otherUser = await userModel.findOne({ 
+            email: { $regex: new RegExp(`^${email.toLowerCase()}$`, 'i') }, 
+            isDelete: false 
+          });
+        }
+        
+        if (otherUser) {
+          return res.status(404).json({ 
+            error: `This email is registered as a ${otherUserType}, not a ${userType}. Please select "${otherUserType === 'jobseeker' ? 'Job Seeker' : 'Employer'}" and try again.`,
+            suggestion: `Try selecting "${otherUserType === 'jobseeker' ? 'Job Seeker' : 'Employer'}" instead.`
+          });
+        }
+        
         return res.status(404).json({ 
-          error: `No ${userType} account found with this email address!` 
+          error: `No ${userType} account found with this email address. Please check your email and try again, or contact support if you believe this is an error.`,
+          debug: {
+            searchedEmail: email.toLowerCase(),
+            userType: userType
+          }
         });
       }
 
