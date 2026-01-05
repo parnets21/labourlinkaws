@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const passwordResetController = require("../Controller/passwordResetController");
 
+console.log("🔐 Password reset routes loading...");
+
 // Test route to verify the API is working
 router.get("/test", (req, res) => {
   res.json({ message: "Password reset API is working", timestamp: new Date().toISOString() });
@@ -41,15 +43,28 @@ router.post("/debug-email", async (req, res) => {
 });
 
 // Send OTP for forgot password
-router.post("/send-otp", passwordResetController.sendForgotPasswordOTP);
+router.post("/send-otp", (req, res) => {
+  console.log("🔐 send-otp route hit");
+  return passwordResetController.sendForgotPasswordOTP(req, res);
+});
 
 // Verify OTP
-router.post("/verify-otp", passwordResetController.verifyOTP);
+router.post("/verify-otp", (req, res) => {
+  console.log("🔐 verify-otp route hit");
+  return passwordResetController.verifyOTP(req, res);
+});
 
 // Reset password with token
-router.post("/reset-password", passwordResetController.resetPassword);
+router.post("/reset-password", (req, res) => {
+  console.log("🔐 reset-password route hit");
+  return passwordResetController.resetPassword(req, res);
+});
 
 // Resend OTP
-router.post("/resend-otp", passwordResetController.resendOTP);
+router.post("/resend-otp", (req, res) => {
+  console.log("🔐 resend-otp route hit");
+  return passwordResetController.resendOTP(req, res);
+});
 
+console.log("🔐 Password reset routes loaded successfully");
 module.exports = router;
