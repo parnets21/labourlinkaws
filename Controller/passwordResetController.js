@@ -127,7 +127,7 @@ class PasswordResetController {
       }
 
       // Generate OTP
-      const otp = this.generateOTP();
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
       console.log("Generated OTP:", otp);
 
       // Delete any existing OTPs for this email and userType
@@ -470,8 +470,8 @@ class PasswordResetController {
         }
       }
 
-      // Use the same logic as sendForgotPasswordOTP
-      return this.sendForgotPasswordOTP(req, res);
+      // Call sendForgotPasswordOTP directly
+      return module.exports.sendForgotPasswordOTP(req, res);
 
     } catch (error) {
       console.error("Resend OTP Error:", error);
