@@ -267,28 +267,33 @@ class user {
       // let parsedEducation = typeof education === 'string' ? JSON.parse(education) : education;
 
 
+      // Parse education & skills if they are strings
+      let parsedEducation = typeof education === 'string' ? JSON.parse(education) : education;
+      let parsedSkills = typeof skills === 'string' ? JSON.parse(skills) : skills;
+      let parsedPreferredSalary = typeof preferredSalary === 'string' ? JSON.parse(preferredSalary) : preferredSalary;
+
       // ✅ Update user details (without password)
       user.fullName = fullName || user.fullName;
-      // user.email = email || user.email;
-      // user.phone = phone || user.phone;
-      // user.location = location || user.location;
-      // user.workExperience = experience ? true : false;
-      // user.experiences = experience || user.experiences;
-      // user.jobRole = jobRole || user.jobRole;
-      // user.companyType = companyType || user.companyType;
-      // user.department = department || user.department;
-      // user.workMode = workMode || user.workMode;
-      // user.jobType = jobType || user.jobType;
-      // user.address = address || user.address;
-      // user.education = parsedEducation || user.education;
+      user.email = email || user.email;
+      user.phone = phone || user.phone;
+      user.location = location || user.location;
+      user.workExperience = experience ? true : false;
+      user.experiences = experience || user.experiences;
+      user.jobRole = jobRole || user.jobRole;
+      user.companyType = companyType || user.companyType;
+      user.department = department || user.department;
+      user.workMode = workMode || user.workMode;
+      user.jobType = jobType || user.jobType;
+      user.address = address || user.address;
+      user.education = parsedEducation || user.education;
       user.bio = bio || user.bio;
-      // user.country = country || user.country;
-      // user.street = street || user.street;
-      // user.city = city || user.city;
-      // user.state = state || user.state;
-      // user.pincode = pincode || user.pincode;
-      // user.skills = parsedSkills || user.skills;
-      // user.preferredSalary = parsedPreferredSalary || user.preferredSalary;
+      user.country = country || user.country;
+      user.street = street || user.street;
+      user.city = city || user.city;
+      user.state = state || user.state;
+      user.pincode = pincode || user.pincode;
+      user.skills = parsedSkills || user.skills;
+      user.preferredSalary = parsedPreferredSalary || user.preferredSalary;
 
       // ✅ Save updated user
       await user.save();

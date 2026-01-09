@@ -263,7 +263,10 @@ class SubscriptionValidationController {
     try {
       const { userId, action, metadata = {} } = req.body;
       
+      console.log('📝 Record usage request:', { userId, action, metadata });
+      
       if (!userId || !action) {
+        console.log('❌ Missing required fields:', { userId: !!userId, action: !!action });
         return res.status(400).json({
           success: false,
           error: 'User ID and action are required'
@@ -276,11 +279,16 @@ class SubscriptionValidationController {
         'apply_job': 'jobApplicationsPerDay',
         'search_candidates': 'candidateSearchesPerDay',
         'view_candidate_contact': 'candidateViewsPerDay',
-        'application_review': 'applicationReviewsPerDay'
+        'application_review': 'applicationReviewsPerDay',
+        'post_job': 'activeJobPosts',
+        'profile_update': 'profileUpdatesPerMonth',
+        'interview_schedule_employer': 'interviewSlotsPerJob',
+        'view_company_details': 'companyViewsPerDay'
       };
       const usageKey = actionToUsageKey[action];
 
       if (!usageKey) {
+        console.log('ℹ️ No usage key found for action:', action);
         // For unsupported actions, acknowledge without recording
         return res.status(200).json({
           success: true,
@@ -292,14 +300,28 @@ class SubscriptionValidationController {
       const mongoose = require('mongoose');
       const UsageRecord = require('../Model/usageRecord');
 
-      // Validate userId as ObjectId
-      if (!mongoose.Types.ObjectId.isValid(userId)) {
+      // Validate and convert userId to ObjectId
+      let userObjectId;
+      try {
+        if (mongoose.Types.ObjectId.isValid(userId)) {
+          userObjectId = new mongoose.Types.ObjectId(userId);
+        } else {
+          // Try to extract ObjectId if it's in a different format
+          const cleanUserId = userId.toString().trim();
+          if (mongoose.Types.ObjectId.isValid(cleanUserId)) {
+            userObjectId = new mongoose.Types.ObjectId(cleanUserId);
+          } else {
+            throw new Error('Invalid ObjectId format');
+          }
+        }
+      } catch (error) {
+        console.log('❌ Invalid userId format:', userId, 'Type:', typeof userId, 'Error:', error.message);
         return res.status(400).json({
           success: false,
-          error: 'Invalid user ID format for usage recording'
+          error: 'Invalid user ID format for usage recording',
+          details: `Received userId: ${userId} (type: ${typeof userId})`
         });
       }
-      const userObjectId = new mongoose.Types.ObjectId(userId);
       const now = new Date();
       const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -318,6 +340,14 @@ class SubscriptionValidationController {
 
       const record = await UsageRecord.findOneAndUpdate(filter, update, options);
 
+      console.log('✅ Usage recorded successfully:', {
+        userId,
+        action,
+        usageKey,
+        count: record.count,
+        date: record.date
+      });
+
       return res.status(200).json({
         success: true,
         message: 'Usage recorded successfully',
@@ -326,7 +356,8 @@ class SubscriptionValidationController {
           action,
           usageKey,
           date: record.date,
-          count: record.count
+          count: record.count,
+          timestamp: now
         }
       });
 
