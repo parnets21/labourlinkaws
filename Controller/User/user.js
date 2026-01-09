@@ -652,7 +652,10 @@ class user {
 
       let hash;
       if (!phonenumber(email)) {
-        hash = await userModel.findOne({ email: email, isDelete: false });
+        hash = await userModel.findOne({ 
+          email: { $regex: new RegExp(`^${email.toLowerCase()}`, 'i') }, 
+          isDelete: false 
+        });
       } else {
         hash = await userModel.findOne({ mobile: email, isDelete: false });
       }

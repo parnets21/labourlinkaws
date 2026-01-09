@@ -13,8 +13,7 @@ const generateOTP = () => {
 // Send OTP for forgot password
 const sendForgotPasswordOTP = async (req, res) => {
   try {
-    console.log("🔐 Password Reset - Send OTP endpoint hit");
-    console.log("Request body:", req.body);
+
 
     const { email, userType } = req.body;
 
@@ -29,7 +28,6 @@ const sendForgotPasswordOTP = async (req, res) => {
       return res.status(400).json({ error: "Please specify user type (jobseeker or employer)!" });
     }
 
-    console.log(`Looking for ${userType} with email: ${email.toLowerCase()}`);
 
     // Check if user exists based on userType
     let user;
@@ -48,7 +46,7 @@ const sendForgotPasswordOTP = async (req, res) => {
     }
 
     if (!user) {
-      console.log(`No ${userType} found with email: ${email}`);
+  
       
       // Check if email exists in the other user type
       let otherUserType = userType === 'jobseeker' ? 'employer' : 'jobseeker';
@@ -78,7 +76,7 @@ const sendForgotPasswordOTP = async (req, res) => {
       });
     }
 
-    console.log("User found:", user.email);
+
 
     // Check if user is blocked
     if (user.isBlock) {
@@ -133,7 +131,7 @@ const sendForgotPasswordOTP = async (req, res) => {
     `;
 
     await send.sendMail(userName, email, emailMessage);
-    console.log("Email sent successfully");
+
 
     return res.status(200).json({
       success: true,
@@ -154,8 +152,7 @@ const sendForgotPasswordOTP = async (req, res) => {
 // Verify OTP
 const verifyOTP = async (req, res) => {
   try {
-    console.log("🔐 Verify OTP endpoint hit");
-    console.log("Request body:", req.body);
+
 
     const { email, otp, userType } = req.body;
 
@@ -218,7 +215,7 @@ const verifyOTP = async (req, res) => {
     otpRecord.isUsed = true;
     await otpRecord.save();
 
-    console.log("OTP verified successfully");
+
 
     return res.status(200).json({
       success: true,
@@ -238,8 +235,7 @@ const verifyOTP = async (req, res) => {
 // Reset password directly with OTP verification
 const resetPassword = async (req, res) => {
   try {
-    console.log("🔐 Reset Password endpoint hit");
-    console.log("Request body:", req.body);
+
 
     const { email, newPassword, confirmPassword, userType } = req.body;
 
