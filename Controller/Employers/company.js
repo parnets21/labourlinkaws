@@ -1428,7 +1428,11 @@ class company {
       if (!user) return res.status(404).json({ message: "User not found" });
       console.log(user, "yusdna")
       if (!user.skills || user.skills.length === 0) {
-        return res.status(400).json({ message: "User has no skills listed" });
+        return res.status(200).json({ 
+          success: true, 
+          data: [], 
+          message: "User has no skills listed. Complete your profile to get suggestions." 
+        });
       }
 
       // Extract skill names (since skills are stored as an array of strings)
@@ -1441,13 +1445,25 @@ class company {
         .limit(10);
 
       if (jobs.length === 0) {
-        return res.status(404).json({ message: "No matching jobs found" });
+        return res.status(200).json({ 
+          success: true, 
+          data: [], 
+          message: "No matching jobs found" 
+        });
       }
 
-      return res.status(200).json({ getSuggestedJobs: jobs });
+      return res.status(200).json({ 
+        success: true, 
+        data: jobs,
+        message: "Suggested jobs retrieved successfully" 
+      });
     } catch (error) {
       console.error("Error in getSuggestedJobs:", error);
-      return res.status(500).json({ message: "Server error", details: error.message });
+      return res.status(500).json({ 
+        success: false, 
+        message: "Server error", 
+        details: error.message 
+      });
     }
   }
 

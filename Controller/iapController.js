@@ -2,7 +2,7 @@ const axios = require('axios');
 const mongoose = require('mongoose');
 // Use the same UserSubscription model as regular subscriptions
 const UserSubscription = require('../Model/User/userSubscription');
-const IAPService = require('../services/iapService');
+const { IAPService } = require('../services/iapService');
 
 // Apple's receipt validation URLs
 const SANDBOX_URL = 'https://sandbox.itunes.apple.com/verifyReceipt';
@@ -32,12 +32,56 @@ exports.validateIAPReceipt = async (req, res) => {
         }
 
         // Validate required fields
-        if (!receipt || !productId || !transactionId) {
+        if (!receipt || !productId || !transactionId || !userId) {
             return res.status(400).json({
                 success: false,
-                message: 'Missing required fields: receipt, productId, transactionId'
+                message: 'Missing required fields: receipt, productId, transactionId, userId'
             });
         }
+
+        // CRITICAL: Validate user type and product match
+        const userModel = require('../Model/User/user');
+        const EmployerModel = require('../Model/Employers/employers');
+
+        let user = await userModel.findOne({ _id: userId, isDelete: false });
+        let userType = 'employee';
+
+        if (!user) {
+            user = await EmployerModel.findOne({ _id: userId, isDelete: false });
+            if (user) {
+                userType = 'employer';
+            }
+        }
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Validate product ID matches user type
+        const employeeProducts = ['employee', 'jobseeker'];
+        const employerProducts = ['employer'];
+
+        const isEmployeeProduct = employeeProducts.some(pattern => productId.toLowerCase().includes(pattern));
+        const isEmployerProduct = employerProducts.some(pattern => productId.toLowerCase().includes(pattern));
+
+        if (userType === 'employee' && !isEmployeeProduct) {
+            return res.status(400).json({
+                success: false,
+                message: `Product ${productId} is not valid for job seeker accounts. Please select a job seeker subscription.`
+            });
+        }
+
+        if (userType === 'employer' && !isEmployerProduct) {
+            return res.status(400).json({
+                success: false,
+                message: `Product ${productId} is not valid for employer accounts. Please select an employer subscription.`
+            });
+        }
+
+        console.log('User type validation passed:', { userId, userType, productId });
 
         // Validate with Apple
         const validationResult = await verifyReceiptWithApple(receipt);
@@ -65,6 +109,7 @@ exports.validateIAPReceipt = async (req, res) => {
         console.log('Receipt validated successfully:', {
             transactionId,
             productId,
+            userType,
             environment: validationResult.environment
         });
 
@@ -77,7 +122,9 @@ exports.validateIAPReceipt = async (req, res) => {
                 purchaseDate: new Date(parseInt(latestReceiptInfo.purchase_date_ms)),
                 expiresDate: latestReceiptInfo.expires_date_ms ? 
                             new Date(parseInt(latestReceiptInfo.expires_date_ms)) : null,
-                environment: validationResult.environment
+                environment: validationResult.environment,
+                userType: userType,
+                userId: userId
             }
         });
 

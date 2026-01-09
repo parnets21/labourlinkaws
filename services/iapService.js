@@ -4,6 +4,82 @@ const axios = require('axios');
 const crypto = require('crypto');
 
 /**
+ * Validate user type by checking database schemas
+ * @param {string} userId - User ID to validate
+ * @returns {Promise<Object>} User type validation result
+ */
+async function validateUserType(userId) {
+  try {
+    const userModel = require('../Model/User/user');
+    const EmployerModel = require('../Model/Employers/employers');
+
+    // Check employee schema first
+    let user = await userModel.findOne({ _id: userId, isDelete: false });
+    if (user) {
+      return { 
+        success: true, 
+        userType: 'employee', 
+        user: user,
+        schema: 'employee' 
+      };
+    }
+
+    // Check employer schema
+    user = await EmployerModel.findOne({ _id: userId, isDelete: false });
+    if (user) {
+      return { 
+        success: true, 
+        userType: 'employer', 
+        user: user,
+        schema: 'employer' 
+      };
+    }
+
+    return { 
+      success: false, 
+      error: 'User not found in any schema' 
+    };
+  } catch (error) {
+    console.error('Error validating user type:', error);
+    return { 
+      success: false, 
+      error: error.message 
+    };
+  }
+}
+
+/**
+ * Validate IAP product ID matches user type
+ * @param {string} productId - IAP product ID
+ * @param {string} userType - User type (employee/employer)
+ * @returns {boolean} Whether product matches user type
+ */
+function validateProductForUserType(productId, userType) {
+  // Define product ID patterns for each user type
+  const employeeProducts = [
+    'com.laborlink.employee.monthly',
+    'com.laborlink.employee.yearly',
+    'com.laborlink.jobseeker.premium',
+    'com.laborlink.jobseeker.basic'
+  ];
+  
+  const employerProducts = [
+    'com.laborlink.employer.monthly',
+    'com.laborlink.employer.yearly',
+    'com.laborlink.employer.premium',
+    'com.laborlink.employer.basic'
+  ];
+
+  if (userType === 'employee') {
+    return employeeProducts.some(pattern => productId.includes(pattern.split('.').pop()) || productId === pattern);
+  } else if (userType === 'employer') {
+    return employerProducts.some(pattern => productId.includes(pattern.split('.').pop()) || productId === pattern);
+  }
+
+  return false;
+}
+
+/**
  * IAP Service - Mirrors PaymentService functionality for In-App Purchases
  * Provides complete feature parity with PhonePe integration
  */
@@ -23,7 +99,7 @@ class IAPService {
         transactionId,
         amount,
         planName,
-        userType,
+        userType: clientUserType, // Rename to indicate this comes from client
         iapReceipt,
         iapProductId,
         startDate,
@@ -38,6 +114,27 @@ class IAPService {
       console.log('Transaction ID:', transactionId);
       console.log('User ID:', userId);
       console.log('Plan:', planName);
+      console.log('Client User Type:', clientUserType);
+      console.log('IAP Product ID:', iapProductId);
+
+      // CRITICAL: Validate user type from database, don't trust client
+      const userValidation = await validateUserType(userId);
+      if (!userValidation.success) {
+        throw new Error(`User validation failed: ${userValidation.error}`);
+      }
+
+      const actualUserType = userValidation.userType;
+      console.log('Validated User Type:', actualUserType);
+
+      // CRITICAL: Validate IAP product matches user type
+      if (iapProductId && !validateProductForUserType(iapProductId, actualUserType)) {
+        throw new Error(`IAP Product ${iapProductId} is not valid for ${actualUserType} users. This appears to be a cross-contamination attempt.`);
+      }
+
+      // Warn if client sent wrong user type
+      if (clientUserType && clientUserType !== actualUserType) {
+        console.warn(`Client sent userType '${clientUserType}' but user is actually '${actualUserType}'. Using validated type.`);
+      }
 
       // Check if transaction already exists (prevent duplicates)
       const existingSubscription = await UserSubscription.findOne({ transactionId });
@@ -73,8 +170,7 @@ class IAPService {
         throw new Error('Invalid end date format');
       }
 
-      // Create subscription record with complete data
-      // Note: Using 'type' field instead of 'userType' to match UserSubscription schema
+      // Create subscription record with validated user type
       const subscriptionData = {
         userId: userId,
         subscriptionId: subscriptionId || null,
@@ -83,22 +179,24 @@ class IAPService {
         status: 'active',
         startDate: parsedStartDate,
         endDate: parsedEndDate,
-        paymentMethod: 'PhonePe', // Use PhonePe as it's in the enum, store IAP info in metadata
+        paymentMethod: 'Apple IAP', // Use Apple IAP directly since it's in the enum
         planName: planName.trim(),
-        type: userType || 'employee', // Use 'type' field as per UserSubscription schema
+        userType: actualUserType, // Use validated user type, not client-provided
         autoRenew: false,
         isActive: true,
+        iapReceipt: iapReceipt || null,
+        iapProductId: iapProductId || null,
         metadata: {
           source: 'IAP',
           platform: 'iOS',
-          paymentMethod: 'Apple IAP', // Store actual payment method here
           activatedAt: new Date(),
           originalAmount: amount,
           duration: duration || 'monthly',
           serviceType: serviceType || 'job_portal_subscription',
-          serviceDescription: serviceDescription || this.getDefaultServiceDescription(userType),
-          iapReceipt: iapReceipt ? '[RECEIPT_DATA]' : null, // Don't store full receipt in metadata
-          iapProductId,
+          serviceDescription: serviceDescription || this.getDefaultServiceDescription(actualUserType),
+          validatedUserType: actualUserType,
+          clientProvidedUserType: clientUserType,
+          productValidated: !!iapProductId,
           ...metadata
         }
       };
@@ -131,6 +229,19 @@ class IAPService {
     } catch (error) {
       console.error('❌ IAP purchase processing error:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Get default service description for user type
+   * @param {string} userType - User type (employee/employer)
+   * @returns {string} Service description
+   */
+  static getDefaultServiceDescription(userType) {
+    if (userType === 'employer') {
+      return 'Premium employer subscription with unlimited job postings and candidate access';
+    } else {
+      return 'Premium job seeker subscription with enhanced profile visibility and application features';
     }
   }
 
@@ -278,7 +389,7 @@ class IAPService {
       };
 
       if (userType) {
-        query.type = userType; // Use 'type' field as per UserSubscription schema
+        query.userType = userType; // Use 'userType' field as per UserSubscription schema
       }
 
       const subscriptions = await UserSubscription.find(query)
@@ -538,4 +649,8 @@ class IAPService {
   }
 }
 
-module.exports = IAPService;
+module.exports = { 
+  IAPService, 
+  validateUserType, 
+  validateProductForUserType 
+};

@@ -1414,17 +1414,16 @@ at ${process.env.NODE_SENDER_MAIL}</p>
         });
       }
 
-      // Deactivate any existing active subscriptions of the same type
+      // Deactivate any existing active subscriptions of the same type for this user
       await UserSubscription.updateMany(
         {
           userId,
-          type: subscription.type,
+          userType: userType, // Filter by user type to prevent cross-contamination
           status: 'active'
         },
-        {
+        { 
           status: 'inactive',
-          cancellationDate: new Date(),
-          cancellationReason: 'Replaced by new subscription'
+          endDate: new Date() // Set end date to now
         }
       );
 

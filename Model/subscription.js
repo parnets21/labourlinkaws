@@ -26,13 +26,11 @@ const subscriptionPlanSchema = new mongoose.Schema({
   shortDescription: {
     type: String,
     trim: true,
-    maxlength: [200, 'Short description cannot exceed 200 characters'],
     description: "Brief description shown in plan listings"
   },
   highlightedFeatures: [{
     type: String,
-    trim: true,
-    maxlength: [100, 'Highlighted feature cannot exceed 100 characters']
+    trim: true
   }],
   price: { 
     type: Number, 
