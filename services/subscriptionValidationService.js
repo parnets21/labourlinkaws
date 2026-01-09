@@ -727,7 +727,7 @@ class SubscriptionValidationService {
         // Use upsert to create or update usage record
         await UsageRecord.findOneAndUpdate(
           {
-            userId: typeof userId === 'string' ? require('mongoose').Types.ObjectId(userId) : userId,
+            userId: mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : userId,
             usageKey: key,
             date: today
           },

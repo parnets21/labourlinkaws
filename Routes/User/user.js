@@ -96,4 +96,7 @@ router.get('/subscriptions/:userId', userController.getUserSubscriptions);
 router.get('/debug/:userId', userController.debugUser);
 router.get('/checkSubscription/:userId', userController.checkUserSubscription);
 
+// Check if user has already applied for a job
+router.get('/checkApplication', userController.checkApplication);
+
 module.exports = router;

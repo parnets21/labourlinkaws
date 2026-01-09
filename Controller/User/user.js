@@ -1496,6 +1496,16 @@ at ${process.env.NODE_SENDER_MAIL}</p>
 
         const userSubscription = await UserSubscription.create(subscriptionData);
 
+        // Reset usage counts to zero when new subscription is activated
+        try {
+          const UsageRecord = require('../../Model/usageRecord');
+          await UsageRecord.deleteMany({ userId: userId });
+          console.log(`✅ Reset usage counts for user ${userId} after subscription activation`);
+        } catch (usageResetError) {
+          console.error('Warning: Failed to reset usage counts:', usageResetError);
+          // Don't fail the subscription activation if usage reset fails
+        }
+
         // console.log('✅ Subscription activated successfully!');
         // console.log('Subscription ID:', userSubscription._id);
         // console.log('Transaction ID:', userSubscription.transactionId);
@@ -1675,6 +1685,18 @@ at ${process.env.NODE_SENDER_MAIL}</p>
       if (planName) userSubscription.planName = planName;
 
       await userSubscription.save();
+
+      // Reset usage counts when subscription is updated to active status
+      if (status === 'active') {
+        try {
+          const UsageRecord = require('../../Model/usageRecord');
+          await UsageRecord.deleteMany({ userId: userId });
+          console.log(`✅ Reset usage counts for user ${userId} after subscription update to active`);
+        } catch (usageResetError) {
+          console.error('Warning: Failed to reset usage counts:', usageResetError);
+          // Don't fail the subscription update if usage reset fails
+        }
+      }
 
       return res.status(200).json({
         success: true,
@@ -1899,6 +1921,39 @@ at ${process.env.NODE_SENDER_MAIL}</p>
         success: false,
         message: "Failed to fetch user subscriptions",
         error: error.message
+      });
+    }
+  }
+
+  // Check if user has already applied for a specific job
+  async checkApplication(req, res) {
+    try {
+      const { applicant, job } = req.query;
+
+      if (!applicant || !job) {
+        return res.status(400).json({
+          error: "Missing required parameters: applicant and job"
+        });
+      }
+
+      // Check if application exists
+      const existingApplication = await applyModel.findOne({
+        applicant: applicant,
+        job: job,
+        isDelete: false
+      });
+
+      return res.status(200).json({
+        applied: !!existingApplication,
+        applicationId: existingApplication?._id || null,
+        applicationDate: existingApplication?.createdAt || null
+      });
+
+    } catch (error) {
+      console.error("Check application error:", error);
+      return res.status(500).json({
+        error: "Failed to check application status",
+        message: error.message
       });
     }
   }
