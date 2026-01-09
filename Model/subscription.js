@@ -20,7 +20,6 @@ const subscriptionPlanSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Display name is required'],
     trim: true,
-    maxlength: [100, 'Display name cannot exceed 100 characters'],
     description: "Marketing-friendly name shown to users"
   },
   shortDescription: {

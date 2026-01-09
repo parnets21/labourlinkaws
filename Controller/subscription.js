@@ -29,12 +29,6 @@ const validateSubscriptionInput = (data) => {
   }
 
   // Text content validation
-  if (data.displayName && data.displayName.length > 100) {
-    errors.displayName = 'Display name cannot exceed 100 characters';
-  }
-  if (data.shortDescription && data.shortDescription.length > 200) {
-    errors.shortDescription = 'Short description cannot exceed 200 characters';
-  }
 
   // Highlighted features validation
   if (data.highlightedFeatures) {
@@ -44,9 +38,6 @@ const validateSubscriptionInput = (data) => {
       data.highlightedFeatures.forEach((feature, index) => {
         if (typeof feature !== 'string') {
           errors[`highlightedFeatures.${index}`] = 'Feature must be a string';
-        }
-        if (feature.length > 100) {
-          errors[`highlightedFeatures.${index}`] = 'Feature cannot exceed 100 characters';
         }
       });
     }
