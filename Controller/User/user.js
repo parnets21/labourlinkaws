@@ -17,6 +17,8 @@ const multer = require("multer");
 const path = require("path");
 const { uploadFile2, deleteFile } = require("../../middileware/aws");
 const FCMtoken = require("../../Model/User/FCMtoken");
+const industryModel = require("../../Model/Admin/jobmanagment/industrymanagment");
+
 
 // Helper function to calculate subscription end date
 const calculateSubscriptionEndDate = (startDate, duration) => {
@@ -1958,6 +1960,196 @@ at ${process.env.NODE_SENDER_MAIL}</p>
       return res.status(500).json({
         error: "Failed to check application status",
         message: error.message
+      });
+    }
+  }
+
+  // Industry Management Methods
+  async getAllIndustries(req, res) {
+    try {
+      const industries = await industryModel.find().sort({ industryName: 1 });
+      return res.status(200).json({
+        success: true,
+        data: industries
+      });
+    } catch (error) {
+      console.error("Get industries error:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Failed to fetch industries"
+      });
+    }
+  }
+
+  async addIndustry(req, res) {
+    try {
+      const { industryName, id } = req.body;
+
+      if (!industryName) {
+        return res.status(400).json({ error: "Industry name is required" });
+      }
+
+      // If id is provided, update existing industry
+      if (id) {
+        const updatedIndustry = await industryModel.findByIdAndUpdate(
+          id,
+          { industryName },
+          { new: true }
+        );
+
+        if (!updatedIndustry) {
+          return res.status(404).json({ error: "Industry not found" });
+        }
+
+        return res.status(200).json({
+          success: true,
+          message: "Industry updated successfully",
+          data: updatedIndustry
+        });
+      }
+
+      // Check if industry already exists
+      const existingIndustry = await industryModel.findOne({ industryName });
+      if (existingIndustry) {
+        return res.status(400).json({ error: "Industry already exists" });
+      }
+
+      // Create new industry
+      const newIndustry = await industryModel.create({ industryName });
+
+      return res.status(200).json({
+        success: true,
+        message: "Industry added successfully",
+        data: newIndustry
+      });
+    } catch (error) {
+      console.error("Add/Update industry error:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Failed to save industry"
+      });
+    }
+  }
+
+  async deleteIndustry(req, res) {
+    try {
+      const { id } = req.params;
+
+      const deletedIndustry = await industryModel.findByIdAndDelete(id);
+
+      if (!deletedIndustry) {
+        return res.status(404).json({ error: "Industry not found" });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Industry deleted successfully"
+      });
+    } catch (error) {
+      console.error("Delete industry error:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Failed to delete industry"
+      });
+    }
+  }
+
+  // Subcategory Management Methods
+  async addSubcategory(req, res) {
+    try {
+      const { industryId } = req.params;
+      const { name } = req.body;
+
+      if (!name) {
+        return res.status(400).json({ error: "Subcategory name is required" });
+      }
+
+      const industry = await industryModel.findById(industryId);
+      if (!industry) {
+        return res.status(404).json({ error: "Industry not found" });
+      }
+
+      // Check if subcategory already exists
+      const exists = industry.subcategories.some(sub => sub.name === name);
+      if (exists) {
+        return res.status(400).json({ error: "Subcategory already exists" });
+      }
+
+      industry.subcategories.push({ name });
+      await industry.save();
+
+      return res.status(200).json({ 
+        success: true,
+        message: "Subcategory added successfully",
+        data: industry 
+      });
+    } catch (error) {
+      console.error("Add subcategory error:", error);
+      return res.status(500).json({ 
+        success: false,
+        error: "Internal server error" 
+      });
+    }
+  }
+
+  async updateSubcategory(req, res) {
+    try {
+      const { industryId, subcategoryId } = req.params;
+      const { name } = req.body;
+
+      if (!name) {
+        return res.status(400).json({ error: "Subcategory name is required" });
+      }
+
+      const industry = await industryModel.findById(industryId);
+      if (!industry) {
+        return res.status(404).json({ error: "Industry not found" });
+      }
+
+      const subcategory = industry.subcategories.id(subcategoryId);
+      if (!subcategory) {
+        return res.status(404).json({ error: "Subcategory not found" });
+      }
+
+      subcategory.name = name;
+      await industry.save();
+
+      return res.status(200).json({ 
+        success: true,
+        message: "Subcategory updated successfully",
+        data: industry 
+      });
+    } catch (error) {
+      console.error("Update subcategory error:", error);
+      return res.status(500).json({ 
+        success: false,
+        error: "Internal server error" 
+      });
+    }
+  }
+
+  async deleteSubcategory(req, res) {
+    try {
+      const { industryId, subcategoryId } = req.params;
+
+      const industry = await industryModel.findById(industryId);
+      if (!industry) {
+        return res.status(404).json({ error: "Industry not found" });
+      }
+
+      industry.subcategories.pull(subcategoryId);
+      await industry.save();
+
+      return res.status(200).json({ 
+        success: true,
+        message: "Subcategory deleted successfully",
+        data: industry 
+      });
+    } catch (error) {
+      console.error("Delete subcategory error:", error);
+      return res.status(500).json({ 
+        success: false,
+        error: "Internal server error" 
       });
     }
   }

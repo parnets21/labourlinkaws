@@ -1,9 +1,15 @@
 const mongoose = require("mongoose");
 
+const SubcategorySchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now }
+});
+
 const IndustrySchema = new mongoose.Schema({
   industryId: { type: String, unique: true }, // 001, 002, 003 format
   industryName: { type: String, required: true, unique: true },
   action: { type: String, required: false },
+  subcategories: [SubcategorySchema]
 });
 
 // Middleware to generate sequential industryId before saving

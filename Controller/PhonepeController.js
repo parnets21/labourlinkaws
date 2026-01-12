@@ -14,7 +14,7 @@ const getCorrectApiUrl = (url) => {
   // If we're in production, always use production URLs
   if (isProduction) {
     if (url.includes('http://localhost') || url.includes('http://192.168')) {
-      const productionUrl = url.replace(/http:\/\/(localhost|192\.168\.[0-9]+\.[0-9]+)(:[0-9]+)?/, 'https://laborlink.co.in');
+      const productionUrl = url.replace(/http:\/\/(localhost|192\.168\.[0-9]+\.[0-9]+)(:[0-9]+)?/, 'http://localhost:8500');
       console.log(`Converting local URL to production: ${url} -> ${productionUrl}`);
       return productionUrl;
     }
@@ -24,11 +24,11 @@ const getCorrectApiUrl = (url) => {
   // For development, check if we should redirect production URLs to local
   const port = process.env.PORT || 8500;
   const isLocalServer = port === 8500 || port === '8500';
-  const isProductionUrl = url.includes('https://laborlink.co.in');
+  const isProductionUrl = url.includes('http://localhost:8500');
   
   // Only redirect to local if explicitly in development mode
   if (isLocalServer && isProductionUrl && process.env.NODE_ENV === 'development') {
-    const localUrl = url.replace('https://laborlink.co.in', `http://localhost:${port}`);
+    const localUrl = url.replace('http://localhost:8500', `http://localhost:${port}`);
     console.log(`Redirecting production URL to local: ${url} -> ${localUrl}`);
     return localUrl;
   }
@@ -139,8 +139,8 @@ class Transaction {
         merchantTransactionId: merchantTransactionId,
         merchantUserId: userId,
         amount: amount * 100, 
-        redirectUrl: `https://laborlink.co.in/PaymentSuccess?transactionId=${transaction._id}&userID=${userId}`,
-        callbackUrl: `https://laborlink.co.in/api/user/checkPayment/${transaction._id}/${userId}`,
+        redirectUrl: `http://localhost:8500/PaymentSuccess?transactionId=${transaction._id}&userID=${userId}`,
+        callbackUrl: `http://localhost:8500/api/user/checkPayment/${transaction._id}/${userId}`,
         mobileNumber: Mobile,
         paymentInstrument: {
           type: "PAY_PAGE"

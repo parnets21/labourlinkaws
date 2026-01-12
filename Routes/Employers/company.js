@@ -77,7 +77,7 @@ router.get("/skills", jobController.getSkills);
 router.get("/chefs", jobController.getChefs);
 router.get("/cuisines", jobController.getCuisine);
 
-//get api https://laborlink.co.in/api/user/skills
+//get api http://localhost:8500/api/user/skills
 
 // Job Management Routes - PUT (Edit) endpoints
 router.put("/edit-company-type/:id", jobController.editCompanyType);

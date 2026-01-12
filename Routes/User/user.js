@@ -99,4 +99,14 @@ router.get('/checkSubscription/:userId', userController.checkUserSubscription);
 // Check if user has already applied for a job
 router.get('/checkApplication', userController.checkApplication);
 
+// Industry routes (for admin panel access)
+router.get('/industries', userController.getAllIndustries);
+router.post('/add-industry', userController.addIndustry);
+router.delete('/delete-industry/:id', userController.deleteIndustry);
+
+// Subcategory routes
+router.post('/add-subcategory/:industryId', userController.addSubcategory);
+router.put('/update-subcategory/:industryId/:subcategoryId', userController.updateSubcategory);
+router.delete('/delete-subcategory/:industryId/:subcategoryId', userController.deleteSubcategory);
+
 module.exports = router;

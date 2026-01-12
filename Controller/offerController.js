@@ -189,7 +189,7 @@ exports.generateOfferLetter = async (req, res) => {
             const candidateName = application.userId.fullName || application.userId.name || "Candidate";
             const candidateEmail = application.userId.email;
             const candidatePhone = application.userId.phone;
-            const offerLink = `https://laborlink.co.in/api/offers/download/${applicationId}`; // Use full URL if possible
+            const offerLink = `http://localhost:8500/api/offers/download/${applicationId}`; // Use full URL if possible
 
             // Send Email
             if (candidateEmail) {
