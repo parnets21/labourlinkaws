@@ -295,6 +295,64 @@ class SupportController {
     }
   }
 
+  // General update enquiry (for priority, category, etc.)
+  static async updateEnquiry(req, res) {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+      const updatedBy = req.user?.id || req.admin?.id;
+
+      const enquiry = await SupportEnquiry.findById(id);
+      if (!enquiry) {
+        return res.status(404).json({
+          success: false,
+          message: 'Enquiry not found'
+        });
+      }
+
+      // Update allowed fields
+      const allowedFields = ['priority', 'category', 'assignedTo', 'tags'];
+      const updates = {};
+      
+      allowedFields.forEach(field => {
+        if (updateData[field] !== undefined) {
+          updates[field] = updateData[field];
+        }
+      });
+
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'No valid fields to update'
+        });
+      }
+
+      // Apply updates
+      Object.assign(enquiry, updates);
+      enquiry.updatedAt = new Date();
+
+      await enquiry.save();
+
+      res.json({
+        success: true,
+        message: 'Enquiry updated successfully',
+        data: {
+          id: enquiry._id,
+          updatedFields: Object.keys(updates),
+          updatedAt: enquiry.updatedAt
+        }
+      });
+
+    } catch (error) {
+      console.error('Error updating enquiry:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to update enquiry',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      });
+    }
+  }
+
   // Add response to enquiry
   static async addResponse(req, res) {
     try {
