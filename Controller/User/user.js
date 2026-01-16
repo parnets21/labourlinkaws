@@ -18,6 +18,7 @@ const path = require("path");
 const { uploadFile2, deleteFile } = require("../../middileware/aws");
 const FCMtoken = require("../../Model/User/FCMtoken");
 const industryModel = require("../../Model/Admin/jobmanagment/industrymanagment");
+const DocumentValidationService = require("../../services/documentValidationService");
 
 
 // Helper function to calculate subscription end date
@@ -72,15 +73,51 @@ class user {
         companyType,
         department,
         workMode,
-        preferredSalary
+        preferredSalary,
+        aadharNumber,
+        panNumber
       } = req.body;
 
       console.log("Incoming request body:", req.body);
+      
+      // Document validation using DocumentValidationService
+      const documentValidator = new DocumentValidationService();
+
+      // Aadhar Validation - mandatory for job seekers
+      if (!aadharNumber || aadharNumber.trim() === '') {
+        return res.status(400).json({ 
+          error: "Aadhar number is required for job seeker registration",
+          code: "AADHAR_REQUIRED"
+        });
+      }
+
+      const aadharValidation = documentValidator.validateAadharNumber(aadharNumber);
+      if (!aadharValidation.isValid) {
+        return res.status(400).json({ 
+          error: aadharValidation.error,
+          code: aadharValidation.code 
+        });
+      }
+
+      // PAN Validation - mandatory for job seekers
+      if (!panNumber || panNumber.trim() === '') {
+        return res.status(400).json({ 
+          error: "PAN number is required for job seeker registration",
+          code: "PAN_REQUIRED"
+        });
+      }
+
+      const panValidation = documentValidator.validatePanNumber(panNumber);
+      if (!panValidation.isValid) {
+        return res.status(400).json({ 
+          error: panValidation.error,
+          code: panValidation.code 
+        });
+      }
+
       // ✅ Check if user already exists
       let userExists = await userModel.findOne({ email, isDelete: false });
       if (userExists) return res.status(400).json({ error: "Email already exists!" });
-
-
 
       userExists = await userModel.findOne({ phone, isDelete: false });
       if (userExists) return res.status(400).json({ error: "Phone number already exists!" });
@@ -114,6 +151,8 @@ class user {
         pincode,
         skills,
         preferredSalary: preferredSalary || { min: 0, max: 0 },
+        aadharNumber: aadharValidation.aadharNumber, // Use cleaned/formatted Aadhar number from validation
+        panNumber: panValidation.panNumber, // Use cleaned/formatted PAN number from validation
         appliedOn: new Date(),
         online: "Offline",
         isBlock: false,
@@ -1420,12 +1459,13 @@ at ${process.env.NODE_SENDER_MAIL}</p>
       await UserSubscription.updateMany(
         {
           userId,
-          userType: userType, // Filter by user type to prevent cross-contamination
+          type: userType, // Filter by type field (not userType) to prevent cross-contamination
           status: 'active'
         },
         { 
           status: 'inactive',
-          endDate: new Date() // Set end date to now
+          cancellationDate: new Date(),
+          cancellationReason: 'Replaced by new subscription'
         }
       );
 
@@ -1518,6 +1558,24 @@ at ${process.env.NODE_SENDER_MAIL}</p>
         // console.log('User ID:', userSubscription.userId);
         // console.log('Plan Name:', userSubscription.planName);
         // console.log('Payment Method:', userSubscription.paymentMethod);
+
+        // Send subscription confirmation email
+        try {
+          const { sendSubscriptionConfirmationEmail } = require('../../EmailSender/send');
+          await sendSubscriptionConfirmationEmail(
+            user.fullName || user.name || 'User',
+            user.email,
+            userSubscription.planName,
+            userSubscription.amount,
+            userSubscription.startDate,
+            userSubscription.endDate,
+            userSubscription.type
+          );
+          console.log('✅ Subscription confirmation email sent to:', user.email);
+        } catch (emailError) {
+          console.error('Warning: Failed to send subscription confirmation email:', emailError);
+          // Don't fail the subscription activation if email fails
+        }
 
         return res.status(200).json({
           success: true,

@@ -28,7 +28,7 @@ class SubscriptionValidationService {
         throw new Error('User not found');
       }
 
-      // Find active subscription
+      // Find active subscription - sort by startDate descending to get the most recent one
       const now = new Date();
       const activeSubscription = await UserSubscription.findOne({
         userId: userId,
@@ -38,7 +38,7 @@ class SubscriptionValidationService {
           { endDate: { $gt: now } },
           { endDate: null } // For lifetime subscriptions
         ]
-      }).populate('subscriptionId').lean();
+      }).sort({ startDate: -1 }).populate('subscriptionId').lean();
 
       console.log('--- Subscription Debug ---');
       console.log('User ID:', userId);

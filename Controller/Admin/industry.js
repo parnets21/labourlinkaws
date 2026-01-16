@@ -1,131 +1,247 @@
 const industryModel = require("../../Model/Admin/jobmanagment/industrymanagment");
-
+const categoryModel = require("../../Model/Admin/jobmanagment/Category");
 
 class industry {
- 
-   async addIndustry(req, res) {
+  // POST /api/admin/industries - Create new industry
+  async addIndustry(req, res) {
     try {
-      const { Industry } = req.body;
-      let check = await industryModel.findOne({ Industry: Industry });
-      if (check)
-        return res.status(400).json({ error: "Industry already exist" });
-      await industryModel.create({ Industry: Industry });
-      return res.status(200).json({ success: "Successfully added" });
+      const { industryName, description } = req.body;
+
+      // Validate required fields
+      if (!industryName) {
+        return res.status(400).json({ error: "Industry name is required" });
+      }
+
+      // Check if industry already exists
+      const existingIndustry = await industryModel.findOne({ 
+        industryName: { $regex: new RegExp(`^${industryName}$`, 'i') } 
+      });
+      
+      if (existingIndustry) {
+        return res.status(409).json({ error: "Industry already exists" });
+      }
+
+      // Create new industry
+      const newIndustry = await industryModel.create({ 
+        industryName: industryName.trim(),
+        description: description?.trim(),
+        isActive: true,
+        createdBy: req.user?._id // Assuming user info is in req.user from auth middleware
+      });
+
+      return res.status(201).json({ 
+        success: "Industry created successfully",
+        data: newIndustry 
+      });
     } catch (error) {
-      console.log(error);
+      console.error("Error adding industry:", error);
+      return res.status(500).json({ error: "Internal server error" });
     }
   }
 
+  // GET /api/admin/industries - Get all industries with category counts
   async getAllIndustry(req, res) {
     try {
-      let data = await industryModel.find();
-      return res.status(200).json({ success: data });
+      const industries = await industryModel.find({ isActive: true }).sort({ industryName: 1 });
+
+      // Get category counts for each industry
+      const industriesWithCounts = await Promise.all(
+        industries.map(async (industry) => {
+          const categoryCount = await categoryModel.countDocuments({ 
+            industryId: industry._id,
+            isActive: true 
+          });
+          
+          return {
+            ...industry.toObject(),
+            categoryCount
+          };
+        })
+      );
+
+      return res.status(200).json({ 
+        success: true,
+        data: industriesWithCounts 
+      });
     } catch (error) {
-      console.log(error);
+      console.error("Error fetching industries:", error);
+      return res.status(500).json({ error: "Internal server error" });
     }
   }
 
+  // GET /api/admin/industries/:id - Get industry by ID
+  async getIndustryById(req, res) {
+    try {
+      const { id } = req.params;
+
+      const industry = await industryModel.findById(id);
+      
+      if (!industry) {
+        return res.status(404).json({ error: "Industry not found" });
+      }
+
+      // Get category count
+      const categoryCount = await categoryModel.countDocuments({ 
+        industryId: industry._id,
+        isActive: true 
+      });
+
+      return res.status(200).json({ 
+        success: true,
+        data: {
+          ...industry.toObject(),
+          categoryCount
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching industry:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  // PUT /api/admin/industries/:id - Update industry
+  async updateIndustry(req, res) {
+    try {
+      const { id } = req.params;
+      const { industryName, description, isActive } = req.body;
+
+      const industry = await industryModel.findById(id);
+      
+      if (!industry) {
+        return res.status(404).json({ error: "Industry not found" });
+      }
+
+      // Check if new name already exists (excluding current industry)
+      if (industryName && industryName !== industry.industryName) {
+        const existingIndustry = await industryModel.findOne({ 
+          industryName: { $regex: new RegExp(`^${industryName}$`, 'i') },
+          _id: { $ne: id }
+        });
+        
+        if (existingIndustry) {
+          return res.status(409).json({ error: "Industry name already exists" });
+        }
+      }
+
+      // Update fields
+      if (industryName) industry.industryName = industryName.trim();
+      if (description !== undefined) industry.description = description?.trim();
+      if (isActive !== undefined) industry.isActive = isActive;
+      industry.updatedAt = Date.now();
+
+      await industry.save();
+
+      return res.status(200).json({ 
+        success: "Industry updated successfully",
+        data: industry 
+      });
+    } catch (error) {
+      console.error("Error updating industry:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  // DELETE /api/admin/industries/:id - Delete industry with dependency validation
   async deleteIndustry(req, res) {
     try {
-      let Id = req.params.Id;
-      let data = await industryModel.deleteOne({ _id: Id });
-      if (data.deletedCount === 0)
-        return res.status(400).json({ error: "Something went worng" });
-      return res.status(200).json({ success: "Successfully deleted" });
-    } catch (error) {
-      console.log(error);
-    }
-  }
+      const { id } = req.params;
 
-  // Add subcategory to an industry
-  async addSubcategory(req, res) {
-    try {
-      const { industryId } = req.params;
-      const { name } = req.body;
-
-      if (!name) {
-        return res.status(400).json({ error: "Subcategory name is required" });
-      }
-
-      const industry = await industryModel.findById(industryId);
+      const industry = await industryModel.findById(id);
+      
       if (!industry) {
         return res.status(404).json({ error: "Industry not found" });
       }
 
-      // Check if subcategory already exists
-      const exists = industry.subcategories.some(sub => sub.name === name);
-      if (exists) {
-        return res.status(400).json({ error: "Subcategory already exists" });
+      // Check for dependent categories
+      const categoryCount = await categoryModel.countDocuments({ 
+        industryId: id,
+        isActive: true 
+      });
+
+      if (categoryCount > 0) {
+        return res.status(409).json({ 
+          error: `Cannot delete industry: ${categoryCount} dependent categories exist` 
+        });
       }
 
-      industry.subcategories.push({ name });
+      // Soft delete by setting isActive to false
+      industry.isActive = false;
+      industry.updatedAt = Date.now();
       await industry.save();
 
       return res.status(200).json({ 
-        success: "Subcategory added successfully",
-        data: industry 
+        success: "Industry deleted successfully" 
       });
     } catch (error) {
-      console.log(error);
+      console.error("Error deleting industry:", error);
       return res.status(500).json({ error: "Internal server error" });
     }
   }
 
-  // Update subcategory
-  async updateSubcategory(req, res) {
+  // GET /api/admin/industries/:id/categories - Get categories for industry
+  async getIndustryCategories(req, res) {
     try {
-      const { industryId, subcategoryId } = req.params;
-      const { name } = req.body;
+      const { id } = req.params;
 
-      if (!name) {
-        return res.status(400).json({ error: "Subcategory name is required" });
-      }
-
-      const industry = await industryModel.findById(industryId);
+      const industry = await industryModel.findById(id);
+      
       if (!industry) {
         return res.status(404).json({ error: "Industry not found" });
       }
 
-      const subcategory = industry.subcategories.id(subcategoryId);
-      if (!subcategory) {
-        return res.status(404).json({ error: "Subcategory not found" });
-      }
-
-      subcategory.name = name;
-      await industry.save();
+      const categories = await categoryModel.find({ 
+        industryId: id,
+        isActive: true 
+      }).sort({ categoryName: 1 });
 
       return res.status(200).json({ 
-        success: "Subcategory updated successfully",
-        data: industry 
+        success: true,
+        data: categories 
       });
     } catch (error) {
-      console.log(error);
+      console.error("Error fetching industry categories:", error);
       return res.status(500).json({ error: "Internal server error" });
     }
   }
 
-  // Delete subcategory
-  async deleteSubcategory(req, res) {
+  // GET /api/admin/industries/search - Search industries
+  async searchIndustries(req, res) {
     try {
-      const { industryId, subcategoryId } = req.params;
+      const { query } = req.query;
 
-      const industry = await industryModel.findById(industryId);
-      if (!industry) {
-        return res.status(404).json({ error: "Industry not found" });
+      if (!query) {
+        return res.status(400).json({ error: "Search query is required" });
       }
 
-      industry.subcategories.pull(subcategoryId);
-      await industry.save();
+      const industries = await industryModel.find({
+        industryName: { $regex: query, $options: 'i' },
+        isActive: true
+      }).sort({ industryName: 1 });
+
+      // Get category counts for each industry
+      const industriesWithCounts = await Promise.all(
+        industries.map(async (industry) => {
+          const categoryCount = await categoryModel.countDocuments({ 
+            industryId: industry._id,
+            isActive: true 
+          });
+          
+          return {
+            ...industry.toObject(),
+            categoryCount
+          };
+        })
+      );
 
       return res.status(200).json({ 
-        success: "Subcategory deleted successfully",
-        data: industry 
+        success: true,
+        data: industriesWithCounts 
       });
     } catch (error) {
-      console.log(error);
+      console.error("Error searching industries:", error);
       return res.status(500).json({ error: "Internal server error" });
     }
   }
-
 }
+
 module.exports = new industry();

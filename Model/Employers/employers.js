@@ -38,6 +38,35 @@ const employerSchema = new Schema(
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Date },
     
+    // Document verification fields
+    documents: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Document'
+    }],
+    documentVerificationStatus: {
+      type: String,
+      enum: ['pending', 'verified', 'rejected'],
+      default: 'pending',
+      index: true
+    },
+    requiredDocuments: {
+      type: [String],
+      default: function() {
+        // Default required documents for employers: GST + PAN
+        return ['gst', 'pan'];
+      }
+    },
+    documentSubmittedAt: { 
+      type: Date,
+      default: null
+    },
+    // Employer type for document requirements
+    employerType: {
+      type: String,
+      enum: ['employer', 'startup_employer'],
+      default: 'employer'
+    },
+    
     // Additional fields
     isPrime: { type: Boolean, default: false },
     isApproved: { type: Boolean, default: false }, // Only approved employers can post jobs
@@ -48,5 +77,40 @@ const employerSchema = new Schema(
   },
   { timestamps: true }
 );
+
+// Instance method to check if all required documents are uploaded
+employerSchema.methods.hasAllRequiredDocuments = function() {
+  return this.documents && this.documents.length >= this.requiredDocuments.length;
+};
+
+// Instance method to get missing documents
+employerSchema.methods.getMissingDocuments = async function() {
+  if (!this.documents || this.documents.length === 0) {
+    return this.requiredDocuments;
+  }
+  
+  const Document = mongoose.model('Document');
+  const uploadedDocs = await Document.find({
+    _id: { $in: this.documents },
+    isActive: true
+  }).select('documentType');
+  
+  const uploadedTypes = uploadedDocs.map(doc => doc.documentType);
+  return this.requiredDocuments.filter(type => !uploadedTypes.includes(type));
+};
+
+// Instance method to update required documents based on employer type
+employerSchema.methods.updateRequiredDocuments = function() {
+  switch (this.employerType) {
+    case 'employer':
+      this.requiredDocuments = ['gst', 'pan'];
+      break;
+    case 'startup_employer':
+      this.requiredDocuments = ['pan', 'tin'];
+      break;
+    default:
+      this.requiredDocuments = ['gst', 'pan'];
+  }
+};
 
 module.exports = mongoose.model("Employer", employerSchema);

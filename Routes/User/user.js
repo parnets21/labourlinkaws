@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const userController = require("../../Controller/User/user");
 const messageController = require('../../Controller/User/messageController');
+const registrationOtpController = require("../../Controller/User/registrationOtp");
 
 const multer = require("multer");
 
@@ -24,6 +25,13 @@ const diskStorage = multer.diskStorage({
 const diskUpload = multer({ storage: diskStorage });
 
 router.post("/register", userController.register);
+
+// Registration OTP routes
+router.post("/sendRegistrationOTP", registrationOtpController.sendRegistrationOTP.bind(registrationOtpController));
+router.post("/verifyRegistrationOTP", registrationOtpController.verifyRegistrationOTP.bind(registrationOtpController));
+router.post("/resendRegistrationOTP", registrationOtpController.resendRegistrationOTP.bind(registrationOtpController));
+router.get("/checkPhoneVerification/:mobile", registrationOtpController.checkPhoneVerification.bind(registrationOtpController));
+
 router.post('/uploadResumeRegister', upload.single('resume'), userController.registerFromResume);
 router.post("/userlogin", userController.login);
 router.post("/changePassword", userController.changePassword);

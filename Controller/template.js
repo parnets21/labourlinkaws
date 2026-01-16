@@ -18,7 +18,7 @@ const templateController = {
         title,
         description,
         category,
-        tags: tags?.split(",").map(tag => tag.trim()), // assuming comma-separated
+        tags: Array.isArray(tags) ? tags : tags?.split(",").map(tag => tag.trim()),
         image: imageUrl,
         type
       });
@@ -44,7 +44,7 @@ const templateController = {
   async updateTemplate(req, res) {
     try {
       const { id } = req.params;
-      const { title, description, category, tags, status } = req.body;
+      const { title, description, category, tags, status, type } = req.body;
 
       let imageUrl;
       if (req.files && req.files.length > 0) {
@@ -64,12 +64,17 @@ const templateController = {
         description,
         category,
         status,
-        tags: tags?.split(",").map(tag => tag.trim()),
+        tags: Array.isArray(tags) ? tags : tags?.split(",").map(tag => tag.trim()),
       };
 
+      if (type) updatedData.type = type;
       if (imageUrl) updatedData.image = imageUrl;
 
       const updatedTemplate = await Template.findByIdAndUpdate(id, updatedData, { new: true });
+
+      if (!updatedTemplate) {
+        return res.status(404).json({ success: false, message: "Template not found" });
+      }
 
       return res.status(200).json({ success: true, message: "Template updated", data: updatedTemplate });
     } catch (error) {

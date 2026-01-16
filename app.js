@@ -37,6 +37,9 @@ const chat = require("./Routes/User/chatbox");
 const resume = require("./Routes/User/resume");
 const category = require("./Routes/Admin/category");
 const industry = require("./Routes/Admin/industry");
+const categoryRoutes = require("./Routes/Admin/categoryRoutes");
+const subCategoryRoutes = require("./Routes/Admin/subCategoryRoutes");
+const bulkImportRoutes = require("./Routes/Admin/bulkImportRoutes");
 const graph = require('./Routes/Admin/graph')
 const headingText = require('./Routes/Admin/headingText')
 const notification = require('./Routes/Admin/notification')
@@ -83,7 +86,10 @@ app.use("/api/user", job);
 app.use("/api/admin", admin);
 app.use("/api/admin", graph);
 app.use("/api/admin", category);
-app.use("/api/admin", industry);
+app.use("/api/admin/industries", industry);
+app.use("/api/admin/categories", categoryRoutes);
+app.use("/api/admin/subcategories", subCategoryRoutes);
+app.use("/api/admin/bulk-import", bulkImportRoutes);
 app.use("/api/admin", ourclient);
 app.use("/api/admin", headingText);
 app.use("/api/admin", notification);
@@ -94,7 +100,7 @@ app.use("/api/user", chat);
 app.use("/api/user", resume);
 app.use("/api/admin", subadmin);
 app.use("/api/offers", offer)
-app.use("/api/subscription", subscription)
+app.use("/api/subscription", subscription) 
 
 app.use("/api/templates", offertemplate)
 app.use("/api/user", fcm)
@@ -130,6 +136,10 @@ app.get("*", (req, res) => {
   return res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 const PORT = process.env.PORT || 8500;
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+const HOST = process.env.HOST || '0.0.0.0'; // Listen on all interfaces
+app.listen(PORT, HOST, () => {
+  console.log(`Server running at http://${HOST}:${PORT}`);
+  console.log(`Local access: http://localhost:${PORT}`);
+  console.log(`Network access: http://192.168.1.47:${PORT}`);
+  console.log(`Android emulator: http://10.0.2.2:${PORT}`);
 });

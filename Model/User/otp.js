@@ -4,25 +4,35 @@ const Schema = mongoose.Schema;
 const otp = new Schema(
       {
          otp: {
-          type: Number,
+          type: String,
           required: true,
           maxlength: 6,
          }, 
          mobile: {
-          type: Number,
+          type: String,
           required: true,
           trim: true,
-          index: { unique :true},
-          match: /^\+?([0-9]{2})\)?[-. ]?([0-9]{4})[-. ]?([0-9]{4})$/,
+          index: { unique: true },
         },
         type: {
           type: String,
-
+        },
+        verified: {
+          type: Boolean,
+          default: false,
+        },
+        attempts: {
+          type: Number,
+          default: 0,
+        },
+        expiresAt: {
+          type: Date,
+          default: () => new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
         },
         expire_at: {
             type: Date, 
             default: Date.now, 
-            expires: 300, 
+            expires: 600, // 10 minutes TTL
         },     
       },{ timestamps: true }
   );

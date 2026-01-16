@@ -25,6 +25,7 @@ const admin = require("firebase-admin");
 const FCMtoken = require("../../Model/User/FCMtoken");
 const SubscriptionUsageService = require("../../services/subscriptionUsageService");
 const SubscriptionValidationService = require("../../services/subscriptionValidationService");
+const callModel = require("../../Model/Employers/scheduleinterview");
 
 
 class company {
@@ -1011,10 +1012,26 @@ class company {
       return res.status(404).json({ error: "No application found" });
     }
 
-    // Check if already selected - OPTION 1: Return success if already selected
-    if (data.status === "Selected") {
+    // Check if already selected - Return success if already selected
+    if (data.status === "Selected" || data.status === "selected") {
       console.log("User already selected, returning success");
+      // Also delete any lingering interview record
+      try {
+        await callModel.deleteOne({ 
+          userId: userId, 
+          companyId: companyObjectId 
+        });
+        console.log('Cleaned up interview record for already selected candidate');
+      } catch (deleteErr) {
+        console.log('Warning: could not delete interview record:', deleteErr?.message || deleteErr);
+      }
       return res.status(200).json({ success: "User already selected" });
+    }
+
+    // Check if already rejected - Cannot select a rejected candidate
+    if (data.status === "Rejected" || data.status === "rejected") {
+      console.log("User already rejected, cannot select");
+      return res.status(400).json({ error: "Cannot select an already rejected candidate" });
     }
 
     // Update status
@@ -1063,6 +1080,17 @@ class company {
       }
     } catch (recErr) {
       console.log('Warning: could not record application_review usage:', recErr?.message || recErr);
+    }
+
+    // Delete the scheduled interview record if it exists (candidate is now selected)
+    try {
+      await callModel.deleteOne({ 
+        userId: userId, 
+        companyId: companyObjectId 
+      });
+      console.log('Interview record deleted for selected candidate');
+    } catch (deleteErr) {
+      console.log('Warning: could not delete interview record:', deleteErr?.message || deleteErr);
     }
 
     return res.status(200).json({ success: "Successfully Selected" });
@@ -1192,6 +1220,26 @@ class company {
         return res.status(404).json({ success: false, error: "Application not found" });
       }
 
+      // Check if already rejected or selected - prevent duplicate actions
+      if (data.status === "Rejected" || data.status === "rejected") {
+        console.log("User already rejected, returning success");
+        // Also delete any lingering interview record
+        try {
+          await callModel.deleteOne({ 
+            userId: userId, 
+            companyId: mongoose.Types.ObjectId(companyId) 
+          });
+          console.log('Cleaned up interview record for already rejected candidate');
+        } catch (deleteErr) {
+          console.log('Warning: could not delete interview record:', deleteErr?.message || deleteErr);
+        }
+        return res.status(200).json({ success: "User already rejected" });
+      }
+      if (data.status === "Selected" || data.status === "selected") {
+        console.log("User already selected, cannot reject");
+        return res.status(400).json({ success: false, error: "Cannot reject an already selected candidate" });
+      }
+
       // Use fullName and phone from populated userId
       const candidateName = data.userId.fullName || data.userId.name || "Candidate";
       const candidateEmail = data.userId.email;
@@ -1218,6 +1266,17 @@ class company {
 
       await applyModel.findOneAndUpdate({ _id: data._id }, { $set: { status: "Rejected" } })
 
+      // Delete the scheduled interview record if it exists
+      try {
+        await callModel.deleteOne({ 
+          userId: userId, 
+          companyId: mongoose.Types.ObjectId(companyId) 
+        });
+        console.log('Interview record deleted for rejected candidate');
+      } catch (deleteErr) {
+        console.log('Warning: could not delete interview record:', deleteErr?.message || deleteErr);
+      }
+
       // Record application review usage
       try {
         if (employerId) {
@@ -1232,8 +1291,7 @@ class company {
       console.log(err);
     }
   }
-
-  async getRejectedApplications(req, res) {
+async getRejectedApplications(req, res) {
     try {
       const { companyId } = req.params; // Get companyId from URL params
       console.log("Received companyId:", companyId); // Debugging

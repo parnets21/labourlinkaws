@@ -81,20 +81,91 @@ const userSchema = new Schema(
     skills: [{
         type: String, required: true   
     }],
-    // experience: { type: Number, default: 0 },
+    
     preferredLocation: { type: String },
     preferredSalary: {
       min: { type: Number, default: 0 },
       max: { type: Number, default: 0 },
     },
-    fcmToken: { type: String }, // 🔥 Used for FCM push notifications
+    fcmToken: { type: String },
 
-    // Password reset fields
+
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Date },
+
+    documents: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Document'
+    }],
+    
+
+    aadharNumber: { 
+      type: String,
+      trim: true,
+      index: true
+    },
+    panNumber: { 
+      type: String,
+      trim: true,
+      uppercase: true,
+      index: true
+    },
+    
+    documentVerificationStatus: {
+      type: String,
+      enum: ['pending', 'verified', 'rejected'],
+      default: 'pending',
+      index: true
+    },
+    requiredDocuments: {
+      type: [String],
+      default: function() {
+       
+        return ['pan', 'aadhar'];
+      }
+    },
+    documentSubmittedAt: { 
+      type: Date,
+      default: null
+    },
+
+    userRole: {
+      type: String,
+      enum: ['employee', 'individual_employer'],
+      default: 'employee'
+    }
 
   },
   { timestamps: true }
 );
+userSchema.methods.hasAllRequiredDocuments = function() {
+  return this.documents && this.documents.length >= this.requiredDocuments.length;
+};
 
+userSchema.methods.getMissingDocuments = async function() {
+  if (!this.documents || this.documents.length === 0) {
+    return this.requiredDocuments;
+  }
+  
+  const Document = mongoose.model('Document');
+  const uploadedDocs = await Document.find({
+    _id: { $in: this.documents },
+    isActive: true
+  }).select('documentType');
+
+  const uploadedTypes = uploadedDocs.map(doc => doc.documentType);
+  return this.requiredDocuments.filter(type => !uploadedTypes.includes(type));
+};
+userSchema.methods.updateRequiredDocuments = function() {
+  switch (this.userRole) {
+    case 'employee':
+      this.requiredDocuments = ['pan', 'aadhar'];
+      break;
+    case 'individual_employer':
+      this.requiredDocuments = ['pan', 'aadhar'];
+      break;
+    default:
+      this.requiredDocuments = ['pan', 'aadhar'];
+  }
+};
 module.exports = mongoose.model("user", userSchema);

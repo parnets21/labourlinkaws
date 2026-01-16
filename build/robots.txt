@@ -2,7 +2,7 @@ User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: http://localhost:8500/sitemap.xml
+Sitemap: https://laborlink.co.in/sitemap.xml
 
 # Crawl-delay
 Crawl-delay: 1

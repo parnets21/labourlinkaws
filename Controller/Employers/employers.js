@@ -19,6 +19,7 @@ const companyModel = require("../../Model/Employers/company");
 const send = require("../../EmailSender/send");
 const { isValidEmail, phonenumber, isValidString, validUrl, isValid } = require("../../Config/function");
 const { uploadFile2 } = require("../../middileware/aws");
+const DocumentValidationService = require("../../services/documentValidationService");
 
 const saltRounds = 10;
 
@@ -58,6 +59,41 @@ class Employers {
       const existingEmail = await employerModel.findOne({ email, isDelete: false });
       if (existingEmail) return res.status(400).json({ error: "Email ID already exists!" });
 
+      // Document validation using DocumentValidationService
+      const documentValidator = new DocumentValidationService();
+
+      // GST Validation - mandatory for employers
+      if (!GstNum || GstNum.trim() === '') {
+        return res.status(400).json({ 
+          error: "GST number is required for employer registration",
+          code: "GST_REQUIRED"
+        });
+      }
+
+      const gstValidation = documentValidator.validateGstNumber(GstNum);
+      if (!gstValidation.isValid) {
+        return res.status(400).json({ 
+          error: gstValidation.error,
+          code: gstValidation.code 
+        });
+      }
+
+      // PAN Validation - mandatory for employers
+      if (!PanNum || PanNum.trim() === '') {
+        return res.status(400).json({ 
+          error: "PAN number is required for employer registration",
+          code: "PAN_REQUIRED"
+        });
+      }
+
+      const panValidation = documentValidator.validatePanNumber(PanNum);
+      if (!panValidation.isValid) {
+        return res.status(400).json({ 
+          error: panValidation.error,
+          code: panValidation.code 
+        });
+      }
+
       // Password hashing
       let hashedPassword;
 
@@ -88,8 +124,8 @@ class Employers {
         MyCompany: MyCompany || false,
         companyWebsite: companyWebsite || '',
         numberOfemp: numberOfemp || null,
-        GstNum: GstNum || '',
-        PanNum: PanNum || '',
+        GstNum: gstValidation.gstNumber, // Use cleaned/formatted GST number from validation
+        PanNum: panValidation.panNumber, // Use cleaned/formatted PAN number from validation
         searchCount: searchCount || 0,
         EmployerImg: profile || '',
         isApproved: false,
@@ -625,6 +661,19 @@ class Employers {
         });
       }
 
+      // Fetch job details to get position if not provided
+      let jobPosition = Position;
+      if (!jobPosition) {
+        try {
+          const job = await jobModel.findById(companyObjectId).select('jobtitle jobProfile');
+          if (job) {
+            jobPosition = job.jobtitle || job.jobProfile || 'Position not specified';
+          }
+        } catch (err) {
+          console.log('Could not fetch job details for position:', err);
+        }
+      }
+
       // Subscription validation is now handled by middleware
 
       // Create a new interview call
@@ -642,7 +691,7 @@ class Employers {
         interviewNotes,
         duration: slotId ? (await Appointment.findById(slotId))?.duration || duration : duration,
         feedback,
-        Position,
+        Position: jobPosition,
       });
 
       if (!newCall) {
@@ -774,7 +823,7 @@ class Employers {
       });
     }
   }
-  // Get Scheduled Interviews
+  // Get Scheduled Interviews 
   async getcallinterview(req, res) {
     try {
       const { employerId, companyId } = req.params;
@@ -783,13 +832,36 @@ class Employers {
         return res.status(400).json({ error: "Employer ID is required" });
       }
 
+      // Get all interview calls for this employer and company
       let interviewCalls = await callModel.find({ employerId, companyId }).sort({ _id: -1 });
 
       if (!interviewCalls.length) {
-        return res.status(404).json({ error: "No interview calls found" });
+        return res.status(200).json({ success: true, data: [], message: "No interview calls found" });
       }
 
-      return res.status(200).json({ success: true, data: interviewCalls });
+      // Filter out candidates who have already been selected or rejected
+      // by checking their application status
+      const applyModel = require("../../Model/Employers/apply");
+      const filteredInterviews = [];
+
+      for (const interview of interviewCalls) {
+        // Check the application status for this user and company
+        const application = await applyModel.findOne({
+          userId: interview.userId,
+          companyId: companyId
+        });
+
+        // Only include interviews where the candidate is NOT selected or rejected
+        if (!application || 
+            (application.status !== 'Selected' && 
+             application.status !== 'selected' && 
+             application.status !== 'Rejected' && 
+             application.status !== 'rejected')) {
+          filteredInterviews.push(interview);
+        }
+      }
+
+      return res.status(200).json({ success: true, data: filteredInterviews });
 
     } catch (error) {
       console.error("Error fetching interview calls:", error);
@@ -801,7 +873,9 @@ class Employers {
   async getAllScheduledInterviews(req, res) {
     try {
       const interviews = await callModel.find({ status: "Scheduled" })
-        .populate("userId", "name email");
+        .populate("userId", "name email fullName")
+        .populate("companyId", "jobtitle jobProfile")
+        .sort({ schedule: -1 }); // Sort by schedule date, latest first (descending)
 
       if (!interviews || interviews.length === 0) {
         return res.status(404).json({
@@ -810,9 +884,63 @@ class Employers {
         });
       }
 
+      // Import models for manual lookup if needed
+      const userModel = require('../../Model/User/user');
+      const jobModel = require('../../Model/Employers/company');
+
+      // Format the response to include candidate name and job position
+      const formattedInterviews = await Promise.all(interviews.map(async (interview) => {
+        let candidateName = 'N/A';
+        let candidateEmail = interview.email || 'No email';
+        
+        // Try to get name from populated userId
+        if (interview.userId && typeof interview.userId === 'object') {
+          candidateName = interview.userId.fullName || interview.userId.name || 'N/A';
+          candidateEmail = interview.userId.email || candidateEmail;
+        } 
+        // If userId is still a string (old data), manually fetch user
+        else if (interview.userId && typeof interview.userId === 'string') {
+          try {
+            const user = await userModel.findById(interview.userId).select('name email fullName');
+            if (user) {
+              candidateName = user.fullName || user.name || 'N/A';
+              candidateEmail = user.email || candidateEmail;
+            }
+          } catch (err) {
+            console.log('Could not fetch user for userId:', interview.userId);
+          }
+        }
+        
+        // Get job position
+        let jobPosition = interview.Position || 'Position not specified';
+        
+        // Try to get from populated companyId
+        if (interview.companyId && typeof interview.companyId === 'object') {
+          jobPosition = interview.companyId.jobtitle || interview.companyId.jobProfile || jobPosition;
+        }
+        // If companyId is a string (old data), manually fetch job
+        else if (interview.companyId && typeof interview.companyId === 'string') {
+          try {
+            const job = await jobModel.findById(interview.companyId).select('jobtitle jobProfile');
+            if (job) {
+              jobPosition = job.jobtitle || job.jobProfile || jobPosition;
+            }
+          } catch (err) {
+            console.log('Could not fetch job for companyId:', interview.companyId);
+          }
+        }
+        
+        return {
+          ...interview.toObject(),
+          name: candidateName,
+          email: candidateEmail,
+          Position: jobPosition
+        };
+      }));
+
       res.status(200).json({
         success: true,
-        interviews,
+        interviews: formattedInterviews,
       });
     } catch (error) {
       console.error("Error fetching scheduled interviews:", error);
@@ -914,6 +1042,60 @@ class Employers {
       });
     }
   }
+
+  // Update Interview Schedule Status
+  async updateInterviewScheduleStatus(req, res) {
+    try {
+      const { interviewId } = req.params;
+      console.log(interviewId, "this is an interview schedule id");
+      const { status } = req.body;
+
+      // Find and update the interview schedule status
+      const updatedInterview = await callModel.findByIdAndUpdate(
+        interviewId,
+        { status: status },
+        { new: true }
+      );
+
+      if (!updatedInterview) {
+        return res.status(404).json({
+          success: false,
+          message: 'Interview schedule not found'
+        });
+      }
+
+      // If status is Selected or Rejected, also update the application status
+      if (status === 'Selected' || status === 'Rejected') {
+        try {
+          await applyModel.findOneAndUpdate(
+            { 
+              userId: updatedInterview.userId,
+              companyId: updatedInterview.companyId
+            },
+            { status: status },
+            { new: true }
+          );
+        } catch (appError) {
+          console.error('Error updating application status:', appError);
+        }
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Interview schedule status updated successfully',
+        data: updatedInterview
+      });
+
+    } catch (error) {
+      console.error('Error updating interview schedule status:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to update interview schedule status',
+        error: error.message
+      });
+    }
+  }
+
   async getUserByFilter(req, res) {
     try {
       const { skill, Experience, city, category, jobProfile, int1 } = req.body;
@@ -1203,8 +1385,25 @@ class Employers {
 
 
   async checkApprovalStatus(req, res) {
+    console.log('=== checkApprovalStatus function called ===');
     const { userId } = req.params; // Extract userId from the request parameters
-    console.log(userId);
+    console.log('Checking approval status for userId:', userId);
+
+    // Validate userId
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required',
+      });
+    }
+
+    // Validate if userId is a valid MongoDB ObjectId
+    if (!userId.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid User ID format',
+      });
+    }
 
     try {
       // Find the user by their ID
@@ -1234,13 +1433,16 @@ class Employers {
         });
       }
     } catch (error) {
+      console.error('=== ERROR in checkApprovalStatus ===');
       console.error('Error checking approval status:', error);
+      console.error('Error stack:', error.stack);
       return res.status(500).json({
         success: false,
         message: 'Internal server error',
+        error: error.message,
       });
     }
-  };
+  }
 
 
 

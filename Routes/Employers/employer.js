@@ -33,6 +33,7 @@ router.post("/callinterview", validateSubscription('interview_schedule_employer'
 router.get("/getAlllScheduledInterviews", employerController.getAllScheduledInterviews)
 router.get("/getcallinterview/:employerId/:companyId", employerController.getcallinterview);
 router.put('/updateInterviewStatus/:interviewId', employerController.updateInterviewStatus);
+router.put('/updateInterviewScheduleStatus/:interviewId', employerController.updateInterviewScheduleStatus);
 router.post("/MakeIntrestedUser", employerController.MakeIntrestedUser);
 router.get("/getInterestedUser/:employerId", employerController.getInterestedUser);
 router.delete("/deleteIntrestById/:intrestId", employerController.deleteIntrestById);

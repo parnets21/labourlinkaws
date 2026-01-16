@@ -34,6 +34,7 @@ const applySchema = new Schema({
     },
     offerLetter: {
     url: String,
+    uploadedPdfUrl: String, // Store custom uploaded PDF URL separately
     generatedAt: Date,
     status: {
         type: String,

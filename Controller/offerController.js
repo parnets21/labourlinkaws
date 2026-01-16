@@ -35,6 +35,7 @@ exports.getApplyList = async (req, res) => {
         });
     }
 };
+
 // Generate offer letter for selected candidate
 exports.generateOfferLetter = async (req, res) => {
     try {
@@ -48,6 +49,14 @@ exports.generateOfferLetter = async (req, res) => {
             companyName
         } = req.body;
 
+        console.log('📄 Generate Offer Letter Request:');
+        console.log('- Application ID:', applicationId);
+        console.log('- Has uploaded file:', !!req.file);
+        if (req.file) {
+            console.log('- File name:', req.file.originalname);
+            console.log('- File size:', req.file.size, 'bytes');
+        }
+
         // Find the application
         const application = await applyModel
             .findById(applicationId)
@@ -60,10 +69,34 @@ exports.generateOfferLetter = async (req, res) => {
             });
         }
 
-        // Create PDF document
-        const pdfDoc = await PDFDocument.create();
-        const page = pdfDoc.addPage();
-        const { width, height } = page.getSize();
+        let pdfUrl;
+        let uploadedPdfUrl = null;
+
+        // Check if a custom PDF was uploaded (multer uses req.file for single file)
+        if (req.file) {
+            const uploadedFile = req.file;
+            const offersDir = path.join(__dirname, '../public/offers');
+            
+            // Create offers directory if it doesn't exist
+            try {
+                await fs.access(offersDir);
+            } catch {
+                await fs.mkdir(offersDir, { recursive: true });
+            }
+
+            // Save uploaded PDF (multer stores file in buffer when using memoryStorage)
+            const uploadedPdfPath = path.join(offersDir, `${applicationId}_custom.pdf`);
+            await fs.writeFile(uploadedPdfPath, uploadedFile.buffer);
+            uploadedPdfUrl = `/offers/${applicationId}_custom.pdf`;
+            pdfUrl = uploadedPdfUrl;
+            
+            console.log('✅ Custom PDF uploaded:', uploadedPdfUrl);
+        } else {
+            // Generate PDF if no custom PDF was uploaded
+            // Create PDF document
+            const pdfDoc = await PDFDocument.create();
+            const page = pdfDoc.addPage();
+            const { width, height } = page.getSize();
 
         // Embed fonts with Unicode support
         let boldFont, regularFont;
@@ -166,14 +199,17 @@ exports.generateOfferLetter = async (req, res) => {
             await fs.mkdir(offersDir, { recursive: true });
         }
 
-        // Save PDF
+        // Save generated PDF
         const pdfBytes = await pdfDoc.save();
         const offerLetterPath = path.join(offersDir, `${applicationId}.pdf`);
         await fs.writeFile(offerLetterPath, pdfBytes);
+        pdfUrl = `/offers/${applicationId}.pdf`;
+        }
 
         // Update application with offer letter details
         application.offerLetter = {
-            url: `/offers/${applicationId}.pdf`,
+            url: pdfUrl, // Use the appropriate PDF URL (uploaded or generated)
+            uploadedPdfUrl: uploadedPdfUrl, // Store uploaded PDF URL separately
             generatedAt: new Date(),
             status: 'sent',
             position: position,
@@ -182,6 +218,11 @@ exports.generateOfferLetter = async (req, res) => {
             workLocation: workLocation
         };
         application.applicationStatus = 'selected'; // Update status to selected
+        await application.save();
+
+        console.log('💾 Saved offer letter to database:');
+        console.log('- URL:', pdfUrl);
+        console.log('- Uploaded PDF URL:', uploadedPdfUrl);
         await application.save();
 
         // Send notifications
@@ -230,7 +271,7 @@ exports.generateOfferLetter = async (req, res) => {
             message: 'Offer letter generated and sent successfully',
             data: {
                 applicationId: application._id,
-                pdfUrl: `/offers/${application._id}.pdf`
+                pdfUrl: pdfUrl // Use the actual pdfUrl (custom or generated)
             }
         });
 
@@ -243,6 +284,7 @@ exports.generateOfferLetter = async (req, res) => {
         });
     }
 };
+
 // Get offer letter details
 exports.getOfferLetter = async (req, res) => {
     try {
@@ -285,6 +327,7 @@ exports.getOfferLetter = async (req, res) => {
         });
     }
 };
+
 // Respond to offer (accept/decline)
 exports.respondToOffer = async (req, res) => {
     try {
@@ -358,6 +401,7 @@ exports.respondToOffer = async (req, res) => {
         });
     }
 };
+
 // Get all selected candidates with offer letters
 exports.getSelectedCandidates = async (req, res) => {
     try {
