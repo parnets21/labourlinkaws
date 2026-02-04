@@ -9,7 +9,26 @@ const jobSchema = new Schema(
     companymobile: String,
     companyindustry: String,
     companytype: String,
-    department: String,
+    department: String, // Keep for backward compatibility
+    // New hierarchical classification fields
+    industryId: {
+      type: ObjectId,
+      ref: 'Industry',
+      required: false,
+      index: true
+    },
+    categoryId: {
+      type: ObjectId,
+      ref: 'Category',
+      required: false,
+      index: true
+    },
+    subCategoryId: {
+      type: ObjectId,
+      ref: 'SubCategory',
+      required: false,
+      index: true
+    },
     companyaddress: String,
     address: String,
     jobtitle: String,
@@ -59,5 +78,11 @@ const jobSchema = new Schema(
   },
   { timestamps: true }
 );
+
+// Indexes for classification fields
+jobSchema.index({ industryId: 1 });
+jobSchema.index({ categoryId: 1 });
+jobSchema.index({ subCategoryId: 1 });
+jobSchema.index({ industryId: 1, categoryId: 1, subCategoryId: 1 });
 
 module.exports = mongoose.model("job", jobSchema);

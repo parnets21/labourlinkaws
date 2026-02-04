@@ -494,7 +494,7 @@ class SubscriptionAdminController {
     // Mock usage data - implement based on your actual usage tracking
     if (type === 'employee') {
       return {
-        jobApplicationsPerMonth: Math.floor(Math.random() * 30),
+        jobApplicationsPerMonth: 0,
         jobSearchPerDay: Math.floor(Math.random() * 50)
       };
     } else if (type === 'employer') {

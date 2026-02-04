@@ -1,36 +1,23 @@
-const otpModel = require("../../Model/User/otp");
-const userModel = require("../../Model/User/user");
+const otpModel = require("../../Model/User/otp"); // Reusing the same OTP model
+const employerModel = require("../../Model/Employers/employers");
 const send = require("../../EmailSender/send");
 
-class RegistrationOtp {
+class EmployerRegistrationOtp {
   // Generate 6-digit OTP
   generateOTP() {
     return Math.floor(100000 + Math.random() * 900000).toString();
   }
 
-  // Send OTP for registration verification via SMS, Email, and WhatsApp
-  async sendRegistrationOTP(req, res) {
+  // Send OTP for employer registration verification via SMS, Email, and WhatsApp
+  async sendEmployerRegistrationOTP(req, res) {
     try {
-      console.log("=== COMPLETE REQUEST DEBUG ===");
-      console.log("req.method:", req.method);
-      console.log("req.url:", req.url);
-      console.log("req.headers:", req.headers);
-      console.log("req.body (raw):", req.body);
-      console.log("req.body type:", typeof req.body);
-      console.log("req.body keys:", Object.keys(req.body || {}));
-      
       const { mobile, email, name } = req.body;
-      
-      console.log("=== OTP REQUEST DEBUG ===");
-      console.log("Raw request body:", JSON.stringify(req.body, null, 2));
-      console.log("Extracted values:");
-      console.log("- Mobile:", mobile, "(type:", typeof mobile, ")");
-      console.log("- Email:", email, "(type:", typeof email, ")");
-      console.log("- Name:", name, "(type:", typeof name, ")");
-      console.log("- Email is undefined?", email === undefined);
-      console.log("- Email is null?", email === null);
-      console.log("- Email is empty string?", email === "");
-      console.log("- Email trimmed:", email ? email.trim() : "N/A");
+
+      console.log("=== EMPLOYER OTP REQUEST DEBUG ===");
+      console.log("Request body:", req.body);
+      console.log("Mobile:", mobile);
+      console.log("Email:", email);
+      console.log("Name:", name);
 
       if (!mobile) {
         return res.status(400).json({ 
@@ -42,13 +29,13 @@ class RegistrationOtp {
       // Format mobile number
       const formattedMobile = String(mobile).replace(/\D/g, '');
 
-      // Check if user already exists with this phone
-      const existingUser = await userModel.findOne({ 
-        phone: formattedMobile, 
+      // Check if employer already exists with this phone
+      const existingEmployer = await employerModel.findOne({ 
+        mobile: formattedMobile, 
         isDelete: false 
       });
 
-      if (existingUser) {
+      if (existingEmployer) {
         return res.status(400).json({ 
           success: false, 
           error: "Phone number already registered. Please login instead." 
@@ -81,7 +68,6 @@ class RegistrationOtp {
       }
 
       // Send OTP via multiple channels
-      const sendPromises = [];
       const results = {
         sms: false,
         email: false,
@@ -90,38 +76,37 @@ class RegistrationOtp {
 
       // 1. Send via SMS
       try {
-        console.log("=== ATTEMPTING SMS SEND ===");
+        console.log("=== ATTEMPTING EMPLOYER SMS SEND ===");
         await send.sendRegistrationOTPSMS(formattedMobile, otp);
         results.sms = true;
-        console.log(`Registration OTP ${otp} sent via SMS to ${formattedMobile}`);
+        console.log(`Employer Registration OTP ${otp} sent via SMS to ${formattedMobile}`);
       } catch (smsError) {
         console.error("Failed to send SMS OTP:", smsError);
       }
 
       // 2. Send via Email (if email provided)
-      if (email && email.trim() !== '' && email !== 'undefined' && email !== 'null') {
+      if (email && email.trim() !== '') {
         try {
-          console.log("=== ATTEMPTING EMAIL SEND ===");
-          console.log("Email parameters:", { name: name || 'User', email, otp });
-          await send.sendRegistrationOTPEmail(name || 'User', email, otp);
+          console.log("=== ATTEMPTING EMPLOYER EMAIL SEND ===");
+          console.log("Email parameters:", { name: name || 'Employer', email, otp });
+          await send.sendRegistrationOTPEmail(name || 'Employer', email, otp);
           results.email = true;
-          console.log(`Registration OTP ${otp} sent via Email to ${email}`);
+          console.log(`Employer Registration OTP ${otp} sent via Email to ${email}`);
         } catch (emailError) {
           console.error("Failed to send Email OTP:", emailError);
           console.error("Email error details:", emailError.message);
         }
       } else {
-        console.log("=== EMAIL SKIPPED ===");
-        console.log("Email not provided, empty, or invalid:", email);
-        console.log("Email validation failed - skipping email OTP");
+        console.log("=== EMPLOYER EMAIL SKIPPED ===");
+        console.log("Email not provided or empty:", email);
       }
 
       // 3. Send via WhatsApp
       try {
-        console.log("=== ATTEMPTING WHATSAPP SEND ===");
+        console.log("=== ATTEMPTING EMPLOYER WHATSAPP SEND ===");
         await send.sendRegistrationOTPWhatsapp(formattedMobile, otp);
         results.whatsapp = true;
-        console.log(`Registration OTP ${otp} sent via WhatsApp to ${formattedMobile}`);
+        console.log(`Employer Registration OTP ${otp} sent via WhatsApp to ${formattedMobile}`);
       } catch (whatsappError) {
         console.error("Failed to send WhatsApp OTP:", whatsappError);
       }
@@ -129,7 +114,7 @@ class RegistrationOtp {
       // Check if at least one method succeeded
       const successCount = Object.values(results).filter(Boolean).length;
       
-      console.log("=== SEND RESULTS ===");
+      console.log("=== EMPLOYER SEND RESULTS ===");
       console.log("Results:", results);
       console.log("Success count:", successCount);
       
@@ -154,7 +139,7 @@ class RegistrationOtp {
       });
 
     } catch (err) {
-      console.error("Error in sendRegistrationOTP:", err);
+      console.error("Error in sendEmployerRegistrationOTP:", err);
       return res.status(500).json({ 
         success: false, 
         error: "Internal server error" 
@@ -162,8 +147,8 @@ class RegistrationOtp {
     }
   }
 
-  // Verify OTP for registration
-  async verifyRegistrationOTP(req, res) {
+  // Verify OTP for employer registration
+  async verifyEmployerRegistrationOTP(req, res) {
     try {
       const { mobile, otp } = req.body;
 
@@ -227,7 +212,7 @@ class RegistrationOtp {
       });
 
     } catch (err) {
-      console.error("Error in verifyRegistrationOTP:", err);
+      console.error("Error in verifyEmployerRegistrationOTP:", err);
       return res.status(500).json({ 
         success: false, 
         error: "Internal server error" 
@@ -235,8 +220,8 @@ class RegistrationOtp {
     }
   }
 
-  // Resend OTP via SMS, Email, and WhatsApp
-  async resendRegistrationOTP(req, res) {
+  // Resend OTP for employer registration
+  async resendEmployerRegistrationOTP(req, res) {
     try {
       const { mobile, email, name } = req.body;
 
@@ -294,7 +279,7 @@ class RegistrationOtp {
       try {
         await send.sendRegistrationOTPSMS(formattedMobile, otp);
         results.sms = true;
-        console.log(`Registration OTP ${otp} resent via SMS to ${formattedMobile}`);
+        console.log(`Employer Registration OTP ${otp} resent via SMS to ${formattedMobile}`);
       } catch (smsError) {
         console.error("Failed to resend SMS OTP:", smsError);
       }
@@ -302,9 +287,9 @@ class RegistrationOtp {
       // 2. Send via Email (if email provided)
       if (email) {
         try {
-          await send.sendRegistrationOTPEmail(name || 'User', email, otp);
+          await send.sendRegistrationOTPEmail(name || 'Employer', email, otp);
           results.email = true;
-          console.log(`Registration OTP ${otp} resent via Email to ${email}`);
+          console.log(`Employer Registration OTP ${otp} resent via Email to ${email}`);
         } catch (emailError) {
           console.error("Failed to resend Email OTP:", emailError);
         }
@@ -314,7 +299,7 @@ class RegistrationOtp {
       try {
         await send.sendRegistrationOTPWhatsapp(formattedMobile, otp);
         results.whatsapp = true;
-        console.log(`Registration OTP ${otp} resent via WhatsApp to ${formattedMobile}`);
+        console.log(`Employer Registration OTP ${otp} resent via WhatsApp to ${formattedMobile}`);
       } catch (whatsappError) {
         console.error("Failed to resend WhatsApp OTP:", whatsappError);
       }
@@ -343,7 +328,7 @@ class RegistrationOtp {
       });
 
     } catch (err) {
-      console.error("Error in resendRegistrationOTP:", err);
+      console.error("Error in resendEmployerRegistrationOTP:", err);
       return res.status(500).json({ 
         success: false, 
         error: "Internal server error" 
@@ -351,8 +336,8 @@ class RegistrationOtp {
     }
   }
 
-  // Check if phone is verified (for registration flow)
-  async checkPhoneVerification(req, res) {
+  // Check if phone is verified for employer registration
+  async checkEmployerPhoneVerification(req, res) {
     try {
       const { mobile } = req.params;
 
@@ -377,7 +362,7 @@ class RegistrationOtp {
       });
 
     } catch (err) {
-      console.error("Error in checkPhoneVerification:", err);
+      console.error("Error in checkEmployerPhoneVerification:", err);
       return res.status(500).json({ 
         success: false, 
         error: "Internal server error" 
@@ -386,5 +371,5 @@ class RegistrationOtp {
   }
 }
 
-const registrationOtpController = new RegistrationOtp();
-module.exports = registrationOtpController;
+const employerRegistrationOtpController = new EmployerRegistrationOtp();
+module.exports = employerRegistrationOtpController;

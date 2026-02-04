@@ -3,7 +3,6 @@ const router = express.Router();
 
 const categoryController = require("../../Controller/Admin/categoryController");
 
-// Category CRUD routes
 router.post("/", categoryController.addCategory);                                    // POST /api/admin/categories
 router.get("/", categoryController.getAllCategories);                                // GET /api/admin/categories
 router.get("/by-industry/:industryId", categoryController.getCategoriesByIndustry); // GET /api/admin/categories/by-industry/:industryId

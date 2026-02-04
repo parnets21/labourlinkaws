@@ -77,6 +77,12 @@ router.get("/skills", jobController.getSkills);
 router.get("/chefs", jobController.getChefs);
 router.get("/cuisines", jobController.getCuisine);
 
+// Cascading dropdown endpoints for hierarchical classification
+const categoryController = require("../../Controller/Admin/categoryController");
+const subCategoryController = require("../../Controller/Admin/subCategoryController");
+router.get("/categories/by-industry/:industryId", categoryController.getCategoriesByIndustry);
+router.get("/subcategories/by-category/:categoryId", subCategoryController.getSubCategoriesByCategory);
+
 //get api http://localhost:8500/api/user/skills
 
 // Job Management Routes - PUT (Edit) endpoints

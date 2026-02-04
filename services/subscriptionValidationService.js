@@ -276,6 +276,19 @@ class SubscriptionValidationService {
     const used = currentUsage[limitKey] || 0;
 
     if (typeof limit === 'number') {
+      // Special case: If limit is 0, user needs subscription (no free applications)
+      if (limit === 0) {
+        return {
+          allowed: false,
+          remaining: 0,
+          limit: limit,
+          used: used,
+          upgradeRequired: true,
+          reason: 'subscription_required',
+          message: 'You need a subscription plan to apply for jobs. Please upgrade to start applying.'
+        };
+      }
+
       const remaining = Math.max(0, limit - used);
       const allowed = remaining > 0;
 
@@ -284,6 +297,22 @@ class SubscriptionValidationService {
         const dailyKey = actionConfig.dailyLimitKey;
         const dailyLimit = limits[dailyKey] || features[dailyKey];
         const dailyUsed = currentUsage[dailyKey] || 0;
+
+        // Special case: If daily limit is 0, user needs subscription
+        if (typeof dailyLimit === 'number' && dailyLimit === 0) {
+          return {
+            allowed: false,
+            remaining: 0,
+            limit: limit,
+            used: used,
+            dailyLimit: dailyLimit,
+            dailyUsed: dailyUsed,
+            upgradeRequired: true,
+            reason: 'subscription_required',
+            message: 'You need a subscription plan to apply for jobs. Please upgrade to start applying.'
+          };
+        }
+
         let dailyRemaining = null;
         let dailyAllowed = true;
         if (typeof dailyLimit === 'number') {
@@ -510,8 +539,8 @@ class SubscriptionValidationService {
   static getFreeFeatures(userType) {
     if (userType === 'employee') {
       return {
-        jobApplicationsPerMonth: 5,
-        jobApplicationsPerDay: 2,
+        jobApplicationsPerMonth: 0,
+        jobApplicationsPerDay: 0,
         jobSearchPerDay: 10,
         companyViewsPerDay: 3,
         profileUpdatesPerMonth: 2,

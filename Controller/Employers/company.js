@@ -11,6 +11,7 @@ const CompanyType = require("../../Model/Admin/jobmanagment/CompanyType");
 const Industry = require("../../Model/Admin/jobmanagment/industrymanagment");
 const Department = require("../../Model/Admin/Department")
 const JobRole = require("../../Model/Admin/jobmanagment/JobRole")
+const Category = require("../../Model/Admin/jobmanagment/Category") // Use new structured Category model
 const WorkMode = require("../../Model/Admin/jobmanagment/WorkMode")
 const Location = require("../../Model/Admin/comapnaylocation")
 const Salary = require("../../Model/Admin/jobmanagment/Salary")
@@ -26,7 +27,41 @@ const FCMtoken = require("../../Model/User/FCMtoken");
 const SubscriptionUsageService = require("../../services/subscriptionUsageService");
 const SubscriptionValidationService = require("../../services/subscriptionValidationService");
 const callModel = require("../../Model/Employers/scheduleinterview");
+const { validateJobClassification } = require("../../utils/jobClassificationValidator");
 
+
+// Utility function to mask sensitive data (standalone function)
+function maskSensitiveData(data) {
+  if (!data) return data;
+  
+  // Mask email - show first 2 and last 2 characters before @
+  const maskEmail = (email) => {
+    if (!email || typeof email !== 'string') return email;
+    const [localPart, domain] = email.split('@');
+    if (!localPart || !domain) return email;
+    
+    if (localPart.length <= 4) {
+      return `${localPart[0]}***${localPart[localPart.length - 1]}@${domain}`;
+    }
+    return `${localPart.substring(0, 2)}***${localPart.substring(localPart.length - 2)}@${domain}`;
+  };
+
+  // Mask phone - show first 2 and last 2 digits
+  const maskPhone = (phone) => {
+    if (!phone) return phone;
+    const phoneStr = phone.toString();
+    if (phoneStr.length <= 4) {
+      return `${phoneStr[0]}***${phoneStr[phoneStr.length - 1]}`;
+    }
+    return `${phoneStr.substring(0, 2)}***${phoneStr.substring(phoneStr.length - 2)}`;
+  };
+
+  return {
+    ...data,
+    email: maskEmail(data.email),
+    phone: maskPhone(data.phone)
+  };
+}
 
 class company {
 
@@ -43,13 +78,24 @@ class company {
         whatsapp, adminId, employerId, salarytype, interviewername,
         companywebsite, companymobile, companyindustry, companytype, department,
         companyaddress, requirements, responsibilities, workSchedule, locationDetails,
-        preferredQualifications, additionalNotes
+        preferredQualifications, additionalNotes,
+        // New hierarchical classification fields
+        industryId, categoryId, subCategoryId
       } = req.body;
       console.log("📥 Received Request Body:", req.body);
 
-      // Subscription validation is now handled by middleware
-
-      let obj = {
+      // Validate hierarchical classification if provided
+      if (industryId || categoryId || subCategoryId) {
+        const validation = await validateJobClassification(industryId, categoryId, subCategoryId);
+        if (!validation.valid) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid job classification",
+            error: validation.error
+          });
+        }
+      }
+let obj = {
         companyName, jobtitle, averageIncentive, openings, address, email, reason,
         experience, interview, period, description, typeofjob, typeofwork,
         typeofeducation, education, experiencerequired, gendertype, jobProfile,
@@ -60,6 +106,11 @@ class company {
         companyaddress, requirements, responsibilities, workSchedule, locationDetails,
         preferredQualifications, additionalNotes
       };
+
+      // Add classification fields if provided
+      if (industryId) obj.industryId = industryId;
+      if (categoryId) obj.categoryId = categoryId;
+      if (subCategoryId) obj.subCategoryId = subCategoryId;
 
       // Handle logo upload to S3
       if (req.files && req.files.length > 0) {
@@ -174,13 +225,29 @@ class company {
         adminId,
         employerId,
         salarytype,
-        interviewername
+        interviewername,
+        // New hierarchical classification fields
+        industryId,
+        categoryId,
+        subCategoryId
       } = req.body;
 
       // Get existing job to check for logo that might need to be deleted
       const existingJob = await jobModel.findById(jobId);
       if (!existingJob) {
         return res.status(404).json({ success: false, message: "Job not found" });
+      }
+
+      // Validate hierarchical classification if provided
+      if (industryId || categoryId || subCategoryId) {
+        const validation = await validateJobClassification(industryId, categoryId, subCategoryId);
+        if (!validation.valid) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid job classification",
+            error: validation.error
+          });
+        }
       }
 
       let obj = {};
@@ -281,6 +348,11 @@ class company {
       if (isVerify) {
         obj["isVerify"] = isVerify;
       }
+
+      // Add classification fields if provided
+      if (industryId !== undefined) obj["industryId"] = industryId;
+      if (categoryId !== undefined) obj["categoryId"] = categoryId;
+      if (subCategoryId !== undefined) obj["subCategoryId"] = subCategoryId;
 
       // Handle logo upload to S3
       if (req.files && req.files.length > 0) {
@@ -501,7 +573,12 @@ class company {
       if (sort === 'salary_high_to_low') sortSpec = { maxSalary: -1 };
 
       // Query
-      let query = jobModel.find(filters).sort(sortSpec).populate("employerId");
+      let query = jobModel.find(filters)
+        .sort(sortSpec)
+        .populate("employerId")
+        .populate("industryId", "industryName industryId")
+        .populate("categoryId", "categoryName categoryId")
+        .populate("subCategoryId", "subCategoryName subCategoryId");
       const numericLimit = parseInt(limit, 10);
       if (!isNaN(numericLimit) && numericLimit > 0) {
         query = query.limit(numericLimit);
@@ -593,6 +670,10 @@ class company {
         maxSalary,
         minSalary,
         closeDate,
+        // New classification filters
+        industryId,
+        categoryId,
+        subCategoryId
       } = req.body;
       let obj = {};
       if (CompanyName) {
@@ -641,10 +722,25 @@ class company {
       if (skill) {
         obj["skill"] = { $regex: skill, $options: "i" };
       }
+      
+      // Add classification filters
+      if (industryId) {
+        obj["industryId"] = industryId;
+      }
+      if (categoryId) {
+        obj["categoryId"] = categoryId;
+      }
+      if (subCategoryId) {
+        obj["subCategoryId"] = subCategoryId;
+      }
+      
       console.log("swagat nhi karoge hamara", obj)
       if (Object.keys(req.body).length <= 0) {
         let findData = await jobModel
           .find({ isVerify: true })
+          .populate("industryId", "industryName industryId")
+          .populate("categoryId", "categoryName categoryId")
+          .populate("subCategoryId", "subCategoryName subCategoryId")
           .sort({ _id: -1 });
         console.log("A");
         if (findData.length <= 0) return res.status(400).json({ success: "Data not found" });
@@ -655,6 +751,9 @@ class company {
             .find({
               isVerify: true,
             })
+            .populate("industryId", "industryName industryId")
+            .populate("categoryId", "categoryName categoryId")
+            .populate("subCategoryId", "subCategoryName subCategoryId")
             .sort({ _id: -1 });
           console.log("B");
           if (findData.length <= 0)
@@ -664,6 +763,9 @@ class company {
           obj["isVerify"] = true
           let findData = await jobModel
             .find(obj)
+            .populate("industryId", "industryName industryId")
+            .populate("categoryId", "categoryName categoryId")
+            .populate("subCategoryId", "subCategoryName subCategoryId")
             .sort({ _id: -1 });
           console.log("C");
           if (findData.length <= 0)
@@ -734,9 +836,11 @@ class company {
     try {
       let jobId = req.params.jobId;
       console.log(jobId, "this is jobid")
-      let data = await jobModel.findById(jobId);
+      let data = await jobModel.findById(jobId)
+        .populate("industryId", "industryName industryId")
+        .populate("categoryId", "categoryName categoryId")
+        .populate("subCategoryId", "subCategoryName subCategoryId");
       if (!data) return res.status(400).json({ success: "data not found" });
-      // Subscription validation is now handled by middleware
       return res.status(200).json({ success: data });
     } catch (err) {
       console.log(err);
@@ -761,6 +865,26 @@ class company {
         return res.status(200).json({ success: true, data: [], message: "No applications found" });
       }
 
+      // Mask sensitive user data for employer view
+      const maskedData = findData.map(application => {
+        if (application.userId) {
+          // Only show employee name and masked email/phone
+          const maskedUserData = maskSensitiveData(application.userId.toObject ? application.userId.toObject() : application.userId);
+          const maskedUser = {
+            _id: application.userId._id,
+            fullName: application.userId.fullName,
+            email: maskedUserData.email,
+            phone: maskedUserData.phone
+          };
+          
+          return {
+            ...application.toObject(),
+            userId: maskedUser
+          };
+        }
+        return application;
+      });
+
       // Record employer candidate search usage if employerId provided (query)
       try {
         const employerId = req.query && req.query.employerId;
@@ -772,7 +896,7 @@ class company {
         console.log('Warning: could not record candidate search usage:', recErr?.message || recErr);
       }
 
-      return res.status(200).json({ success: true, data: findData });
+      return res.status(200).json({ success: true, data: maskedData });
     } catch (err) {
       console.error("Server Error:", err);
       return res.status(500).json({ success: false, message: "Internal Server Error" });
@@ -972,7 +1096,7 @@ class company {
 
 
 
-  async addSelect(req, res) {
+async addSelect(req, res) {
     console.log(req.body, "this is body");
 
     const { userId, companyId } = req.body;
@@ -992,7 +1116,6 @@ class company {
       return res.status(400).json({ error: "Invalid ObjectId format" });
     }
 
-    // Debug logs
     const apps = await applyModel.find({ userId: userObjectId });
     console.log("Apps with this userId:", apps);
 
@@ -1011,8 +1134,6 @@ class company {
     if (!data) {
       return res.status(404).json({ error: "No application found" });
     }
-
-    // Check if already selected - Return success if already selected
     if (data.status === "Selected" || data.status === "selected") {
       console.log("User already selected, returning success");
       // Also delete any lingering interview record
@@ -1027,27 +1148,21 @@ class company {
       }
       return res.status(200).json({ success: "User already selected" });
     }
-
-    // Check if already rejected - Cannot select a rejected candidate
     if (data.status === "Rejected" || data.status === "rejected") {
       console.log("User already rejected, cannot select");
       return res.status(400).json({ error: "Cannot select an already rejected candidate" });
     }
 
-    // Update status
     const update = await applyModel.findOneAndUpdate(
       { userId: userObjectId, companyId: companyObjectId },
       { $set: { status: "Selected" } },
       { new: true }
     );
-
     if (!update) {
       return res.status(400).json({ error: "Something went wrong" });
     }
 
     console.log("Update successful:", update);
-
-    // Send Email
     await sent.sendMail(
       data.userId.fullName,
       data.userId.email,
@@ -1056,7 +1171,6 @@ class company {
     );
     console.log("Email sent successfully");
 
-    // Send WhatsApp
     await sent.sendSelectedWhatsapp(
       data.userId.fullName,
       data.userId.phone,
@@ -1081,8 +1195,6 @@ class company {
     } catch (recErr) {
       console.log('Warning: could not record application_review usage:', recErr?.message || recErr);
     }
-
-    // Delete the scheduled interview record if it exists (candidate is now selected)
     try {
       await callModel.deleteOne({ 
         userId: userId, 
@@ -1092,34 +1204,44 @@ class company {
     } catch (deleteErr) {
       console.log('Warning: could not delete interview record:', deleteErr?.message || deleteErr);
     }
-
     return res.status(200).json({ success: "Successfully Selected" });
   }
-
-
-  async getSelectData(req, res) {
+async getSelectData(req, res) {
     try {
-      // let companyId = new mongoose.Types.ObjectId(req.params.companyId); // Convert to ObjectId
-      let companyId = req.params.companyId
+    let companyId = req.params.companyId
       console.log(companyId, "this is company id")
       const hash = await applyModel
         .find({ companyId, status: "Selected", isDelete: false })
         .populate("userId");
       console.log(hash, "this is hash");
 
-      // if (hash.length <= 0) {
-      //     return res.status(400).json({ success: false, message: "Data not found hjjhg" });
-      // }
+      // Mask sensitive user data for employer view
+      const maskedData = hash.map(application => {
+        if (application.userId) {
+          // Only show employee name and masked email/phone
+          const maskedUserData = maskSensitiveData(application.userId.toObject ? application.userId.toObject() : application.userId);
+          const maskedUser = {
+            _id: application.userId._id,
+            fullName: application.userId.fullName,
+            email: maskedUserData.email,
+            phone: maskedUserData.phone
+          };
+          
+          return {
+            ...application.toObject(),
+            userId: maskedUser
+          };
+        }
+        return application;
+      });
 
-      return res.status(200).json({ success: true, data: hash });
+      return res.status(200).json({ success: true, data: maskedData });
     } catch (err) {
       console.log(err);
       return res.status(500).json({ success: false, message: "Internal Server Error" });
     }
   }
-
-
-  async getShortlistingData(req, res) {
+async getShortlistingData(req, res) {
     try {
       const { jobId } = req.params;  // Changed from companyId to jobId to match route
       console.log("Fetching shortlisted applications for jobId:", jobId);
@@ -1149,9 +1271,29 @@ class company {
         });
       }
 
+      // Mask sensitive user data for employer view
+      const maskedData = shortlistingData.map(application => {
+        if (application.userId) {
+          // Only show employee name and masked email/phone
+          const maskedUserData = maskSensitiveData(application.userId.toObject ? application.userId.toObject() : application.userId);
+          const maskedUser = {
+            _id: application.userId._id,
+            fullName: application.userId.fullName,
+            email: maskedUserData.email,
+            phone: maskedUserData.phone
+          };
+          
+          return {
+            ...application.toObject(),
+            userId: maskedUser
+          };
+        }
+        return application;
+      });
+
       return res.status(200).json({
         success: true,
-        data: shortlistingData
+        data: maskedData
       });
 
     } catch (err) {
@@ -1163,9 +1305,7 @@ class company {
       });
     }
   }
-
-
-  async AllAplliedDetals(req, res) {
+async AllAplliedDetals(req, res) {
     try {
       let data = await applyModel
         .find()
@@ -1173,14 +1313,32 @@ class company {
         .populate("userId")
         .populate("companyId");
 
-      return res.status(200).json({ success: data });
+      // Mask sensitive user data for employer view
+      const maskedData = data.map(application => {
+        if (application.userId) {
+          // Only show employee name and masked email/phone
+          const maskedUserData = maskSensitiveData(application.userId.toObject ? application.userId.toObject() : application.userId);
+          const maskedUser = {
+            _id: application.userId._id,
+            fullName: application.userId.fullName,
+            email: maskedUserData.email,
+            phone: maskedUserData.phone
+          };
+          
+          return {
+            ...application.toObject(),
+            userId: maskedUser
+          };
+        }
+        return application;
+      });
+
+      return res.status(200).json({ success: maskedData });
     } catch (error) {
       console.log(error);
     }
   }
-
-
-  async rejectApply(req, res) {
+async rejectApply(req, res) {
     try {
       const { userId, companyId, employerId } = req.body;
       console.log(companyId, "lililili")
@@ -1316,14 +1474,33 @@ async getRejectedApplications(req, res) {
         return res.status(200).json({ success: true, data: [], message: "No rejected applications found" });
       }
 
-      return res.status(200).json({ success: true, data: rejectedApplications });
+      // Mask sensitive user data for employer view
+      const maskedData = rejectedApplications.map(application => {
+        if (application.userId) {
+          // Only show employee name and masked email/phone
+          const maskedUserData = maskSensitiveData(application.userId.toObject ? application.userId.toObject() : application.userId);
+          const maskedUser = {
+            _id: application.userId._id,
+            fullName: application.userId.fullName,
+            email: maskedUserData.email,
+            phone: maskedUserData.phone
+          };
+          
+          return {
+            ...application.toObject(),
+            userId: maskedUser
+          };
+        }
+        return application;
+      });
+
+      return res.status(200).json({ success: true, data: maskedData });
     } catch (err) {
       console.error("Error in getRejectedApplications:", err);
       return res.status(500).json({ error: "Internal server error" });
     }
   }
-
-  async deleteApply(req, res) {
+async deleteApply(req, res) {
     try {
       let applyId = req.params.applyId;
       let data = await applyModel.deleteOne({ _id: applyId });
@@ -1347,9 +1524,8 @@ async getRejectedApplications(req, res) {
     } catch (err) {
       console.log(err);
     }
-  }
-
-  async makeVerify(req, res) {
+  } 
+async makeVerify(req, res) {
     try {
       let companyId = req.params.companyId;
       let verify = await jobModel
@@ -1396,7 +1572,7 @@ async getRejectedApplications(req, res) {
       console.log(err);
     }
   }
-  async makeUnVerify(req, res) {
+async makeUnVerify(req, res) {
     try {
       let companyId = req.params.companyId;
       let verify = await jobModel
@@ -1468,8 +1644,7 @@ async getRejectedApplications(req, res) {
       res.status(500).json({ error: "Internal server error" });
     }
   }
-
-  async getSuggestedJobs(req, res) {
+async getSuggestedJobs(req, res) {
     console.log("Getting Suggested Jobs...");
     try {
       const { userId } = req.params;
@@ -1524,8 +1699,7 @@ async getRejectedApplications(req, res) {
       });
     }
   }
-
-  async getRecommendedJobs(req, res) {
+async getRecommendedJobs(req, res) {
     try {
       const { userId } = req.params;
 
@@ -1559,7 +1733,7 @@ async getRejectedApplications(req, res) {
       return res.status(500).json({ error: "Something went wrong", details: error.message });
     }
   }
-  async getHighestPayingJob(req, res) {
+async getHighestPayingJob(req, res) {
     try {
       // Find the highest-paying job (no filtering by role)
       const highestPayingJob = await jobModel.find().sort({ salary: -1 }).limit(15);;
@@ -1574,9 +1748,7 @@ async getRejectedApplications(req, res) {
       res.status(500).json({ message: "Server error", details: error.message });
     }
   };
-
-
-  async searchJobsByUserRole(req, res) {
+async searchJobsByUserRole(req, res) {
     try {
       const { userId } = req.params;
       console.log("Received userId:", userId);
@@ -1616,13 +1788,7 @@ async getRejectedApplications(req, res) {
       res.status(500).json({ success: false, message: "Internal Server Error" });
     }
   }
-
-
-
-
-
-
-  async addCompanyType(req, res) {
+async addCompanyType(req, res) {
     try {
       const { type } = req.body;
       if (!type) {
@@ -1670,7 +1836,7 @@ async getRejectedApplications(req, res) {
       });
     }
   }
-  async addIndustry(req, res) {
+async addIndustry(req, res) {
     try {
       const { id, industryName } = req.body;
 
@@ -1734,7 +1900,7 @@ async getRejectedApplications(req, res) {
       });
     }
   };
-  async addDepartment(req, res) {
+async addDepartment(req, res) {
     try {
       const { departmentName } = req.body;
       if (!departmentName) {
@@ -1775,7 +1941,7 @@ async getRejectedApplications(req, res) {
       });
     }
   }
-  async addJobRole(req, res) {
+async addJobRole(req, res) {
     try {
       const { jobRole } = req.body;
       if (!jobRole) {
@@ -1796,7 +1962,7 @@ async getRejectedApplications(req, res) {
       return res.status(500).json({ error: "Internal server error" });
     }
   }
-  async addJobRole(req, res) {
+async addJobRole(req, res) {
     try {
       const { id, jobRole } = req.body;
 
@@ -1860,9 +2026,8 @@ async getRejectedApplications(req, res) {
       console.error("Error adding work mode:", error);
       return res.status(500).json({ error: "Internal server error" });
     }
-  }
-
-  async addEducation(req, res) {
+  } 
+async addEducation(req, res) {
     const education = new Education({
       qualification: req.body.qualification,
     });
@@ -1874,7 +2039,7 @@ async getRejectedApplications(req, res) {
       res.status(400).json({ message: error.message });
     }
   }
-  async addSkill(req, res) {
+async addSkill(req, res) {
     try {
       console.log("Received body:", req.body); // Debugging step ✅
 
@@ -1962,7 +2127,7 @@ async getRejectedApplications(req, res) {
       });
     }
   }
-  async addCuisine(req, res) {
+async addCuisine(req, res) {
     try {
       console.log("Received body:", req.body);
 
@@ -1999,11 +2164,48 @@ async getRejectedApplications(req, res) {
       });
     }
   }
-  async getCompanyTypes(req, res) {
+async getCompanyTypes(req, res) {
     try {
-      const companyTypes = await CompanyType.find({ action: true })
-        .select('_id type typeId')  // ✅ Add typeId
-        .sort({ type: 1 });
+      // Fetch industries instead of company types
+      const industries = await Industry.find({ isActive: true })
+        .select('_id industryName industryId')
+        .sort({ industryName: 1 });
+
+      let companyTypes = [];
+      
+      if (industries && industries.length > 0) {
+        // Transform to match expected format
+        companyTypes = industries.map(industry => ({
+          _id: industry._id,
+          type: industry.industryName,
+          typeId: industry.industryId
+        }));
+      } else {
+        // Provide default company types if no industries exist
+        const defaultIndustries = [
+          'Information Technology',
+          'Healthcare',
+          'Finance & Banking',
+          'Education',
+          'Manufacturing',
+          'Retail & E-commerce',
+          'Construction',
+          'Transportation',
+          'Hospitality',
+          'Media & Entertainment',
+          'Real Estate',
+          'Consulting',
+          'Non-Profit',
+          'Government',
+          'Agriculture'
+        ];
+        
+        companyTypes = defaultIndustries.map((industry, index) => ({
+          _id: `default-industry-${index}`,
+          type: industry,
+          typeId: `ind-${index + 1}`
+        }));
+      }
 
       return res.status(200).json({
         success: true,
@@ -2011,7 +2213,7 @@ async getRejectedApplications(req, res) {
         data: companyTypes
       });
     } catch (error) {
-      console.error("Error fetching company types:", error);
+      console.error("Error fetching company types (industries):", error);
       return res.status(500).json({
         error: "Internal server error",
         details: error.message
@@ -2020,10 +2222,13 @@ async getRejectedApplications(req, res) {
   }
   async getIndustries(req, res) {
     try {
-      const industries = await Industry.find({}).sort({ industryName: 1 }); // Fetch all industries from the database
+      const industries = await Industry.find({ isActive: true })
+        .select('industryId industryName description')
+        .sort({ industryName: 1 });
+      
       res.status(200).json({
         success: true,
-        data: industries, // Ensure the data is returned in the correct format
+        data: industries,
       });
     } catch (error) {
       console.error("Error fetching industries:", error);
@@ -2033,15 +2238,66 @@ async getRejectedApplications(req, res) {
       });
     }
   };
-  async getDepartments(req, res) {
+async getDepartments(req, res) {
     try {
-      const departments = await Department.find({ action: true })
-        .select('_id departmentName departmentId')  // ✅ Include departmentId
-        .sort({ departmentName: 1 });
+      let departments = [];
+      
+      // Try new structured Category model first
+      try {
+        const newCategories = await Category.find({ isActive: true })
+          .select('_id categoryName categoryId')
+          .sort({ categoryName: 1 });
+        
+        if (newCategories && newCategories.length > 0) {
+          departments = newCategories.map(cat => ({
+            _id: cat._id,
+            departmentName: cat.categoryName,
+            departmentId: cat.categoryId || cat._id.toString()
+          }));
+        }
+      } catch (newModelError) {
+        console.log("New Category model not available or empty, trying old model");
+      }
+      
+      // Fallback to old simple category model if new model has no data
+      if (departments.length === 0) {
+        const OldCategory = require("../../Model/Admin/category");
+        const oldCategories = await OldCategory.find({})
+          .select('_id category Industry')
+          .sort({ category: 1 });
+        
+        departments = oldCategories.map(cat => ({
+          _id: cat._id,
+          departmentName: cat.category,
+          departmentId: cat._id.toString()
+        }));
+      }
+
+      // If still no data, provide some default departments
+      if (departments.length === 0) {
+        const defaultDepartments = [
+          'Information Technology',
+          'Human Resources',
+          'Finance',
+          'Marketing',
+          'Sales',
+          'Operations',
+          'Customer Service',
+          'Engineering',
+          'Design',
+          'Administration'
+        ];
+        
+        departments = defaultDepartments.map((dept, index) => ({
+          _id: `default-dept-${index}`,
+          departmentName: dept,
+          departmentId: `dept-${index + 1}`
+        }));
+      }
 
       return res.status(200).json({
         success: true,
-        count: departments.length,  // ✅ Add count like getCompanyTypes
+        count: departments.length,
         data: departments
       });
     } catch (error) {
@@ -2054,19 +2310,105 @@ async getRejectedApplications(req, res) {
   }
   async getJobRoles(req, res) {
     try {
-      const roles = await JobRole.find({}).sort({ jobRole: 1 });;
-      console.log(roles, "sdsd")
+      let roles = [];
+      
+      // Try SubCategory model first
+      try {
+        const SubCategory = require("../../Model/Admin/jobmanagment/SubCategory");
+        const subCategories = await SubCategory.find({ isActive: true })
+          .select('_id subCategoryName subCategoryId')
+          .sort({ subCategoryName: 1 });
+        
+        if (subCategories && subCategories.length > 0) {
+          roles = subCategories.map(subCat => ({
+            _id: subCat._id,
+            jobRole: subCat.subCategoryName
+          }));
+        }
+      } catch (subCategoryError) {
+        console.log("SubCategory model not available or empty, trying Category model");
+        
+        // Fallback to Category model
+        try {
+          const categories = await Category.find({ isActive: true })
+            .select('_id categoryName categoryId')
+            .sort({ categoryName: 1 });
+          
+          if (categories && categories.length > 0) {
+            roles = categories.map(cat => ({
+              _id: cat._id,
+              jobRole: cat.categoryName
+            }));
+          }
+        } catch (categoryError) {
+          console.log("Category model also not available, trying old model");
+        }
+      }
+      
+      // Fallback to old simple category model if other models have no data
+      if (roles.length === 0) {
+        try {
+          const OldCategory = require("../../Model/Admin/category");
+          const oldCategories = await OldCategory.find({})
+            .select('_id category Industry')
+            .sort({ category: 1 });
+          
+          roles = oldCategories.map(cat => ({
+            _id: cat._id,
+            jobRole: cat.category
+          }));
+        } catch (oldCategoryError) {
+          console.log("Old category model also not available");
+        }
+      }
+
+      // If still no data, provide some default job roles
+      if (roles.length === 0) {
+        const defaultRoles = [
+          'Software Developer',
+          'Frontend Developer',
+          'Backend Developer',
+          'Full Stack Developer',
+          'Mobile App Developer',
+          'DevOps Engineer',
+          'Data Scientist',
+          'Data Analyst',
+          'UI/UX Designer',
+          'Product Manager',
+          'Project Manager',
+          'Business Analyst',
+          'Quality Assurance Engineer',
+          'System Administrator',
+          'Database Administrator',
+          'Sales Executive',
+          'Marketing Specialist',
+          'Digital Marketing Manager',
+          'Content Writer',
+          'Graphic Designer',
+          'Customer Support Representative',
+          'HR Specialist',
+          'Finance Analyst',
+          'Operations Manager',
+          'Administrative Assistant'
+        ];
+        
+        roles = defaultRoles.map((role, index) => ({
+          _id: `default-role-${index}`,
+          jobRole: role
+        }));
+      }
+
+      console.log(roles, "job roles from subcategories")
       return res.status(200).json({ success: true, data: roles });
     } catch (error) {
       console.error('Error fetching job roles:', error);
       return res.status(500).json({ error: 'Internal server error' });
     }
   };
-
   async getWorkModes(req, res) {
     try {
       const workModes = await WorkMode.find({ action: true })
-        .select('_id workMode') // Include _id and workMode
+        .select('_id workMode') 
         .sort({ workMode: 1 });
 
       return res.status(200).json({
@@ -2079,9 +2421,7 @@ async getRejectedApplications(req, res) {
       return res.status(500).json({ error: "Internal server error" });
     }
   }
-
-
-  async getEducations(req, res) {
+async getEducations(req, res) {
     try {
       const educations = await Education.find().sort({ qualification: 1 });;
       res.json(educations);
@@ -2127,7 +2467,6 @@ async getRejectedApplications(req, res) {
       });
     }
   }
-
   async getCuisine(req, res) {
     try {
       const cuisines = await Cuisines.find({ action: true })
@@ -2378,7 +2717,6 @@ async getRejectedApplications(req, res) {
       res.status(400).json({ message: error.message });
     }
   };
-
   async editSkill(req, res) {
     try {
       const { id } = req.params;
@@ -2547,7 +2885,6 @@ async getRejectedApplications(req, res) {
       });
     }
   }
-  // Delete functions
   async deleteCompanyType(req, res) {
     try {
       const { id } = req.params;
@@ -2584,7 +2921,6 @@ async getRejectedApplications(req, res) {
       });
     }
   }
-
   async deleteIndustry(req, res) {
     try {
       const { id } = req.params;
@@ -2603,7 +2939,6 @@ async getRejectedApplications(req, res) {
       return res.status(500).json({ error: "Internal server error" });
     }
   }
-
   async deleteDepartment(req, res) {
     try {
       const { id } = req.params;
@@ -2628,7 +2963,6 @@ async getRejectedApplications(req, res) {
       return res.status(500).json({ error: "Internal server error" });
     }
   }
-
   async deleteJobRole(req, res) {
     try {
       const { id } = req.params;
@@ -2642,7 +2976,6 @@ async getRejectedApplications(req, res) {
       return res.status(500).json({ error: 'Internal server error' });
     }
   };
-
   async deleteWorkMode(req, res) {
     try {
       const { id } = req.params;  // Capture _id from URL
@@ -2669,9 +3002,6 @@ async getRejectedApplications(req, res) {
       return res.status(500).json({ error: "Internal server error" });
     }
   }
-
-
-
   async deleteEducation(req, res) {
     try {
       await Education.findByIdAndDelete(req.params.id);
@@ -2680,7 +3010,6 @@ async getRejectedApplications(req, res) {
       res.status(500).json({ message: error.message });
     }
   }
-
   async deleteSkill(req, res) {
     try {
       const { id } = req.params;
@@ -2741,7 +3070,6 @@ async getRejectedApplications(req, res) {
       });
     }
   }
-
   async deleteCuisine(req, res) {
     try {
       const { id } = req.params;
@@ -2772,10 +3100,7 @@ async getRejectedApplications(req, res) {
       });
     }
   }
-
-
 }
-
-
-
 module.exports = new company();
+
+

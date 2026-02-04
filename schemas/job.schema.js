@@ -25,7 +25,26 @@ const jobSchema = new mongoose.Schema({
         enum: ['entry', 'mid', 'senior', 'executive']
     },
     subCategory: String,
-    department: String,
+    department: String, // Keep for backward compatibility
+    // New hierarchical classification fields
+    industryId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Industry',
+        required: false,
+        index: true
+    },
+    categoryId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Category',
+        required: false,
+        index: true
+    },
+    subCategoryId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'SubCategory',
+        required: false,
+        index: true
+    },
     location: {
         type: {
             type: String,
@@ -210,6 +229,11 @@ jobSchema.index({ status: 1, applicationDeadline: 1 });
 jobSchema.index({ category: 1, workMode: 1, status: 1 });
 jobSchema.index({ 'requirements.skills.name': 1 });
 jobSchema.index({ keywords: 'text', title: 'text', description: 'text' });
+// Classification indexes
+jobSchema.index({ industryId: 1 });
+jobSchema.index({ categoryId: 1 });
+jobSchema.index({ subCategoryId: 1 });
+jobSchema.index({ industryId: 1, categoryId: 1, subCategoryId: 1 });
 
 // Update timestamp middleware
 jobSchema.pre('save', function(next) {

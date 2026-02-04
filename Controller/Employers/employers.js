@@ -21,6 +21,39 @@ const { isValidEmail, phonenumber, isValidString, validUrl, isValid } = require(
 const { uploadFile2 } = require("../../middileware/aws");
 const DocumentValidationService = require("../../services/documentValidationService");
 
+// Utility function to mask sensitive data (standalone function)
+function maskSensitiveData(data) {
+  if (!data) return data;
+  
+  // Mask email - show first 2 and last 2 characters before @
+  const maskEmail = (email) => {
+    if (!email || typeof email !== 'string') return email;
+    const [localPart, domain] = email.split('@');
+    if (!localPart || !domain) return email;
+    
+    if (localPart.length <= 4) {
+      return `${localPart[0]}***${localPart[localPart.length - 1]}@${domain}`;
+    }
+    return `${localPart.substring(0, 2)}***${localPart.substring(localPart.length - 2)}@${domain}`;
+  };
+
+  // Mask phone - show first 2 and last 2 digits
+  const maskPhone = (phone) => {
+    if (!phone) return phone;
+    const phoneStr = phone.toString();
+    if (phoneStr.length <= 4) {
+      return `${phoneStr[0]}***${phoneStr[phoneStr.length - 1]}`;
+    }
+    return `${phoneStr.substring(0, 2)}***${phoneStr.substring(phoneStr.length - 2)}`;
+  };
+
+  return {
+    ...data,
+    email: maskEmail(data.email),
+    phone: maskPhone(data.phone)
+  };
+}
+
 const saltRounds = 10;
 
 class Employers {
@@ -833,21 +866,22 @@ class Employers {
       }
 
       // Get all interview calls for this employer and company
-      let interviewCalls = await callModel.find({ employerId, companyId }).sort({ _id: -1 });
+      let interviewCalls = await callModel.find({ employerId, companyId })
+        .populate("userId", "fullName name email") // Only populate needed fields
+        .sort({ _id: -1 });
 
       if (!interviewCalls.length) {
         return res.status(200).json({ success: true, data: [], message: "No interview calls found" });
       }
 
-      // Filter out candidates who have already been selected or rejected
-      // by checking their application status
+     
       const applyModel = require("../../Model/Employers/apply");
       const filteredInterviews = [];
 
       for (const interview of interviewCalls) {
         // Check the application status for this user and company
         const application = await applyModel.findOne({
-          userId: interview.userId,
+          userId: interview.userId?._id || interview.userId,
           companyId: companyId
         });
 
@@ -857,7 +891,32 @@ class Employers {
              application.status !== 'selected' && 
              application.status !== 'Rejected' && 
              application.status !== 'rejected')) {
-          filteredInterviews.push(interview);
+          
+          // Create clean interview data with candidate name only
+          const interviewData = interview.toObject();
+          
+          // Ensure we have the candidate name
+          let candidateName = 'No Name';
+          if (interviewData.userId) {
+            candidateName = interviewData.userId.fullName || 
+                          interviewData.userId.name || 
+                          interviewData.name || 
+                          'No Name';
+          }
+          
+          // Set name fields for frontend compatibility
+          interviewData.fullName = candidateName;
+          interviewData.name = candidateName;
+          
+          // Remove sensitive user data, keep only essential info
+          if (interviewData.userId) {
+            interviewData.userId = interviewData.userId._id;
+          }
+          
+          // Remove email and phone for privacy
+          delete interviewData.email;
+          
+          filteredInterviews.push(interviewData);
         }
       }
 
@@ -890,21 +949,18 @@ class Employers {
 
       // Format the response to include candidate name and job position
       const formattedInterviews = await Promise.all(interviews.map(async (interview) => {
-        let candidateName = 'N/A';
-        let candidateEmail = interview.email || 'No email';
+        let candidateName = 'No Name';
         
         // Try to get name from populated userId
         if (interview.userId && typeof interview.userId === 'object') {
-          candidateName = interview.userId.fullName || interview.userId.name || 'N/A';
-          candidateEmail = interview.userId.email || candidateEmail;
+          candidateName = interview.userId.fullName || interview.userId.name || 'No Name';
         } 
         // If userId is still a string (old data), manually fetch user
         else if (interview.userId && typeof interview.userId === 'string') {
           try {
             const user = await userModel.findById(interview.userId).select('name email fullName');
             if (user) {
-              candidateName = user.fullName || user.name || 'N/A';
-              candidateEmail = user.email || candidateEmail;
+              candidateName = user.fullName || user.name || 'No Name';
             }
           } catch (err) {
             console.log('Could not fetch user for userId:', interview.userId);
@@ -932,9 +988,10 @@ class Employers {
         
         return {
           ...interview.toObject(),
-          name: candidateName,
-          email: candidateEmail,
+          fullName: candidateName, // Frontend expects fullName
+          name: candidateName, // Also set name for compatibility
           Position: jobPosition
+          // Email removed completely for privacy
         };
       }));
 

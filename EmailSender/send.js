@@ -616,7 +616,242 @@ const sendSubscriptionConfirmationEmail = async (name, email, planName, amount, 
   }
 };
 
-// Send Registration OTP via WhatsApp
+// Send Registration OTP via SMS
+const sendRegistrationOTPSMS = async (mobile, otp) => {
+  console.log("🚨🚨🚨 SMS FUNCTION CALLED - START 🚨🚨🚨");
+  console.log("📱 SMS Input Parameters:", { mobile, otp, mobileType: typeof mobile, otpType: typeof otp });
+  
+  try {
+    console.log("=== SMS OTP FUNCTION DEBUG ===");
+    console.log("Function called with mobile:", mobile, "OTP:", otp);
+    
+    const formattedMobile = String(mobile).replace(/\D/g, '');
+    console.log("Formatted mobile:", formattedMobile);
+    console.log("Mobile length:", formattedMobile.length);
+
+    // Send only the OTP value - the template will format it
+    const message = String(otp);
+    console.log("SMS Message to send:", message);
+    console.log("Message length:", message.length);
+
+    // Try OTP template first, fallback to registration template
+    let payload = {
+      number: [`91${formattedMobile}`],
+      message: String(otp), // Send only OTP value
+      senderId: "LBRLNK",
+      templateId: "1707168926925165526" // OTP template
+    };
+
+    console.log("=== SMS API PAYLOAD (OTP Template) ===");
+    console.log("Full payload:", JSON.stringify(payload, null, 2));
+
+    console.log("=== SMS API PAYLOAD ===");
+    console.log("Full payload:", JSON.stringify(payload, null, 2));
+    console.log("API URL:", "https://smsapi.edumarcsms.com/api/v1/sendsms");
+    console.log("API Key:", "ffe14f876d5444038bfe71cddef56f49");
+    console.log("Headers:", {
+      "Content-Type": "application/json",
+      "apikey": "ffe14f876d5444038bfe71cddef56f49"
+    });
+
+    console.log("🚀 Making SMS API request...");
+    const response = await axios.post(
+      "https://smsapi.edumarcsms.com/api/v1/sendsms",
+      payload,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": "ffe14f876d5444038bfe71cddef56f49"
+        },
+        timeout: 10000 // 10 second timeout
+      }
+    );
+
+    console.log("✅ SMS API RESPONSE RECEIVED");
+    console.log("Status:", response.status);
+    console.log("Status Text:", response.statusText);
+    console.log("Response data:", JSON.stringify(response.data, null, 2));
+    console.log("Response headers:", response.headers);
+    
+    console.log("🎉 SMS API call completed successfully");
+    return response.data;
+  } catch (err) {
+    console.error("❌❌❌ SMS API ERROR ❌❌❌");
+    console.error("Error type:", err.constructor.name);
+    console.error("Error message:", err.message);
+    console.error("Error code:", err.code);
+    console.error("Error status:", err.response?.status);
+    console.error("Error status text:", err.response?.statusText);
+    console.error("Error data:", err.response?.data);
+    console.error("Error headers:", err.response?.headers);
+    console.error("Request config:", {
+      url: err.config?.url,
+      method: err.config?.method,
+      data: err.config?.data,
+      headers: err.config?.headers,
+      timeout: err.config?.timeout
+    });
+    console.error("Full error object:", err);
+    
+    // Re-throw the error so it's handled by the calling function
+    throw err;
+  }
+};
+
+// Test email configuration
+const testEmailConfiguration = async () => {
+  try {
+    console.log("=== TESTING EMAIL CONFIGURATION ===");
+    
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: "support@laborlink.in",
+        pass: "qnxucahhbfbzaxie",
+      },
+      port: 587,
+      host: "smtp.gmail.com",
+      secure: false, // Use TLS
+      requireTLS: true,
+    });
+
+    // Verify the transporter configuration
+    const verified = await transporter.verify();
+    console.log("Email transporter verified:", verified);
+    return verified;
+  } catch (error) {
+    console.log("=== EMAIL CONFIGURATION ERROR ===");
+    console.log("Error:", error.message);
+    console.log("Error code:", error.code);
+    console.log("Full error:", error);
+    return false;
+  }
+};
+
+// Send Registration OTP via Email
+const sendRegistrationOTPEmail = async (name, email, otp) => {
+  try {
+    console.log("=== EMAIL FUNCTION DEBUG ===");
+    console.log("Function called with:", { name, email, otp });
+    
+    // Test configuration first
+    const configValid = await testEmailConfiguration();
+    if (!configValid) {
+      throw new Error("Email configuration is invalid");
+    }
+    
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: "support@laborlink.in",
+        pass: "qnxucahhbfbzaxie",
+      },
+      port: 587,
+      host: "smtp.gmail.com",
+      secure: false, // Use TLS
+      requireTLS: true,
+    });
+
+    console.log("Transporter created successfully");
+
+    const emailHTML = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 0; }
+          .container { max-width: 600px; margin: 0 auto; background: white; }
+          .header { background: linear-gradient(135deg, #134083 0%, #1e5aa8 100%); color: white; padding: 40px 30px; text-align: center; }
+          .content { padding: 40px 30px; }
+          .otp-box { background: #f8f9fa; border: 2px dashed #134083; border-radius: 10px; padding: 30px; text-align: center; margin: 30px 0; }
+          .otp-code { font-size: 36px; font-weight: bold; color: #134083; letter-spacing: 8px; margin: 20px 0; }
+          .warning { background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin: 20px 0; color: #856404; }
+          .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 12px; }
+          .logo { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="logo">🔐 Labor Link</div>
+            <h1>Verification Code</h1>
+            <p>Complete your registration with the OTP below</p>
+          </div>
+          <div class="content">
+            <h2>Hello ${name || 'User'}!</h2>
+            <p>Thank you for registering with Labor Link. To complete your registration, please use the verification code below:</p>
+            
+            <div class="otp-box">
+              <p style="margin: 0; font-size: 18px; color: #666;">Your Verification Code</p>
+              <div class="otp-code">${otp}</div>
+              <p style="margin: 0; color: #666; font-size: 14px;">Valid for 10 minutes</p>
+            </div>
+
+            <div class="warning">
+              <strong>⚠️ Security Notice:</strong> This OTP is confidential. Never share it with anyone. Labor Link will never ask for your OTP over phone or email.
+            </div>
+
+            <p><strong>What's Next?</strong></p>
+            <ul>
+              <li>Enter this OTP in the app to verify your account</li>
+              <li>Complete your profile setup</li>
+              <li>Start exploring job opportunities</li>
+            </ul>
+
+            <p style="margin-top: 30px; font-size: 14px; color: #666;">
+              If you didn't request this verification code, please ignore this email or contact our support team at support@laborlink.in
+            </p>
+          </div>
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} Labor Link. All rights reserved.</p>
+            <p>This is an automated email for account verification.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    var mailOptions = {
+      from: "Labor Link <support@laborlink.in>",
+      to: email,
+      subject: `🔐 Your Labor Link Verification Code: ${otp}`,
+      html: emailHTML,
+    };
+
+    console.log("Mail options prepared:", {
+      from: mailOptions.from,
+      to: mailOptions.to,
+      subject: mailOptions.subject
+    });
+
+    return new Promise((resolve, reject) => {
+      transporter.sendMail(mailOptions, function (error, info) {
+        if (error) {
+          console.log("=== EMAIL SEND ERROR ===");
+          console.log("OTP email error:", error.message);
+          console.log("Error code:", error.code);
+          console.log("Error command:", error.command);
+          console.log("Error response:", error.response);
+          console.log("Error responseCode:", error.responseCode);
+          console.log("Full error:", error);
+          reject(error);
+        } else {
+          console.log("=== EMAIL SEND SUCCESS ===");
+          console.log("OTP email sent successfully: " + info.response);
+          console.log("Message ID:", info.messageId);
+          console.log("Accepted:", info.accepted);
+          console.log("Rejected:", info.rejected);
+          resolve(info);
+        }
+      });
+    });
+  } catch (err) {
+    console.log("=== EMAIL FUNCTION ERROR ===");
+    console.log("Error in sendRegistrationOTPEmail:", err);
+    console.log("Error stack:", err.stack);
+    throw err;
+  }
+};
 const sendRegistrationOTPWhatsapp = async (mobile, otp) => {
   try {
     let formattedMobile = String(mobile).replace(/\D/g, "");
@@ -682,5 +917,5 @@ const sendRegistrationOTPWhatsapp = async (mobile, otp) => {
 //sendInterviewDetailsSMS("7238861147","amit","developer","14thsep","3:30PM")
 module.exports = {
   sendMail,
-  sendWhatsAppShortlisted,sendShortlistedSMS,sendregisterSMS,sendInterviewDetailsSMS,sendSelectedSMS,sendSelectedWhatsapp,sendInterviewDetails,sendUserRegisteredWhatsapp,sendRejectedWhatsapp,sendRegistrationOTPWhatsapp,sendSubscriptionConfirmationEmail
+  sendWhatsAppShortlisted,sendShortlistedSMS,sendregisterSMS,sendInterviewDetailsSMS,sendSelectedSMS,sendSelectedWhatsapp,sendInterviewDetails,sendUserRegisteredWhatsapp,sendRejectedWhatsapp,sendRegistrationOTPWhatsapp,sendRegistrationOTPSMS,sendRegistrationOTPEmail,sendSubscriptionConfirmationEmail,testEmailConfiguration
 };

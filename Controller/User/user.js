@@ -45,6 +45,39 @@ const calculateSubscriptionEndDate = (startDate, duration) => {
   return endDate;
 };
 
+// Utility function to mask sensitive data (standalone function)
+function maskSensitiveDataUser(data) {
+  if (!data) return data;
+  
+  // Mask email - show first 2 and last 2 characters before @
+  const maskEmail = (email) => {
+    if (!email || typeof email !== 'string') return email;
+    const [localPart, domain] = email.split('@');
+    if (!localPart || !domain) return email;
+    
+    if (localPart.length <= 4) {
+      return `${localPart[0]}***${localPart[localPart.length - 1]}@${domain}`;
+    }
+    return `${localPart.substring(0, 2)}***${localPart.substring(localPart.length - 2)}@${domain}`;
+  };
+
+  // Mask phone - show first 2 and last 2 digits
+  const maskPhone = (phone) => {
+    if (!phone) return phone;
+    const phoneStr = phone.toString();
+    if (phoneStr.length <= 4) {
+      return `${phoneStr[0]}***${phoneStr[phoneStr.length - 1]}`;
+    }
+    return `${phoneStr.substring(0, 2)}***${phoneStr.substring(phoneStr.length - 2)}`;
+  };
+
+  return {
+    ...data,
+    email: maskEmail(data.email),
+    phone: maskPhone(data.phone)
+  };
+}
+
 class user {
   async register(req, res) {
     try {
@@ -1021,7 +1054,27 @@ class user {
         .populate("companyId")
         .populate("userId");
 
-      return res.status(200).json({ success: data });
+      // Mask sensitive user data
+      const maskedData = data.map(application => {
+        if (application.userId) {
+          // Only show employee name and masked email/phone
+          const maskedUserData = maskSensitiveDataUser(application.userId);
+          const maskedUser = {
+            _id: application.userId._id,
+            fullName: application.userId.fullName,
+            email: maskedUserData.email,
+            phone: maskedUserData.phone
+          };
+          
+          return {
+            ...application.toObject(),
+            userId: maskedUser
+          };
+        }
+        return application;
+      });
+
+      return res.status(200).json({ success: maskedData });
     } catch (err) {
       console.log(err);
     }

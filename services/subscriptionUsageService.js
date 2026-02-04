@@ -291,8 +291,8 @@ class SubscriptionUsageService {
     const freeLimits = {
       employee: {
         jobSearchPerDay: 5,
-        jobApplicationsPerMonth: 3,
-        jobApplicationsPerDay: 1,
+        jobApplicationsPerMonth: 0,
+        jobApplicationsPerDay: 0,
         companyViewsPerDay: 3,
         profileUpdatesPerMonth: 2,
         interviewsPerMonth: 2,
