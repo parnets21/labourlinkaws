@@ -79,67 +79,220 @@ function maskSensitiveDataUser(data) {
 }
 
 class user {
-  async register(req, res) {
-    try {
-      const {
-        profile,
-        fullName,
-        email,
-        phone, // This will be used for WhatsApp
-        location,
-        password,
-        confirmPassword,
-        experience,
-        workExperience,
-        jobType,
-        resume,
-        address,
-        education,
-        bio,
-        country,
-        street,
-        city,
-        state,
-        pincode,
-        skills,
-        jobRole,
-        companyType,
-        department,
-        workMode,
-        preferredSalary,
-        aadharNumber,
-        panNumber
-      } = req.body;
+  // async register(req, res) {
+  //   try {
+  //     const {
+  //       profile,
+  //       fullName,
+  //       email,
+  //       phone, // This will be used for WhatsApp
+  //       location,
+  //       password,
+  //       confirmPassword,
+  //       experience,
+  //       workExperience,
+  //       jobType,
+  //       resume,
+  //       address,
+  //       education,
+  //       bio,
+  //       country,
+  //       street,
+  //       city,
+  //       state,
+  //       pincode,
+  //       skills,
+  //       jobRole,
+  //       companyType,
+  //       department,
+  //       workMode,
+  //       preferredSalary,
+  //       aadharNumber,
+  //       panNumber
+  //     } = req.body;
 
-      console.log("Incoming request body:", req.body);
+  //     console.log("Incoming request body:", req.body);
       
-      // Document validation using DocumentValidationService
-      const documentValidator = new DocumentValidationService();
+  //     // Document validation using DocumentValidationService
+  //     const documentValidator = new DocumentValidationService();
 
-      // Aadhar Validation - mandatory for job seekers
-      if (!aadharNumber || aadharNumber.trim() === '') {
-        return res.status(400).json({ 
-          error: "Aadhar number is required for job seeker registration",
-          code: "AADHAR_REQUIRED"
-        });
-      }
+  //     // Aadhar Validation - mandatory for job seekers
+  //     if (!aadharNumber || aadharNumber.trim() === '') {
+  //       return res.status(400).json({ 
+  //         error: "Aadhar number is required for job seeker registration",
+  //         code: "AADHAR_REQUIRED"
+  //       });
+  //     }
 
-      const aadharValidation = documentValidator.validateAadharNumber(aadharNumber);
-      if (!aadharValidation.isValid) {
-        return res.status(400).json({ 
-          error: aadharValidation.error,
-          code: aadharValidation.code 
-        });
-      }
+  //     const aadharValidation = documentValidator.validateAadharNumber(aadharNumber);
+  //     if (!aadharValidation.isValid) {
+  //       return res.status(400).json({ 
+  //         error: aadharValidation.error,
+  //         code: aadharValidation.code 
+  //       });
+  //     }
 
-      // PAN Validation - mandatory for job seekers
-      if (!panNumber || panNumber.trim() === '') {
-        return res.status(400).json({ 
-          error: "PAN number is required for job seeker registration",
-          code: "PAN_REQUIRED"
-        });
-      }
+  //     // PAN Validation - mandatory for job seekers
+  //     if (!panNumber || panNumber.trim() === '') {
+  //       return res.status(400).json({ 
+  //         error: "PAN number is required for job seeker registration",
+  //         code: "PAN_REQUIRED"
+  //       });
+  //     }
 
+  //     const panValidation = documentValidator.validatePanNumber(panNumber);
+  //     if (!panValidation.isValid) {
+  //       return res.status(400).json({ 
+  //         error: panValidation.error,
+  //         code: panValidation.code 
+  //       });
+  //     }
+
+  //     // ✅ Check if user already exists
+  //     let userExists = await userModel.findOne({ email, isDelete: false });
+  //     if (userExists) return res.status(400).json({ error: "Email already exists!" });
+
+  //     userExists = await userModel.findOne({ phone, isDelete: false });
+  //     if (userExists) return res.status(400).json({ error: "Phone number already exists!" });
+
+  //     // ✅ Encrypt password
+  //     const encryptedPassword = await bcrypt.hash(password, 10);
+  //     // Create user object
+  //     const userData = {
+  //       profile,
+  //       fullName,
+  //       email,
+  //       phone,
+  //       location,
+  //       password: encryptedPassword,
+  //       confirmPassword: encryptedPassword,
+  //       workExperience: experience ? true : false,
+  //       experiences: experience,
+  //       jobRole,
+  //       companyType,
+  //       department,
+  //       workMode,
+  //       jobType,
+  //       resume,
+  //       address,
+  //       education,
+  //       bio,
+  //       country,
+  //       street,
+  //       city,
+  //       state,
+  //       pincode,
+  //       skills,
+  //       preferredSalary: preferredSalary || { min: 0, max: 0 },
+  //       aadharNumber: aadharValidation.aadharNumber, // Use cleaned/formatted Aadhar number from validation
+  //       panNumber: panValidation.panNumber, // Use cleaned/formatted PAN number from validation
+  //       appliedOn: new Date(),
+  //       online: "Offline",
+  //       isBlock: false,
+  //       isDelete: false
+  //     };
+  //     // Create new user
+  //     const newUser = await userModel.create(userData);
+  //     console.log("User created successfully:", newUser._id);
+  //     console.log("User created successfully yuppp:", userData);
+
+  //     // Send welcome email
+  //     await send.sendMail(fullName, email, `Welcome to Labor Link!<h3>Thank you!<br>Labor Link Team</h3>`);
+
+  //     // Send welcome WhatsApp message
+  //     try {
+  //       await send.sendUserRegisteredWhatsapp({
+  //         name: fullName,
+  //         mobile: phone
+  //       });
+  //       console.log("WhatsApp welcome message sent successfully");
+  //     } catch (whatsappError) {
+  //       console.error("Failed to send WhatsApp message:", whatsappError);
+  //       // Don't fail the registration if WhatsApp fails
+  //     }
+  //     //sms
+  //     // SMS
+  //     try {
+  //       await send.sendregisterSMS(phone, fullName); // pass ONLY the variable
+  //       console.log("SMS welcome message sent successfully");
+  //     } catch (smsError) {
+  //       console.error("Failed to send SMS message:", smsError.response?.data || smsError.message);
+  //     }
+
+
+  //     return res.status(200).json({
+  //       success: "Successfully registered!",
+  //       userId: newUser._id,
+  //       newUser
+  //     });
+
+  //   } catch (err) {
+  //     console.error("Error in register function:", err);
+  //     if (err.name === 'ValidationError') {
+  //       return res.status(400).json({
+  //         error: "Validation error",
+  //         details: Object.values(err.errors).map(e => e.message)
+  //       });
+  //     }
+  //     return res.status(500).json({ error: "Internal server error!" });
+  //   }
+  // }
+  
+  async register(req, res) {
+  try {
+    const {
+      profile,
+      fullName,
+      email,
+      phone,
+      location,
+      password,
+      confirmPassword,
+      experience,
+      workExperience,
+      jobType,
+      resume,
+      address,
+      education,
+      bio,
+      country,
+      street,
+      city,
+      state,
+      pincode,
+      skills,
+      jobRole,
+      companyType,
+      department,
+      workMode,
+      preferredSalary,
+      aadharNumber,
+      panNumber
+    } = req.body;
+
+    console.log("Incoming request body:", req.body);
+
+    const documentValidator = new DocumentValidationService();
+
+    // Aadhar Validation - MANDATORY for job seekers
+    if (!aadharNumber || aadharNumber.trim() === '') {
+      return res.status(400).json({ 
+        error: "Aadhar number is required for job seeker registration",
+        code: "AADHAR_REQUIRED"
+      });
+    }
+
+    const aadharValidation = documentValidator.validateAadharNumber(aadharNumber);
+    if (!aadharValidation.isValid) {
+      return res.status(400).json({ 
+        error: aadharValidation.error,
+        code: aadharValidation.code 
+      });
+    }
+
+    // PAN Validation - OPTIONAL (only validate format if provided)
+    let validatedPanNumber = '';
+    if (panNumber && panNumber.trim() !== '') {
       const panValidation = documentValidator.validatePanNumber(panNumber);
       if (!panValidation.isValid) {
         return res.status(400).json({ 
@@ -147,96 +300,101 @@ class user {
           code: panValidation.code 
         });
       }
-
-      // ✅ Check if user already exists
-      let userExists = await userModel.findOne({ email, isDelete: false });
-      if (userExists) return res.status(400).json({ error: "Email already exists!" });
-
-      userExists = await userModel.findOne({ phone, isDelete: false });
-      if (userExists) return res.status(400).json({ error: "Phone number already exists!" });
-
-      // ✅ Encrypt password
-      const encryptedPassword = await bcrypt.hash(password, 10);
-      // Create user object
-      const userData = {
-        profile,
-        fullName,
-        email,
-        phone,
-        location,
-        password: encryptedPassword,
-        confirmPassword: encryptedPassword,
-        workExperience: experience ? true : false,
-        experiences: experience,
-        jobRole,
-        companyType,
-        department,
-        workMode,
-        jobType,
-        resume,
-        address,
-        education,
-        bio,
-        country,
-        street,
-        city,
-        state,
-        pincode,
-        skills,
-        preferredSalary: preferredSalary || { min: 0, max: 0 },
-        aadharNumber: aadharValidation.aadharNumber, // Use cleaned/formatted Aadhar number from validation
-        panNumber: panValidation.panNumber, // Use cleaned/formatted PAN number from validation
-        appliedOn: new Date(),
-        online: "Offline",
-        isBlock: false,
-        isDelete: false
-      };
-      // Create new user
-      const newUser = await userModel.create(userData);
-      console.log("User created successfully:", newUser._id);
-      console.log("User created successfully yuppp:", userData);
-
-      // Send welcome email
-      await send.sendMail(fullName, email, `Welcome to Labor Link!<h3>Thank you!<br>Labor Link Team</h3>`);
-
-      // Send welcome WhatsApp message
-      try {
-        await send.sendUserRegisteredWhatsapp({
-          name: fullName,
-          mobile: phone
-        });
-        console.log("WhatsApp welcome message sent successfully");
-      } catch (whatsappError) {
-        console.error("Failed to send WhatsApp message:", whatsappError);
-        // Don't fail the registration if WhatsApp fails
-      }
-      //sms
-      // SMS
-      try {
-        await send.sendregisterSMS(phone, fullName); // pass ONLY the variable
-        console.log("SMS welcome message sent successfully");
-      } catch (smsError) {
-        console.error("Failed to send SMS message:", smsError.response?.data || smsError.message);
-      }
-
-
-      return res.status(200).json({
-        success: "Successfully registered!",
-        userId: newUser._id,
-        newUser
-      });
-
-    } catch (err) {
-      console.error("Error in register function:", err);
-      if (err.name === 'ValidationError') {
-        return res.status(400).json({
-          error: "Validation error",
-          details: Object.values(err.errors).map(e => e.message)
-        });
-      }
-      return res.status(500).json({ error: "Internal server error!" });
+      validatedPanNumber = panValidation.panNumber;
     }
+
+    // Check if user already exists
+    let userExists = await userModel.findOne({ email, isDelete: false });
+    if (userExists) return res.status(400).json({ error: "Email already exists!" });
+
+    userExists = await userModel.findOne({ phone, isDelete: false });
+    if (userExists) return res.status(400).json({ error: "Phone number already exists!" });
+
+    // Encrypt password
+    const encryptedPassword = await bcrypt.hash(password, 10);
+
+    // Create user object
+    const userData = {
+      profile,
+      fullName,
+      email,
+      phone,
+      location,
+      password: encryptedPassword,
+      confirmPassword: encryptedPassword,
+      workExperience: experience ? true : false,
+      experiences: experience,
+      jobRole,
+      companyType,
+      department,
+      workMode,
+      jobType,
+      resume,
+      address,
+      education,
+      bio,
+      country,
+      street,
+      city,
+      state,
+      pincode,
+      skills,
+      preferredSalary: preferredSalary || { min: 0, max: 0 },
+      aadharNumber: aadharValidation.aadharNumber, // Required - use cleaned/formatted Aadhar
+      panNumber: validatedPanNumber, // Optional - empty string if not provided
+      appliedOn: new Date(),
+      online: "Offline",
+      isBlock: false,
+      isDelete: false
+    };
+
+    // Create new user
+    const newUser = await userModel.create(userData);
+    console.log("User created successfully:", newUser._id);
+
+    // Send welcome email
+    await send.sendMail(
+      fullName, 
+      email, 
+      `Welcome to Labor Link!<h3>Thank you!<br>Labor Link Team</h3>`
+    );
+
+    // Send welcome WhatsApp message
+    try {
+      await send.sendUserRegisteredWhatsapp({
+        name: fullName,
+        mobile: phone
+      });
+      console.log("WhatsApp welcome message sent successfully");
+    } catch (whatsappError) {
+      console.error("Failed to send WhatsApp message:", whatsappError);
+    }
+
+    // Send SMS
+    try {
+      await send.sendregisterSMS(phone, fullName);
+      console.log("SMS welcome message sent successfully");
+    } catch (smsError) {
+      console.error("Failed to send SMS message:", smsError.response?.data || smsError.message);
+    }
+
+    return res.status(200).json({
+      success: "Successfully registered!",
+      userId: newUser._id,
+      newUser
+    });
+
+  } catch (err) {
+    console.error("Error in register function:", err);
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({
+        error: "Validation error",
+        details: Object.values(err.errors).map(e => e.message)
+      });
+    }
+    return res.status(500).json({ error: "Internal server error!" });
   }
+}
 
   async registerFromResume(req, res) {
     try {
