@@ -570,6 +570,37 @@ class Employers {
     }
   }
 
+  // Get Individual Employers Only
+  async getIndividualEmployers(req, res) {
+    try {
+      // Find only employers where isIndividualEmployer is true
+      let individualEmployers = await employerModel.find({ 
+        isIndividualEmployer: true,
+        isDelete: false // Exclude deleted employers
+      }).sort({ _id: -1 });
+
+      if (individualEmployers.length <= 0) {
+        return res.status(200).json({ 
+          success: true,
+          message: "No individual employers found",
+          data: []
+        });
+      }
+
+      return res.status(200).json({ 
+        success: true,
+        count: individualEmployers.length,
+        data: individualEmployers 
+      });
+    } catch (err) {
+      console.error("Error fetching individual employers:", err);
+      return res.status(500).json({ 
+        success: false,
+        error: "Internal server error" 
+      });
+    }
+  }
+
   // Toggle Employer Approval
   async toggleEmployerApproval(req, res) {
     try {

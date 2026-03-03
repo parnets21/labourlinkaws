@@ -53,6 +53,7 @@ router.put("/editProfileEmployer", employerController.editProfile);
 router.post("/AddEducationEmployer", employerController.AddEducation);
 router.delete("/removeEducationEmployer/:userId/:removeId", employerController.removeEducation);
 router.get("/getAllProfileEmployer", employerController.getAllProfile);
+router.get("/individual-employers", employerController.getIndividualEmployers); // New route for individual employers
 router.patch("/approve-employer/:employerId", employerController.toggleEmployerApproval);
 router.get('/check-approval-status/:userId', employerController.checkApprovalStatus);
 
