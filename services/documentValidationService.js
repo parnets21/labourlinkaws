@@ -425,6 +425,65 @@ class DocumentValidationService {
   }
 
   /**
+   * Validate TAN (Tax Deduction and Collection Account Number) format
+   * @param {String} tanNumber - TAN number to validate
+   * @returns {Object} - Validation result with isValid boolean and error message
+   */
+  validateTanNumber(tanNumber) {
+    try {
+      if (!tanNumber) {
+        return {
+          isValid: false,
+          error: 'TAN number is required',
+          code: 'TAN_REQUIRED'
+        };
+      }
+
+      // Remove any spaces and convert to uppercase
+      const cleanTanNumber = tanNumber.toString().replace(/\s/g, '').toUpperCase();
+
+      // TAN number format: 10 characters alphanumeric
+      // Pattern: ABCD12345E (4 letters + 5 digits + 1 letter)
+      const tanPattern = /^[A-Z]{4}[0-9]{5}[A-Z]{1}$/;
+
+      if (cleanTanNumber.length !== 10) {
+        return {
+          isValid: false,
+          error: 'TAN number must be 10 characters in format: ABCD12345E',
+          code: 'TAN_INVALID_LENGTH',
+          expectedLength: 10,
+          actualLength: cleanTanNumber.length,
+          format: 'ABCD12345E'
+        };
+      }
+
+      if (!tanPattern.test(cleanTanNumber)) {
+        return {
+          isValid: false,
+          error: 'TAN number must be 10 characters in format: ABCD12345E (4 letters + 5 digits + 1 letter)',
+          code: 'TAN_INVALID_FORMAT',
+          format: 'ABCD12345E',
+          received: cleanTanNumber
+        };
+      }
+
+      return {
+        isValid: true,
+        tanNumber: cleanTanNumber,
+        format: 'Valid TAN format'
+      };
+
+    } catch (error) {
+      return {
+        isValid: false,
+        error: 'Error validating TAN number',
+        code: 'TAN_VALIDATION_ERROR',
+        details: error.message
+      };
+    }
+  }
+
+  /**
    * Validate Aadhar number format (12-digit numeric)
    * @param {String} aadharNumber - Aadhar number to validate
    * @returns {Object} - Validation result with isValid boolean and error message

@@ -27,6 +27,8 @@ const employerSchema = new Schema(
     industry: { type: String },
     GstNum: { type: String },
     PanNum: { type: String },
+    TanNum: { type: String }, // Add TAN field
+    isIndividualEmployer: { type: Boolean, default: false }, // Add individual employer flag
     deviceId: { type: String },
     platform: { type: String, enum: ["android", "ios"] },
     isActive: { type: Boolean, default: true },

@@ -66,7 +66,8 @@ class Employers {
         mobile, age, name, email, password, gender,
         street, city, state, pincode, country, address,
         hiring, MyCompany, CompanyName, companyWebsite,
-        numberOfemp, industry, GstNum, searchCount, PanNum, profile
+        numberOfemp, industry, GstNum, searchCount, PanNum, profile,
+        isIndividualEmployer, TanNum // Add new fields
       } = req.body;
 
       // Validations
@@ -95,36 +96,64 @@ class Employers {
       // Document validation using DocumentValidationService
       const documentValidator = new DocumentValidationService();
 
-      // GST Validation - mandatory for employers
-      if (!GstNum || GstNum.trim() === '') {
-        return res.status(400).json({ 
-          error: "GST number is required for employer registration",
-          code: "GST_REQUIRED"
-        });
-      }
+      // Conditional validation based on employer type
+      if (isIndividualEmployer) {
+        // For individual employers: PAN is required, TAN is optional, GST not required
+        if (!PanNum || PanNum.trim() === '') {
+          return res.status(400).json({ 
+            error: "PAN number is required for individual employer registration",
+            code: "PAN_REQUIRED"
+          });
+        }
 
-      const gstValidation = documentValidator.validateGstNumber(GstNum);
-      if (!gstValidation.isValid) {
-        return res.status(400).json({ 
-          error: gstValidation.error,
-          code: gstValidation.code 
-        });
-      }
+        const panValidation = documentValidator.validatePanNumber(PanNum);
+        if (!panValidation.isValid) {
+          return res.status(400).json({ 
+            error: panValidation.error,
+            code: panValidation.code 
+          });
+        }
 
-      // PAN Validation - mandatory for employers
-      if (!PanNum || PanNum.trim() === '') {
-        return res.status(400).json({ 
-          error: "PAN number is required for employer registration",
-          code: "PAN_REQUIRED"
-        });
-      }
+        // TAN validation - optional but validate format if provided
+        if (TanNum && TanNum.trim() !== '') {
+          const tanValidation = documentValidator.validateTanNumber(TanNum);
+          if (!tanValidation.isValid) {
+            return res.status(400).json({ 
+              error: tanValidation.error,
+              code: tanValidation.code 
+            });
+          }
+        }
+      } else {
+        // For company/organization employers: GST or PAN required
+        if ((!GstNum || GstNum.trim() === '') && (!PanNum || PanNum.trim() === '')) {
+          return res.status(400).json({ 
+            error: "Either GST number or PAN number is required for employer registration",
+            code: "DOCUMENT_REQUIRED"
+          });
+        }
 
-      const panValidation = documentValidator.validatePanNumber(PanNum);
-      if (!panValidation.isValid) {
-        return res.status(400).json({ 
-          error: panValidation.error,
-          code: panValidation.code 
-        });
+        // GST Validation - if provided
+        if (GstNum && GstNum.trim() !== '') {
+          const gstValidation = documentValidator.validateGstNumber(GstNum);
+          if (!gstValidation.isValid) {
+            return res.status(400).json({ 
+              error: gstValidation.error,
+              code: gstValidation.code 
+            });
+          }
+        }
+
+        // PAN Validation - if provided
+        if (PanNum && PanNum.trim() !== '') {
+          const panValidation = documentValidator.validatePanNumber(PanNum);
+          if (!panValidation.isValid) {
+            return res.status(400).json({ 
+              error: panValidation.error,
+              code: panValidation.code 
+            });
+          }
+        }
       }
 
       // Password hashing
@@ -157,8 +186,10 @@ class Employers {
         MyCompany: MyCompany || false,
         companyWebsite: companyWebsite || '',
         numberOfemp: numberOfemp || null,
-        GstNum: gstValidation.gstNumber, // Use cleaned/formatted GST number from validation
-        PanNum: panValidation.panNumber, // Use cleaned/formatted PAN number from validation
+        GstNum: isIndividualEmployer ? '' : (GstNum || ''), // Empty for individual employers
+        PanNum: PanNum || '',
+        TanNum: isIndividualEmployer ? (TanNum || '') : '', // Only for individual employers
+        isIndividualEmployer: isIndividualEmployer || false, // Add individual employer flag
         searchCount: searchCount || 0,
         EmployerImg: profile || '',
         isApproved: false,
