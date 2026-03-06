@@ -24,6 +24,23 @@ const userSchema = new Schema(
     },
 
     //admin 
+    // Cascading dropdown fields - store IDs for proper relationships
+    industryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Industry',
+      index: true
+    },
+    categoryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Category',
+      index: true
+    },
+    jobRoleId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'SubCategory', // SubCategory is the job role
+      index: true
+    },
+    // Legacy fields - kept for backward compatibility
     jobRole: { type: String },
     companyType: { type: String },
     department: { type: String },

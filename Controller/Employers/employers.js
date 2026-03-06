@@ -67,7 +67,9 @@ class Employers {
         street, city, state, pincode, country, address,
         hiring, MyCompany, CompanyName, companyWebsite,
         numberOfemp, industry, GstNum, searchCount, PanNum, profile,
-        isIndividualEmployer, TanNum // Add new fields
+        isIndividualEmployer, TanNum, // Add new fields
+        // New cascading dropdown fields
+        industryId, categoryId, jobRoleId
       } = req.body;
 
       // Validations
@@ -76,7 +78,11 @@ class Employers {
       if (!password || password.length < 6) return res.status(400).json({ error: "Password must be at least 6 characters!" });
       if (!mobile || mobile.toString().trim() === '') return res.status(400).json({ error: "Mobile number is required!" });
       if (!CompanyName || CompanyName.trim() === '') return res.status(400).json({ error: "Company name is required!" });
-      if (!industry || industry.trim() === '') return res.status(400).json({ error: "Industry is required!" });
+      
+      // Validate industry - either legacy string or new ID
+      if (!industry && !industryId) {
+        return res.status(400).json({ error: "Industry is required!" });
+      }
 
       // Convert mobile to number if it's a string
       const mobileNumber = typeof mobile === 'string' ? parseInt(mobile) : mobile;
@@ -92,6 +98,83 @@ class Employers {
 
       const existingEmail = await employerModel.findOne({ email, isDelete: false });
       if (existingEmail) return res.status(400).json({ error: "Email ID already exists!" });
+
+      // Validate cascading dropdown relationships if provided
+      if (industryId || categoryId || jobRoleId) {
+        const industryModel = require("../../Model/Admin/jobmanagment/industrymanagment");
+        const categoryModel = require("../../Model/Admin/jobmanagment/Category");
+        const subCategoryModel = require("../../Model/Admin/jobmanagment/SubCategory");
+
+        // If jobRoleId is provided, validate the entire chain
+        if (jobRoleId) {
+          if (!categoryId) {
+            return res.status(400).json({ 
+              error: "Category is required when job role is selected",
+              code: "CATEGORY_REQUIRED"
+            });
+          }
+          if (!industryId) {
+            return res.status(400).json({ 
+              error: "Industry is required when job role is selected",
+              code: "INDUSTRY_REQUIRED"
+            });
+          }
+
+          // Verify job role exists
+          const jobRole = await subCategoryModel.findById(jobRoleId);
+          if (!jobRole) {
+            return res.status(400).json({ 
+              error: "Invalid job role selected",
+              code: "INVALID_JOB_ROLE"
+            });
+          }
+
+          // Verify job role belongs to selected category
+          if (jobRole.categoryId.toString() !== categoryId) {
+            return res.status(400).json({ 
+              error: "Selected job role does not belong to the selected category",
+              code: "JOB_ROLE_CATEGORY_MISMATCH"
+            });
+          }
+
+          // Verify job role belongs to selected industry
+          if (jobRole.industryId.toString() !== industryId) {
+            return res.status(400).json({ 
+              error: "Selected job role does not belong to the selected industry",
+              code: "JOB_ROLE_INDUSTRY_MISMATCH"
+            });
+          }
+        }
+
+        // If categoryId is provided, validate it belongs to industry
+        if (categoryId && industryId) {
+          const category = await categoryModel.findById(categoryId);
+          if (!category) {
+            return res.status(400).json({ 
+              error: "Invalid category selected",
+              code: "INVALID_CATEGORY"
+            });
+          }
+
+          if (category.industryId.toString() !== industryId) {
+            return res.status(400).json({ 
+              error: "Selected category does not belong to the selected industry",
+              code: "CATEGORY_INDUSTRY_MISMATCH"
+            });
+          }
+        }
+
+        // Verify industry exists
+        if (industryId) {
+          const industryDoc = await industryModel.findById(industryId);
+          if (!industryDoc) {
+            return res.status(400).json({ 
+              error: "Invalid industry selected",
+              code: "INVALID_INDUSTRY"
+            });
+          }
+        }
+      }
 
       // Document validation using DocumentValidationService
       const documentValidator = new DocumentValidationService();
@@ -175,6 +258,11 @@ class Employers {
         password: hashedPassword,
         gender: gender && gender !== '' ? gender : 'Other', // Default gender if not provided
         CompanyName,
+        // New cascading fields
+        industryId: industryId || null,
+        categoryId: categoryId || null,
+        jobRoleId: jobRoleId || null,
+        // Legacy field
         industry,
         street: street || '',
         city: city || '',
