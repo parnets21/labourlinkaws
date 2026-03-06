@@ -2245,14 +2245,19 @@ async getDepartments(req, res) {
       // Try new structured Category model first
       try {
         const newCategories = await Category.find({ isActive: true })
-          .select('_id categoryName categoryId')
+          .select('_id categoryName categoryId industryId')
+          .populate('industryId', 'industryName type')
           .sort({ categoryName: 1 });
         
         if (newCategories && newCategories.length > 0) {
           departments = newCategories.map(cat => ({
             _id: cat._id,
             departmentName: cat.categoryName,
-            departmentId: cat.categoryId || cat._id.toString()
+            categoryName: cat.categoryName,
+            departmentId: cat.categoryId || cat._id.toString(),
+            industryId: cat.industryId?._id || cat.industryId,
+            industryName: cat.industryId?.industryName || cat.industryId?.type,
+            industry: cat.industryId
           }));
         }
       } catch (newModelError) {
@@ -2269,7 +2274,10 @@ async getDepartments(req, res) {
         departments = oldCategories.map(cat => ({
           _id: cat._id,
           departmentName: cat.category,
-          departmentId: cat._id.toString()
+          categoryName: cat.category,
+          departmentId: cat._id.toString(),
+          industryName: cat.Industry,
+          industry: cat.Industry
         }));
       }
 
@@ -2316,13 +2324,24 @@ async getDepartments(req, res) {
       try {
         const SubCategory = require("../../Model/Admin/jobmanagment/SubCategory");
         const subCategories = await SubCategory.find({ isActive: true })
-          .select('_id subCategoryName subCategoryId')
+          .select('_id subCategoryName subCategoryId categoryId industryId')
+          .populate('categoryId', 'categoryName')
+          .populate('industryId', 'industryName type')
           .sort({ subCategoryName: 1 });
         
         if (subCategories && subCategories.length > 0) {
           roles = subCategories.map(subCat => ({
             _id: subCat._id,
-            jobRole: subCat.subCategoryName
+            jobRole: subCat.subCategoryName,
+            categoryName: subCat.subCategoryName,
+            departmentId: subCat.categoryId?._id || subCat.categoryId,
+            departmentName: subCat.categoryId?.categoryName,
+            department: subCat.categoryId,
+            categoryId: subCat.categoryId?._id || subCat.categoryId,
+            category: subCat.categoryId?.categoryName,
+            industryId: subCat.industryId?._id || subCat.industryId,
+            industryName: subCat.industryId?.industryName || subCat.industryId?.type,
+            industry: subCat.industryId
           }));
         }
       } catch (subCategoryError) {
@@ -2331,13 +2350,23 @@ async getDepartments(req, res) {
         // Fallback to Category model
         try {
           const categories = await Category.find({ isActive: true })
-            .select('_id categoryName categoryId')
+            .select('_id categoryName categoryId industryId')
+            .populate('industryId', 'industryName type')
             .sort({ categoryName: 1 });
           
           if (categories && categories.length > 0) {
             roles = categories.map(cat => ({
               _id: cat._id,
-              jobRole: cat.categoryName
+              jobRole: cat.categoryName,
+              categoryName: cat.categoryName,
+              departmentId: cat._id,
+              departmentName: cat.categoryName,
+              department: cat.categoryName,
+              categoryId: cat._id,
+              category: cat.categoryName,
+              industryId: cat.industryId?._id || cat.industryId,
+              industryName: cat.industryId?.industryName || cat.industryId?.type,
+              industry: cat.industryId
             }));
           }
         } catch (categoryError) {
@@ -2355,7 +2384,13 @@ async getDepartments(req, res) {
           
           roles = oldCategories.map(cat => ({
             _id: cat._id,
-            jobRole: cat.category
+            jobRole: cat.category,
+            categoryName: cat.category,
+            departmentName: cat.category,
+            department: cat.category,
+            category: cat.category,
+            industryName: cat.Industry,
+            industry: cat.Industry
           }));
         } catch (oldCategoryError) {
           console.log("Old category model also not available");

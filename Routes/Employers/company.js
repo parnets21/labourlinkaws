@@ -83,7 +83,7 @@ const subCategoryController = require("../../Controller/Admin/subCategoryControl
 router.get("/categories/by-industry/:industryId", categoryController.getCategoriesByIndustry);
 router.get("/subcategories/by-category/:categoryId", subCategoryController.getSubCategoriesByCategory);
 
-//get api http://localhost:8500/api/user/skills
+//get api https://laborlink.co.in/api/user/skills
 
 // Job Management Routes - PUT (Edit) endpoints
 router.put("/edit-company-type/:id", jobController.editCompanyType);

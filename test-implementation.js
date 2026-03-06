@@ -5,7 +5,7 @@
 
 const axios = require('axios');
 
-const BASE_URL = 'http://localhost:8500/api';
+const BASE_URL = 'https://laborlink.co.in/api';
 let testData = {
   industryId: null,
   categoryId: null,
@@ -406,7 +406,7 @@ async function runTests() {
     log('║                    TEST SUMMARY                           ║', 'green');
     log('╚═══════════════════════════════════════════════════════════╝', 'green');
     logSuccess('All API endpoints tested successfully!');
-    logInfo('Backend server: http://localhost:8500');
+    logInfo('Backend server: https://laborlink.co.in');
     logInfo('Frontend admin: http://localhost:5174');
     log('\n✨ Next Steps:', 'cyan');
     log('1. Open http://localhost:5174 in your browser', 'cyan');

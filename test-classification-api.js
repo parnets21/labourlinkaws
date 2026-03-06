@@ -5,7 +5,7 @@
 
 const axios = require('axios');
 
-const BASE_URL = 'http://localhost:8500';
+const BASE_URL = 'https://laborlink.co.in';
 
 async function testClassificationAPIs() {
   console.log('🧪 Testing Job Classification Hierarchy APIs...\n');
