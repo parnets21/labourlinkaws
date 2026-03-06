@@ -2240,11 +2240,20 @@ async getCompanyTypes(req, res) {
   };
 async getDepartments(req, res) {
     try {
+      // Get optional filter parameter from query string
+      const { industryId } = req.query;
+      
       let departments = [];
       
       // Try new structured Category model first
       try {
-        const newCategories = await Category.find({ isActive: true })
+        // Build filter query based on provided parameters
+        let filter = { isActive: true };
+        if (industryId) {
+          filter.industryId = industryId;
+        }
+        
+        const newCategories = await Category.find(filter)
           .select('_id categoryName categoryId industryId')
           .populate('industryId', 'industryName type')
           .sort({ categoryName: 1 });
@@ -2265,7 +2274,7 @@ async getDepartments(req, res) {
       }
       
       // Fallback to old simple category model if new model has no data
-      if (departments.length === 0) {
+      if (departments.length === 0 && !industryId) {
         const OldCategory = require("../../Model/Admin/category");
         const oldCategories = await OldCategory.find({})
           .select('_id category Industry')
@@ -2281,8 +2290,8 @@ async getDepartments(req, res) {
         }));
       }
 
-      // If still no data, provide some default departments
-      if (departments.length === 0) {
+      // If still no data and no filter applied, provide some default departments
+      if (departments.length === 0 && !industryId) {
         const defaultDepartments = [
           'Information Technology',
           'Human Resources',
@@ -2306,7 +2315,8 @@ async getDepartments(req, res) {
       return res.status(200).json({
         success: true,
         count: departments.length,
-        data: departments
+        data: departments,
+        filtered: !!industryId
       });
     } catch (error) {
       console.error("Error fetching departments:", error);
@@ -2318,12 +2328,24 @@ async getDepartments(req, res) {
   }
   async getJobRoles(req, res) {
     try {
+      // Get optional filter parameters from query string
+      const { industryId, categoryId } = req.query;
+      
       let roles = [];
       
       // Try SubCategory model first
       try {
         const SubCategory = require("../../Model/Admin/jobmanagment/SubCategory");
-        const subCategories = await SubCategory.find({ isActive: true })
+        
+        // Build filter query based on provided parameters
+        let filter = { isActive: true };
+        if (categoryId) {
+          filter.categoryId = categoryId;
+        } else if (industryId) {
+          filter.industryId = industryId;
+        }
+        
+        const subCategories = await SubCategory.find(filter)
           .select('_id subCategoryName subCategoryId categoryId industryId')
           .populate('categoryId', 'categoryName')
           .populate('industryId', 'industryName type')
@@ -2349,7 +2371,12 @@ async getDepartments(req, res) {
         
         // Fallback to Category model
         try {
-          const categories = await Category.find({ isActive: true })
+          let filter = { isActive: true };
+          if (industryId) {
+            filter.industryId = industryId;
+          }
+          
+          const categories = await Category.find(filter)
             .select('_id categoryName categoryId industryId')
             .populate('industryId', 'industryName type')
             .sort({ categoryName: 1 });

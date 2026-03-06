@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Cascading Dropdowns</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        select:disabled {
+            background-color: #f0f0f0;
+            cursor: not-allowed;
+        }
+        .info {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        .selected-info {
+            background-color: #f1f8e9;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+        .selected-info h3 {
+            margin-top: 0;
+            color: #558b2f;
+        }
+        .selected-info p {
+            margin: 5px 0;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+        .success {
+            color: green;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 Test Cascading Dropdowns</h1>
+        
+        <div class="info">
+            <strong>How it works:</strong>
+            <ol>
+                <li>Select an Industry</li>
+                <li>Categories for that industry will load</li>
+                <li>Select a Category</li>
+                <li>Job Roles for that category will load</li>
+            </ol>
+        </div>
+
+        <form id="testForm">
+            <div class="form-group">
+                <label for="industry">Industry *</label>
+                <select id="industry" required>
+                    <option value="">-- Select Industry --</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="category">Category *</label>
+                <select id="category" disabled required>
+                    <option value="">-- Select Category --</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="jobRole">Job Role *</label>
+                <select id="jobRole" disabled required>
+                    <option value="">-- Select Job Role --</option>
+                </select>
+            </div>
+
+            <button type="submit">Test Registration</button>
+        </form>
+
+        <div id="message"></div>
+
+        <div class="selected-info" id="selectedInfo" style="display: none;">
+            <h3>Selected Values:</h3>
+            <p><strong>Industry:</strong> <span id="selectedIndustry"></span></p>
+            <p><strong>Category:</strong> <span id="selectedCategory"></span></p>
+            <p><strong>Job Role:</strong> <span id="selectedJobRole"></span></p>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin + '/api';
+        
+        let selectedData = {
+            industry: null,
+            category: null,
+            jobRole: null
+        };
+
+        // Fetch industries on page load
+        async function fetchIndustries() {
+            try {
+                const response = await fetch(`${API_BASE}/admin/industries`);
+                const data = await response.json();
+                
+                const industrySelect = document.getElementById('industry');
+                industrySelect.innerHTML = '<option value="">-- Select Industry --</option>';
+                
+                if (data.success && data.data) {
+                    data.data.forEach(industry => {
+                        const option = document.createElement('option');
+                        option.value = industry._id;
+                        option.textContent = industry.industryName;
+                        option.dataset.name = industry.industryName;
+                        industrySelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching industries:', error);
+                showMessage('Error loading industries', 'error');
+            }
+        }
+
+        // Fetch categories by industry
+        async function fetchCategories(industryId) {
+            try {
+                const response = await fetch(`${API_BASE}/admin/categories/by-industry/${industryId}`);
+                const data = await response.json();
+                
+                const categorySelect = document.getElementById('category');
+                categorySelect.innerHTML = '<option value="">-- Select Category --</option>';
+                
+                if (data.success && data.data) {
+                    data.data.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category._id;
+                        option.textContent = category.categoryName;
+                        option.dataset.name = category.categoryName;
+                        categorySelect.appendChild(option);
+                    });
+                    categorySelect.disabled = false;
+                } else {
+                    categorySelect.disabled = true;
+                }
+            } catch (error) {
+                console.error('Error fetching categories:', error);
+                showMessage('Error loading categories', 'error');
+            }
+        }
+
+        // Fetch job roles by category
+        async function fetchJobRoles(categoryId) {
+            try {
+                const response = await fetch(`${API_BASE}/admin/subcategories/by-category/${categoryId}`);
+                const data = await response.json();
+                
+                const jobRoleSelect = document.getElementById('jobRole');
+                jobRoleSelect.innerHTML = '<option value="">-- Select Job Role --</option>';
+                
+                if (data.success && data.data) {
+                    data.data.forEach(role => {
+                        const option = document.createElement('option');
+                        option.value = role._id;
+                        option.textContent = role.subCategoryName;
+                        option.dataset.name = role.subCategoryName;
+                        jobRoleSelect.appendChild(option);
+                    });
+                    jobRoleSelect.disabled = false;
+                } else {
+                    jobRoleSelect.disabled = true;
+                }
+            } catch (error) {
+                console.error('Error fetching job roles:', error);
+                showMessage('Error loading job roles', 'error');
+            }
+        }
+
+        // Event listeners
+        document.getElementById('industry').addEventListener('change', function(e) {
+            const industryId = e.target.value;
+            const industryName = e.target.options[e.target.selectedIndex].dataset.name;
+            
+            // Reset dependent dropdowns
+            document.getElementById('category').innerHTML = '<option value="">-- Select Category --</option>';
+            document.getElementById('category').disabled = true;
+            document.getElementById('jobRole').innerHTML = '<option value="">-- Select Job Role --</option>';
+            document.getElementById('jobRole').disabled = true;
+            
+            selectedData.industry = { id: industryId, name: industryName };
+            selectedData.category = null;
+            selectedData.jobRole = null;
+            
+            if (industryId) {
+                fetchCategories(industryId);
+            }
+            
+            updateSelectedInfo();
+        });
+
+        document.getElementById('category').addEventListener('change', function(e) {
+            const categoryId = e.target.value;
+            const categoryName = e.target.options[e.target.selectedIndex].dataset.name;
+            
+            // Reset dependent dropdown
+            document.getElementById('jobRole').innerHTML = '<option value="">-- Select Job Role --</option>';
+            document.getElementById('jobRole').disabled = true;
+            
+            selectedData.category = { id: categoryId, name: categoryName };
+            selectedData.jobRole = null;
+            
+            if (categoryId) {
+                fetchJobRoles(categoryId);
+            }
+            
+            updateSelectedInfo();
+        });
+
+        document.getElementById('jobRole').addEventListener('change', function(e) {
+            const jobRoleId = e.target.value;
+            const jobRoleName = e.target.options[e.target.selectedIndex].dataset.name;
+            
+            selectedData.jobRole = { id: jobRoleId, name: jobRoleName };
+            updateSelectedInfo();
+        });
+
+        // Form submission
+        document.getElementById('testForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!selectedData.industry || !selectedData.category || !selectedData.jobRole) {
+                showMessage('Please select all fields', 'error');
+                return;
+            }
+
+            const testData = {
+                fullName: 'Test User',
+                email: 'test' + Date.now() + '@example.com',
+                phone: Math.floor(1000000000 + Math.random() * 9000000000),
+                password: 'test123456',
+                industryId: selectedData.industry.id,
+                categoryId: selectedData.category.id,
+                jobRoleId: selectedData.jobRole.id,
+                aadharNumber: '123456789012'
+            };
+
+            try {
+                showMessage('Testing registration...', 'info');
+                const response = await fetch(`${API_BASE}/user/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showMessage('✅ Success! Cascading validation works correctly!', 'success');
+                } else {
+                    showMessage('❌ Error: ' + (result.error || 'Registration failed'), 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('❌ Network error: ' + error.message, 'error');
+            }
+        });
+
+        function updateSelectedInfo() {
+            const infoDiv = document.getElementById('selectedInfo');
+            
+            if (selectedData.industry) {
+                document.getElementById('selectedIndustry').textContent = selectedData.industry.name;
+                document.getElementById('selectedCategory').textContent = selectedData.category ? selectedData.category.name : '-';
+                document.getElementById('selectedJobRole').textContent = selectedData.jobRole ? selectedData.jobRole.name : '-';
+                infoDiv.style.display = 'block';
+            } else {
+                infoDiv.style.display = 'none';
+            }
+        }
+
+        function showMessage(msg, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = msg;
+            messageDiv.className = type;
+        }
+
+        // Initialize
+        fetchIndustries();
+    </script>
+</body>
+</html>
