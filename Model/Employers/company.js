@@ -9,8 +9,7 @@ const jobSchema = new Schema(
     companymobile: String,
     companyindustry: String,
     companytype: String,
-    department: String, // Keep for backward compatibility
-    // New hierarchical classification fields
+    department: String,
     industryId: {
       type: ObjectId,
       ref: 'Industry',
@@ -49,7 +48,9 @@ const jobSchema = new Schema(
     additionalNotes: String,
     skill: [{ type: String, required: true }],
     email: String,
-    logo:String,
+    logo: String,
+    jdPdf: String,
+    businessImages: [{ type: String }],
     english: String,
     experience: String,
     interview: String,

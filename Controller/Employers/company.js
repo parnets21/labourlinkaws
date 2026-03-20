@@ -99,13 +99,20 @@ let obj = {
         companyName, jobtitle, averageIncentive, openings, address, email, reason,
         experience, interview, period, description, typeofjob, typeofwork,
         typeofeducation, education, experiencerequired, gendertype, jobProfile,
-        minSalary, maxSalary, skill, benefits, category, typeofqualification,
+        minSalary, maxSalary, benefits, category, typeofqualification,
         location, time, whatsapp, adminId, employerId, salarytype, interviewername,
         // Added new fields below
         companywebsite, companymobile, companyindustry, companytype, department,
         companyaddress, requirements, responsibilities, workSchedule, locationDetails,
         preferredQualifications, additionalNotes
       };
+
+      // Always ensure skill is stored as an array
+      if (typeof skill === 'string') {
+        try { obj.skill = JSON.parse(skill); } catch { obj.skill = skill ? [skill] : []; }
+      } else {
+        obj.skill = Array.isArray(skill) ? skill : [];
+      }
 
       // Add classification fields if provided
       if (industryId) obj.industryId = industryId;
@@ -115,19 +122,37 @@ let obj = {
       // Handle logo upload to S3
       if (req.files && req.files.length > 0) {
         const logoFile = req.files.find(file => file.fieldname === "logo");
-
         if (logoFile) {
           try {
-            // Upload logo to S3
             const logoUrl = await uploadFile2(logoFile, "company-logos");
             obj["logo"] = logoUrl;
           } catch (uploadError) {
             console.error("Error uploading logo to S3:", uploadError);
-            return res.status(500).json({
-              success: false,
-              message: "Failed to upload company logo",
-              error: uploadError.message
-            });
+            return res.status(500).json({ success: false, message: "Failed to upload company logo", error: uploadError.message });
+          }
+        }
+
+        // Handle JD PDF upload
+        const jdPdfFile = req.files.find(file => file.fieldname === "jdPdf");
+        if (jdPdfFile) {
+          try {
+            const jdPdfUrl = await uploadFile2(jdPdfFile, "jd-pdfs");
+            obj["jdPdf"] = jdPdfUrl;
+          } catch (uploadError) {
+            console.error("Error uploading JD PDF to S3:", uploadError);
+          }
+        }
+
+        // Handle business images upload
+        const bizImageFiles = req.files.filter(file => file.fieldname === "businessImages");
+        if (bizImageFiles.length > 0) {
+          try {
+            const bizImageUrls = await Promise.all(
+              bizImageFiles.map(f => uploadFile2(f, "business-images"))
+            );
+            obj["businessImages"] = bizImageUrls;
+          } catch (uploadError) {
+            console.error("Error uploading business images to S3:", uploadError);
           }
         }
       }
