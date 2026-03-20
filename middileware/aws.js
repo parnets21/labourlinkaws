@@ -1,4 +1,5 @@
-const { S3Client, PutObjectCommand, DeleteObjectCommand, DeleteObjectsCommand } = require("@aws-sdk/client-s3");
+const { S3Client, PutObjectCommand, DeleteObjectCommand, DeleteObjectsCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
+const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const dotenv = require("dotenv");
 const fs = require('fs');
 dotenv.config();
@@ -187,10 +188,31 @@ const multifileUpload = async (files, bucketname) => {
   }
 };
 
+/**
+ * Generate a pre-signed URL for a private S3 object
+ * @param {String} url - Full S3 URL of the object
+ * @param {Number} expiresIn - Expiry in seconds (default 1 hour)
+ * @returns {Promise<String>} - Pre-signed URL
+ */
+const getPresignedUrl = async (url, expiresIn = 3600) => {
+  try {
+    const key = getUrlFileKey(url);
+    const command = new GetObjectCommand({
+      Bucket: process.env.AWS_S3_BUCKET_NAME,
+      Key: key,
+    });
+    return await getSignedUrl(s3Client, command, { expiresIn });
+  } catch (error) {
+    console.error("Error generating pre-signed URL:", error);
+    return url; // fallback to original URL
+  }
+};
+
 module.exports = { 
   uploadFile, 
   uploadFile2, 
   deleteFile, 
   updateFile, 
-  multifileUpload 
+  multifileUpload,
+  getPresignedUrl,
 };

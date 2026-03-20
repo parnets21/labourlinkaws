@@ -18,7 +18,7 @@ const Salary = require("../../Model/Admin/jobmanagment/Salary")
 const Education = require("../../Model/Admin/jobmanagment/education")
 const ExperienceLevel = require("../../Model/Admin/jobmanagment/ExperienceLevel")
 const Skill = require("../../Model/Admin/jobmanagment/Skill");
-const { uploadFile2, deleteFile } = require("../../middileware/aws");
+const { uploadFile2, deleteFile, getPresignedUrl } = require("../../middileware/aws");
 const Chefs = require("../../Model/Admin/jobmanagment/Chefs");
 const Cuisines = require("../../Model/Admin/jobmanagment/Cuisines");
 const user = require("../../Model/User/user");
@@ -208,7 +208,12 @@ let obj = {
         return res.status(404).json({ message: "Job not found" });
       }
 
-      res.status(200).json(job);
+      const jobObj = job.toObject();
+      if (jobObj.jdPdf) {
+        try { jobObj.jdPdf = await getPresignedUrl(jobObj.jdPdf, 3600); } catch (_) {}
+      }
+
+      res.status(200).json(jobObj);
     } catch (error) {
       res.status(500).json({ message: "Error fetching job details", error });
     }
@@ -616,6 +621,17 @@ let obj = {
 
       const findData = await query.exec();
 
+      // Sign jdPdf URLs so private S3 objects are accessible
+      const signedData = await Promise.all(
+        findData.map(async (job) => {
+          const obj = job.toObject();
+          if (obj.jdPdf) {
+            try { obj.jdPdf = await getPresignedUrl(obj.jdPdf, 3600); } catch (_) {}
+          }
+          return obj;
+        })
+      );
+
       // Record usage for successful searches only when userId is present
       try {
         const effectiveUserId = req.query.userId || req.params.userId;
@@ -642,7 +658,7 @@ let obj = {
 
       return res.status(200).json({
         success: true,
-        data: findData,
+        data: signedData,
         meta: {
           remainingSearches,
           totalLimit: typeof totalLimit === 'number' ? totalLimit : null
