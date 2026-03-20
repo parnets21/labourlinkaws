@@ -134,6 +134,7 @@ let obj = {
 
         // Handle JD PDF upload
         const jdPdfFile = req.files.find(file => file.fieldname === "jdPdf");
+        console.log('📎 Files received:', req.files?.map(f => f.fieldname), 'jdPdfFile:', !!jdPdfFile);
         if (jdPdfFile) {
           try {
             const jdPdfUrl = await uploadFile2(jdPdfFile, "jd-pdfs");
