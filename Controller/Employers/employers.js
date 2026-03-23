@@ -356,6 +356,21 @@ class Employers {
         console.log("No EmployerImg file uploaded");
       }
 
+      // Map all other profile fields from req.body
+      const allowedFields = [
+        'CompanyName', 'MyCompany', 'CompanyInd', 'companyWebsite',
+        'companyWebsiteclient', 'numberOfemp', 'industry', 'address',
+        'name', 'email', 'mobile', 'age', 'gender', 'country',
+        'street', 'city', 'state', 'pincode', 'skillSet', 'hiring',
+        'userName',
+      ];
+
+      allowedFields.forEach(field => {
+        if (req.body[field] !== undefined && req.body[field] !== '') {
+          obj[field] = req.body[field];
+        }
+      });
+
       const updatedUser = await employerModel.findOneAndUpdate(
         { _id: userId },
         { $set: obj },
