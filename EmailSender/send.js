@@ -623,14 +623,14 @@ const sendRegistrationOTPSMS = async (mobile, otp) => {
   try {
     const formattedMobile = String(mobile).replace(/\D/g, '');
 
-    // Message must match DLT template: "Your OTP for LabourLink registration is {#var#}. ukJ5CiNnO4B"
-    const message = `Your OTP for LabourLink registration is ${otp}. ukJ5CiNnO4B`;
+    // Matches DLT approved template: "Your OTP for LabourLink registration is {#var#}."
+    const message = `Your OTP for LabourLink registration is ${otp}.`;
 
     const payload = {
       number: [`91${formattedMobile}`],
       message: message,
       senderId: "LBRLNK",
-      templateId: "1707175672728517784" // using register template as fallback — register OTP template on edumarcsms and update
+      templateId: "1707176888574912857" // smartping DLT approved OTP template
     };
 
     console.log("SMS OTP Payload:", JSON.stringify(payload, null, 2));
