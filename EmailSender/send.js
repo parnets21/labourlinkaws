@@ -630,7 +630,7 @@ const sendRegistrationOTPSMS = async (mobile, otp) => {
       number: [`91${formattedMobile}`],
       message: message,
       senderId: "LBRLNK",
-      templateId: "REPLACE_WITH_NEW_TEMPLATE_ID" // update once new template is approved
+      templateId: "1707175672728517784" // using register template as fallback — register OTP template on edumarcsms and update
     };
 
     console.log("SMS OTP Payload:", JSON.stringify(payload, null, 2));
