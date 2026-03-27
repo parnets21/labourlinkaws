@@ -618,43 +618,23 @@ const sendSubscriptionConfirmationEmail = async (name, email, planName, amount, 
 
 // Send Registration OTP via SMS
 const sendRegistrationOTPSMS = async (mobile, otp) => {
-  console.log("🚨🚨🚨 SMS FUNCTION CALLED - START 🚨🚨🚨");
-  console.log("📱 SMS Input Parameters:", { mobile, otp, mobileType: typeof mobile, otpType: typeof otp });
+  console.log("📱 Sending Registration OTP SMS to:", mobile, "OTP:", otp);
   
   try {
-    console.log("=== SMS OTP FUNCTION DEBUG ===");
-    console.log("Function called with mobile:", mobile, "OTP:", otp);
-    
     const formattedMobile = String(mobile).replace(/\D/g, '');
-    console.log("Formatted mobile:", formattedMobile);
-    console.log("Mobile length:", formattedMobile.length);
 
-    // Send only the OTP value - the template will format it
-    const message = String(otp);
-    console.log("SMS Message to send:", message);
-    console.log("Message length:", message.length);
+    // Full message text matching the DLT-registered OTP template
+    const message = `Your Labor Link OTP for registration is ${otp}. Valid for 10 minutes. Do not share with anyone. - Labor Link`;
 
-    // Try OTP template first, fallback to registration template
-    let payload = {
+    const payload = {
       number: [`91${formattedMobile}`],
-      message: String(otp), // Send only OTP value
+      message: message,
       senderId: "LBRLNK",
-      templateId: "1707168926925165526" // OTP template
+      templateId: "1707175672187250636" // using interview template as fallback — replace with actual OTP templateId once registered on DLT
     };
 
-    console.log("=== SMS API PAYLOAD (OTP Template) ===");
-    console.log("Full payload:", JSON.stringify(payload, null, 2));
+    console.log("SMS OTP Payload:", JSON.stringify(payload, null, 2));
 
-    console.log("=== SMS API PAYLOAD ===");
-    console.log("Full payload:", JSON.stringify(payload, null, 2));
-    console.log("API URL:", "https://smsapi.edumarcsms.com/api/v1/sendsms");
-    console.log("API Key:", "ffe14f876d5444038bfe71cddef56f49");
-    console.log("Headers:", {
-      "Content-Type": "application/json",
-      "apikey": "ffe14f876d5444038bfe71cddef56f49"
-    });
-
-    console.log("🚀 Making SMS API request...");
     const response = await axios.post(
       "https://smsapi.edumarcsms.com/api/v1/sendsms",
       payload,
@@ -663,37 +643,14 @@ const sendRegistrationOTPSMS = async (mobile, otp) => {
           "Content-Type": "application/json",
           "apikey": "ffe14f876d5444038bfe71cddef56f49"
         },
-        timeout: 10000 // 10 second timeout
+        timeout: 10000
       }
     );
 
-    console.log("✅ SMS API RESPONSE RECEIVED");
-    console.log("Status:", response.status);
-    console.log("Status Text:", response.statusText);
-    console.log("Response data:", JSON.stringify(response.data, null, 2));
-    console.log("Response headers:", response.headers);
-    
-    console.log("🎉 SMS API call completed successfully");
+    console.log("✅ SMS OTP sent:", response.status, JSON.stringify(response.data));
     return response.data;
   } catch (err) {
-    console.error("❌❌❌ SMS API ERROR ❌❌❌");
-    console.error("Error type:", err.constructor.name);
-    console.error("Error message:", err.message);
-    console.error("Error code:", err.code);
-    console.error("Error status:", err.response?.status);
-    console.error("Error status text:", err.response?.statusText);
-    console.error("Error data:", err.response?.data);
-    console.error("Error headers:", err.response?.headers);
-    console.error("Request config:", {
-      url: err.config?.url,
-      method: err.config?.method,
-      data: err.config?.data,
-      headers: err.config?.headers,
-      timeout: err.config?.timeout
-    });
-    console.error("Full error object:", err);
-    
-    // Re-throw the error so it's handled by the calling function
+    console.error("❌ SMS OTP Error:", err.message, err.response?.data);
     throw err;
   }
 };

@@ -13,11 +13,11 @@ const applySchema = new Schema({
     },
     jobTitle: {
         type: String,
-        // required: true
+     
     },
     companyName: {
         type: String,
-        // required: true
+        
     },
     status: {
         type: String,
@@ -34,7 +34,7 @@ const applySchema = new Schema({
     },
     offerLetter: {
     url: String,
-    uploadedPdfUrl: String, // Store custom uploaded PDF URL separately
+    uploadedPdfUrl: String, 
     generatedAt: Date,
     status: {
         type: String,
