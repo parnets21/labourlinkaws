@@ -623,14 +623,14 @@ const sendRegistrationOTPSMS = async (mobile, otp) => {
   try {
     const formattedMobile = String(mobile).replace(/\D/g, '');
 
-    // Full message text matching the DLT-registered OTP template
-    const message = `Your Labor Link OTP for registration is ${otp}. Valid for 10 minutes. Do not share with anyone. - Labor Link`;
+    // Message must match DLT template EXACTLY: "Your OTP for LabourLink registration is {#var#}."
+    const message = `Your OTP for LabourLink registration is ${otp}.`;
 
     const payload = {
       number: [`91${formattedMobile}`],
       message: message,
       senderId: "LBRLNK",
-      templateId: "1707175672187250636" // using interview template as fallback — replace with actual OTP templateId once registered on DLT
+      templateId: "1707176888574912857"
     };
 
     console.log("SMS OTP Payload:", JSON.stringify(payload, null, 2));
