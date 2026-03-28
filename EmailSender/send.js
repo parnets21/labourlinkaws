@@ -630,7 +630,7 @@ const sendRegistrationOTPSMS = async (mobile, otp) => {
       number: [`91${formattedMobile}`],
       message: message,
       senderId: "LBRLNK",
-      templateId: "1707177461835639332"
+      templateId: "1707177468457969078"
     };
 
     console.log("SMS OTP Payload:", JSON.stringify(payload, null, 2));
