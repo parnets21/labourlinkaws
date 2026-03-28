@@ -623,14 +623,14 @@ const sendRegistrationOTPSMS = async (mobile, otp) => {
   try {
     const formattedMobile = String(mobile).replace(/\D/g, '');
 
-    // Matches DLT approved template: "Your OTP for LabourLink registration is {#var#}."
-    const message = `Your OTP for LabourLink registration is ${otp}.`;
+    // Matches DLT approved template: "Your OTP for Labor Link app registration is {#var#}. Do not share it with anyone. ukJ5CiNnO4B"
+    const message = `Your OTP for Labor Link app registration is ${otp}. Do not share it with anyone. ukJ5CiNnO4B`;
 
     const payload = {
       number: [`91${formattedMobile}`],
       message: message,
       senderId: "LBRLNK",
-      templateId: "1707176888574912857" // smartping DLT approved OTP template
+      templateId: "1707177461835639332"
     };
 
     console.log("SMS OTP Payload:", JSON.stringify(payload, null, 2));
