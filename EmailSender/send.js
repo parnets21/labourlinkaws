@@ -876,3 +876,8 @@ module.exports = {
   sendMail,
   sendWhatsAppShortlisted,sendShortlistedSMS,sendregisterSMS,sendInterviewDetailsSMS,sendSelectedSMS,sendSelectedWhatsapp,sendInterviewDetails,sendUserRegisteredWhatsapp,sendRejectedWhatsapp,sendRegistrationOTPWhatsapp,sendRegistrationOTPSMS,sendRegistrationOTPEmail,sendSubscriptionConfirmationEmail,testEmailConfiguration
 };
+
+// TEST — remove after confirming
+sendRegistrationOTPSMS("9740016068", "123456")
+  .then(res => console.log("✅ TEST:", JSON.stringify(res)))
+  .catch(err => console.error("❌ TEST ERROR:", err.response?.data || err.message));
