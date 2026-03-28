@@ -623,15 +623,14 @@ const sendRegistrationOTPSMS = async (mobile, otp) => {
   try {
     const formattedMobile = String(mobile).replace(/\D/g, '');
 
-    // SMS Retriever API — hash on last line (package: com.labor_link)
-    const appHash = "Mok8YyTFOIg"; // correct release hash
-    const message = `Your OTP for Labor Link app registration is ${otp}. Do not share it with anyone.\n${appHash}`;
+    // Matches approved DLT template: "Your OTP for Labor Link app registration is {#var#}. Do not share it with anyone. ukJ5CiNnO4B"
+    const message = `Your OTP for Labor Link app registration is ${otp}. Do not share it with anyone. ukJ5CiNnO4B`;
 
     const payload = {
       number: [`91${formattedMobile}`],
       message: message,
       senderId: "LBRLNK",
-      templateId: "1707177468457969078"
+      templateId: "1707177469649187037"
     };
 
     console.log("SMS OTP Payload:", JSON.stringify(payload, null, 2));
