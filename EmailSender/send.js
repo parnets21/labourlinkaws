@@ -623,13 +623,13 @@ const sendRegistrationOTPSMS = async (mobile, otp) => {
   try {
     const formattedMobile = String(mobile).replace(/\D/g, '');
 
-    const message = `Your OTP for LaborLink app registration is ${otp}\nukJ5CiNnO4B`;
+    const message = `LBRLNK Your OTP for Labor Link app registration is ${otp}. Do not share it with anyone. ukJ5CiNnO4B`;
 
     const payload = {
       number: [`91${formattedMobile}`],
       message: message,
       senderId: "LBRLNK",
-      templateId: "1707177469698810314"
+      templateId: "1707177468457968078"
     };
 
     console.log("SMS OTP Payload:", JSON.stringify(payload, null, 2));
