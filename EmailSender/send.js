@@ -623,7 +623,7 @@ const sendRegistrationOTPSMS = async (mobile, otp) => {
   try {
     const formattedMobile = String(mobile).replace(/\D/g, '');
 
-    const message = `Your OTP for Labor Link app registration is ${otp}. Do not share it with anyone.\nukJ5CiNnO4B`;
+    const message = `Your OTP for LabourLink registration is ${otp}\n${process.env.SMS_APP_HASH || 'ukJ5CiNnO4B'}`;
 
     const payload = {
       number: [`91${formattedMobile}`],
@@ -875,3 +875,4 @@ module.exports = {
   sendMail,
   sendWhatsAppShortlisted,sendShortlistedSMS,sendregisterSMS,sendInterviewDetailsSMS,sendSelectedSMS,sendSelectedWhatsapp,sendInterviewDetails,sendUserRegisteredWhatsapp,sendRejectedWhatsapp,sendRegistrationOTPWhatsapp,sendRegistrationOTPSMS,sendRegistrationOTPEmail,sendSubscriptionConfirmationEmail,testEmailConfiguration
 };
+i 
