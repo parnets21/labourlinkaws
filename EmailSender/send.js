@@ -623,13 +623,13 @@ const sendRegistrationOTPSMS = async (mobile, otp) => {
   try {
     const formattedMobile = String(mobile).replace(/\D/g, '');
 
-    const message = `LBRLNK Your OTP for Labor Link app registration is ${otp}. Do not share it with anyone. ukJ5CiNnO4B`;
+    const message = `Your OTP for LabourLink registration is ${otp}.`;
 
     const payload = {
       number: [`91${formattedMobile}`],
       message: message,
       senderId: "LBRLNK",
-      templateId: "1707177468457968078"
+      templateId: "1707176888574912857"
     };
 
     console.log("SMS OTP Payload:", JSON.stringify(payload, null, 2));
@@ -871,13 +871,6 @@ const sendRegistrationOTPWhatsapp = async (mobile, otp) => {
   
 //  sendregisterSMS("7238861147","Welcome Amit to Labor Link. Your registration is successful. Complete your profile to start applying for jobs today.")
 //sendInterviewDetailsSMS("7238861147","amit","developer","14thsep","3:30PM")
-
-// TEST CALL - remove after testing
-sendRegistrationOTPSMS("9845536068", "123456").then(res => {
-  console.log("TEST SMS result:", res);
-}).catch(err => {
-  console.error("TEST SMS error:", err.message, err.response?.data);
-});
 
 module.exports = {
   sendMail,
