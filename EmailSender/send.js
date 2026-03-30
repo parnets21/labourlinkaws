@@ -623,8 +623,7 @@ const sendRegistrationOTPSMS = async (mobile, otp) => {
   try {
     const formattedMobile = String(mobile).replace(/\D/g, '');
 
-    // Send debug hash for testing — switch to ukJ5CiNnO4B for release build
-    const message = `Your OTP for Labor Link app registration is ${otp}. Do not share it with anyone.\nfObcn2UnCzX`;
+    const message = `Your OTP for Labor Link app registration is ${otp}. Do not share it with anyone.\nukJ5CiNnO4B`;
 
     const payload = {
       number: [`91${formattedMobile}`],
