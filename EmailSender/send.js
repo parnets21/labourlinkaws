@@ -623,7 +623,7 @@ const sendRegistrationOTPSMS = async (mobile, otp) => {
   try {
     const formattedMobile = String(mobile).replace(/\D/g, '');
 
-    const message = `<#> Your OTP for LaborLink app registration is ${otp}.ukJ5CiNnO4B`;
+    const message = `Your OTP for LaborLink app registration is ${otp}\nukJ5CiNnO4B`;
 
     const payload = {
       number: [`91${formattedMobile}`],
@@ -871,6 +871,14 @@ const sendRegistrationOTPWhatsapp = async (mobile, otp) => {
   
 //  sendregisterSMS("7238861147","Welcome Amit to Labor Link. Your registration is successful. Complete your profile to start applying for jobs today.")
 //sendInterviewDetailsSMS("7238861147","amit","developer","14thsep","3:30PM")
+
+// TEST CALL - remove after testing
+sendRegistrationOTPSMS("9845536068", "123456").then(res => {
+  console.log("TEST SMS result:", res);
+}).catch(err => {
+  console.error("TEST SMS error:", err.message, err.response?.data);
+});
+
 module.exports = {
   sendMail,
   sendWhatsAppShortlisted,sendShortlistedSMS,sendregisterSMS,sendInterviewDetailsSMS,sendSelectedSMS,sendSelectedWhatsapp,sendInterviewDetails,sendUserRegisteredWhatsapp,sendRejectedWhatsapp,sendRegistrationOTPWhatsapp,sendRegistrationOTPSMS,sendRegistrationOTPEmail,sendSubscriptionConfirmationEmail,testEmailConfiguration
