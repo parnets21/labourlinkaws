@@ -623,8 +623,8 @@ const sendRegistrationOTPSMS = async (mobile, otp) => {
   try {
     const formattedMobile = String(mobile).replace(/\D/g, '');
 
-    // SMS Retriever API format with <#> prefix
-    const message = `<#> Your OTP for Labor Link app registration is ${otp}. Do not share it with anyone. ukJ5CiNnO4B`;
+    // Matches approved DLT template exactly
+    const message = `Your OTP for Labor Link app registration is ${otp}. Do not share it with anyone. ukJ5CiNnO4B`;
 
     const payload = {
       number: [`91${formattedMobile}`],
