@@ -623,8 +623,8 @@ const sendRegistrationOTPSMS = async (mobile, otp) => {
   try {
     const formattedMobile = String(mobile).replace(/\D/g, '');
 
-    // Matches approved DLT template: "Your OTP for Labor Link app registration is {#var#}. Do not share it with anyone. ukJ5CiNnO4B"
-    const message = `Your OTP for Labor Link app registration is ${otp}. Do not share it with anyone. ukJ5CiNnO4B`;
+    // SMS Retriever API format with <#> prefix
+    const message = `<#> Your OTP for Labor Link app registration is ${otp}. Do not share it with anyone. ukJ5CiNnO4B`;
 
     const payload = {
       number: [`91${formattedMobile}`],
@@ -876,8 +876,3 @@ module.exports = {
   sendMail,
   sendWhatsAppShortlisted,sendShortlistedSMS,sendregisterSMS,sendInterviewDetailsSMS,sendSelectedSMS,sendSelectedWhatsapp,sendInterviewDetails,sendUserRegisteredWhatsapp,sendRejectedWhatsapp,sendRegistrationOTPWhatsapp,sendRegistrationOTPSMS,sendRegistrationOTPEmail,sendSubscriptionConfirmationEmail,testEmailConfiguration
 };
-
-// TEST — remove after confirming
-sendRegistrationOTPSMS("9740016068", "123456")
-  .then(res => console.log("✅ TEST:", JSON.stringify(res)))
-  .catch(err => console.error("❌ TEST ERROR:", err.response?.data || err.message));
