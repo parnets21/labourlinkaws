@@ -48,6 +48,7 @@
     "path": "^0.12.7",
     "pdf-lib": "^1.17.1",
     "pg-sdk-node": "^2.0.2",
+    "react-native-sms-retriever": "^1.1.1",
     "socket.io": "^4.6.1",
     "stripe": "^12.0.0",
     "twilio": "^4.23.0",
