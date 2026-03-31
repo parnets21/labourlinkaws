@@ -2,17 +2,18 @@ const express = require('express');
 const router = express.Router();
 const Location = require('../../Model/User/location');
 const User = require("../../Model/User/user");
-// POST /api/jobseeker/location - Update jobseeker location
+const Employer = require("../../Model/Employers/employers");
+// POST /api/user/location - Update user/employer location
 router.post('/location', async (req, res) => {
   try {
     const { userId, latitude, longitude } = req.body;
 
-    // Check if jobseeker exists
-    const user = await User.findById(userId);
+    // Check both User and Employer collections
+    const user = await User.findById(userId) || await Employer.findById(userId);
     if (!user) {
-      return res.status(404).json({ message: 'Jobseeker not found' });
+      return res.status(404).json({ message: 'User not found' });
     }
-console.log('📍 Location received:', userId, latitude, longitude);
+    console.log('📍 Location received:', userId, latitude, longitude);
 
     // Update or insert location
     await Location.findOneAndUpdate(
@@ -28,15 +29,15 @@ console.log('📍 Location received:', userId, latitude, longitude);
   }
 });
 
-// GET: Get the latest location of a jobseeker
+// GET: Get the latest location of a user/employer
 router.get('/location/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Check if jobseeker exists
-    const user = await User.findById(userId);
+    // Check both User and Employer collections
+    const user = await User.findById(userId) || await Employer.findById(userId);
     if (!user) {
-      return res.status(404).json({ message: 'Jobseeker not found' });
+      return res.status(404).json({ message: 'User not found' });
     }
 
     const location = await Location.findOne({ userId })

@@ -460,8 +460,6 @@ class SubscriptionValidationService {
       usage.candidateSearchesPerDay = 0;
       usage.candidateViewsPerDay = 0;
       usage.applicationReviewsPerDay = 0;
-
-      // Always compute today's various actions using UsageRecord so UI shows correct counts
       try {
         const UsageRecord = require('../Model/usageRecord');
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -539,8 +537,8 @@ class SubscriptionValidationService {
   static getFreeFeatures(userType) {
     if (userType === 'employee') {
       return {
-        jobApplicationsPerMonth: 0,
-        jobApplicationsPerDay: 0,
+        jobApplicationsPerMonth: 5,
+        jobApplicationsPerDay: 2,
         jobSearchPerDay: 10,
         companyViewsPerDay: 3,
         profileUpdatesPerMonth: 2,
