@@ -87,7 +87,7 @@ exports.generateOfferLetter = async (req, res) => {
             // Save uploaded PDF (multer stores file in buffer when using memoryStorage)
             const uploadedPdfPath = path.join(offersDir, `${applicationId}_custom.pdf`);
             await fs.writeFile(uploadedPdfPath, uploadedFile.buffer);
-            uploadedPdfUrl = `/offers/${applicationId}_custom.pdf`;
+            uploadedPdfUrl = `/api/offers/view/${applicationId}`;
             pdfUrl = uploadedPdfUrl;
             
             console.log('✅ Custom PDF uploaded:', uploadedPdfUrl);
@@ -203,7 +203,7 @@ exports.generateOfferLetter = async (req, res) => {
         const pdfBytes = await pdfDoc.save();
         const offerLetterPath = path.join(offersDir, `${applicationId}.pdf`);
         await fs.writeFile(offerLetterPath, pdfBytes);
-        pdfUrl = `/offers/${applicationId}.pdf`;
+        pdfUrl = `/api/offers/view/${applicationId}`;
         }
 
         // Update application with offer letter details

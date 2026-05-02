@@ -56,7 +56,42 @@ router.get(
     offerController.getEmployerOfferHistory
 );
 
-// Serve PDF files (static route)
+// Serve PDF files (static route) - View in browser
+router.get('/view/:applicationId', async (req, res) => {
+    try {
+        const path = require('path');
+        const fs = require('fs').promises;
+
+        // Check for custom PDF first
+        const customPdfPath = path.join(__dirname, `../public/offers/${req.params.applicationId}_custom.pdf`);
+        const generatedPdfPath = path.join(__dirname, `../public/offers/${req.params.applicationId}.pdf`);
+
+        let filePath;
+        try {
+            await fs.access(customPdfPath);
+            filePath = customPdfPath;
+            console.log('📥 Serving custom PDF:', filePath);
+        } catch {
+            // Custom PDF doesn't exist, try generated PDF
+            await fs.access(generatedPdfPath);
+            filePath = generatedPdfPath;
+            console.log('📥 Serving generated PDF:', filePath);
+        }
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="offer-letter-${req.params.applicationId}.pdf"`);
+        res.sendFile(filePath);
+
+    } catch (error) {
+        console.error('❌ PDF not found:', error);
+        res.status(404).json({
+            success: false,
+            message: 'Offer letter not found'
+        });
+    }
+});
+
+// Serve PDF files (static route) - Download
 router.get('/download/:applicationId', async (req, res) => {
     try {
         const path = require('path');
