@@ -30,6 +30,7 @@ router.delete("/deleteJob/:jobId", jobController.deleteJob);
 // Apply API routes
 router.get("/getApplyList/:jobId", validateSubscription('search_candidates', { checkUsage: true, usagePeriod: 'daily' }), jobController.getApplyList);
 router.get("/getShortlistingData/:jobId", jobController.getShortlistingData);
+router.get("/getScheduledData/:jobId", jobController.getScheduledData);
 router.get("/getSelectDatas/:companyId", jobController.getSelectData);
 router.post("/addShortList", validateSubscription('application_review', { checkUsage: true, usagePeriod: 'daily' }), jobController.addShortList);
 router.post("/rejectApply", validateSubscription('application_review', { checkUsage: true, usagePeriod: 'daily' }), jobController.rejectApply);

@@ -845,6 +845,34 @@ class Employers {
         return res.status(404).json({ error: "User not found" });
       }
 
+      // Check application status before scheduling interview
+      const applyModel = require("../../Model/Employers/apply");
+      const application = await applyModel.findOne({
+        userId: userId,
+        companyId: companyObjectId
+      });
+
+      if (!application) {
+        return res.status(404).json({ error: "Application not found. Candidate must apply first." });
+      }
+
+      // Only allow scheduling for Shortlisted candidates
+      if (application.status !== "Shortlisted") {
+        if (application.status === "Scheduled") {
+          return res.status(400).json({ error: "Interview already scheduled for this candidate" });
+        }
+        if (application.status === "Selected") {
+          return res.status(400).json({ error: "Cannot schedule interview - Candidate already selected" });
+        }
+        if (application.status === "Rejected") {
+          return res.status(400).json({ error: "Cannot schedule interview - Application already rejected" });
+        }
+        if (application.status === "Applied") {
+          return res.status(400).json({ error: "Please shortlist the candidate before scheduling an interview" });
+        }
+        return res.status(400).json({ error: `Cannot schedule interview - Application status is ${application.status}` });
+      }
+
       // Check if the interview call already exists
       let existingCall = await callModel.findOne({
         userId,
@@ -897,6 +925,22 @@ class Employers {
       }
 
       console.log("Interview Call Created:", newCall);
+
+      // Update application status to "Scheduled"
+      try {
+        await applyModel.findOneAndUpdate(
+          { 
+            userId: userId, 
+            companyId: companyObjectId 
+          },
+          { 
+            status: "Scheduled" 
+          }
+        );
+        console.log("Application status updated to Scheduled");
+      } catch (updateError) {
+        console.error("Error updating application status:", updateError);
+      }
 
       // Record interview slot usage for employer
       try {

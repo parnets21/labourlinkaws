@@ -1070,6 +1070,15 @@ let obj = {
       if (data.status === "Shortlisted") {
         return res.status(400).json({ message: "Already shortlisted" });
       }
+      if (data.status === "Scheduled") {
+        return res.status(400).json({ message: "Cannot shortlist - Interview already scheduled" });
+      }
+      if (data.status === "Selected") {
+        return res.status(400).json({ message: "Cannot shortlist - Candidate already selected" });
+      }
+      if (data.status === "Rejected") {
+        return res.status(400).json({ message: "Cannot shortlist - Application already rejected" });
+      }
 
       let update = await applyModel.findOneAndUpdate(
         { userId, companyId },
@@ -1378,6 +1387,91 @@ async getShortlistingData(req, res) {
       });
     }
   }
+
+async getScheduledData(req, res) {
+    try {
+      const { jobId } = req.params;
+      console.log("Fetching scheduled applications for jobId:", jobId);
+
+      if (!mongoose.Types.ObjectId.isValid(jobId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid job ID format"
+        });
+      }
+
+      // Get applications with "Scheduled" status
+      const scheduledData = await applyModel
+        .find({
+          companyId: new mongoose.Types.ObjectId(jobId),
+          status: "Scheduled",
+          isDelete: false
+        })
+        .populate("userId")
+        .sort({ updatedAt: -1 });
+
+      if (!scheduledData || scheduledData.length === 0) {
+        return res.status(200).json({
+          success: true,
+          data: [],
+          message: "No scheduled applications found"
+        });
+      }
+
+      // Get interview details for each scheduled application
+      const callModel = require("../../Model/Employers/scheduleinterview");
+      const scheduledWithInterviews = await Promise.all(
+        scheduledData.map(async (application) => {
+          const interview = await callModel.findOne({
+            userId: application.userId._id,
+            companyId: application.companyId
+          });
+
+          // Mask sensitive user data
+          const maskedUserData = maskSensitiveData(
+            application.userId.toObject ? application.userId.toObject() : application.userId
+          );
+          const maskedUser = {
+            _id: application.userId._id,
+            fullName: application.userId.fullName,
+            email: maskedUserData.email,
+            phone: maskedUserData.phone,
+            location: application.userId.location,
+            profile: application.userId.profile,
+            skills: application.userId.skills || [],
+            education: application.userId.education || []
+          };
+
+          return {
+            ...application.toObject(),
+            userId: maskedUser,
+            isInterviewScheduled: true,
+            interviewDetails: interview ? {
+              schedule: interview.schedule,
+              platform: interview.platform,
+              meetingLink: interview.meetingLink,
+              duration: interview.duration,
+              status: interview.status
+            } : null
+          };
+        })
+      );
+
+      return res.status(200).json({
+        success: true,
+        data: scheduledWithInterviews
+      });
+
+    } catch (err) {
+      console.error("Error in getScheduledData:", err);
+      return res.status(500).json({
+        success: false,
+        message: "Internal Server Error",
+        error: err.message
+      });
+    }
+  }
+
 async AllAplliedDetals(req, res) {
     try {
       let data = await applyModel

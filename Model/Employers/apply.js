@@ -21,7 +21,7 @@ const applySchema = new Schema({
     },
     status: {
         type: String,
-        enum: ['Applied', 'Shortlisted', 'Selected', 'Rejected'],
+        enum: ['Applied', 'Shortlisted', 'Scheduled', 'Selected', 'Rejected'],
         default: "Applied"
     },
     isDelete: {
