@@ -159,8 +159,27 @@ let obj = {
       }
 
       // Save the job in DB
-      const newJob = await jobModel.create(obj);
-      console.log("✅ New Job Saved:", newJob);
+      let newJob;
+      try {
+        newJob = await jobModel.create(obj);
+        console.log("✅ New Job Saved:", newJob);
+      } catch (saveError) {
+        // If error is due to 2dsphere index, try to drop it and retry
+        if (saveError.code === 16755 && saveError.message.includes('geo keys')) {
+          console.log('⚠️  Detected geolocation index error, attempting to drop index...');
+          try {
+            await jobModel.collection.dropIndex('location_2dsphere');
+            console.log('✅ Dropped location_2dsphere index, retrying save...');
+            newJob = await jobModel.create(obj);
+            console.log("✅ New Job Saved after index drop:", newJob);
+          } catch (retryError) {
+            console.error('❌ Failed to save even after dropping index:', retryError);
+            throw retryError;
+          }
+        } else {
+          throw saveError;
+        }
+      }
 
       // Record employer usage for post_job (non-blocking)
       try {
