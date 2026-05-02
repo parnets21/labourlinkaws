@@ -49,6 +49,13 @@ router.get(
     offerController.getSelectedCandidates
 );
 
+// Get all sent offer letters for an employer (offer history)
+router.get(
+    '/history/:employerId',
+    // authController.restrictTo('employer', 'admin'),
+    offerController.getEmployerOfferHistory
+);
+
 // Serve PDF files (static route)
 router.get('/download/:applicationId', async (req, res) => {
     try {

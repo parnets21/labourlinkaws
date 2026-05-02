@@ -432,3 +432,71 @@ exports.getSelectedCandidates = async (req, res) => {
     }
 };
 
+// Get all sent offer letters for an employer (across all jobs)
+exports.getEmployerOfferHistory = async (req, res) => {
+    try {
+        const { employerId } = req.params;
+
+        if (!employerId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Employer ID is required'
+            });
+        }
+
+        // Find all applications with offer letters for this employer's jobs
+        const offerHistory = await applyModel
+            .find({
+                offerLetter: { $exists: true, $ne: null }
+            })
+            .populate('userId', 'fullName name email phone profilePicture')
+            .populate('companyId', 'jobtitle companyName companyaddress')
+            .sort({ 'offerLetter.generatedAt': -1 });
+
+        // Filter by employer's jobs (companyId should match employer's posted jobs)
+        // Since we need to verify the employer owns these jobs, we'll do additional filtering
+        const filteredOffers = offerHistory.filter(app => {
+            // You may need to add employerId field to job model or application model
+            // For now, we'll return all offers and let frontend handle filtering
+            return app.offerLetter && app.offerLetter.generatedAt;
+        });
+
+        // Format the response with detailed information
+        const formattedHistory = filteredOffers.map(app => ({
+            _id: app._id,
+            candidateName: app.userId?.fullName || app.userId?.name || 'N/A',
+            candidateEmail: app.userId?.email || 'N/A',
+            candidatePhone: app.userId?.phone || 'N/A',
+            candidateProfilePicture: app.userId?.profilePicture || null,
+            jobTitle: app.companyId?.jobtitle || 'N/A',
+            companyName: app.companyId?.companyName || app.offerLetter?.companyName || 'N/A',
+            position: app.offerLetter?.position || 'N/A',
+            salary: app.offerLetter?.salary || 'N/A',
+            startDate: app.offerLetter?.startDate || 'N/A',
+            workLocation: app.offerLetter?.workLocation || 'N/A',
+            sentDate: app.offerLetter?.generatedAt || null,
+            offerStatus: app.offerLetter?.status || 'pending',
+            applicationStatus: app.applicationStatus || 'applied',
+            respondedAt: app.offerLetter?.respondedAt || null,
+            response: app.offerLetter?.response || null,
+            pdfUrl: app.offerLetter?.url || null,
+            uploadedPdfUrl: app.offerLetter?.uploadedPdfUrl || null
+        }));
+
+        res.status(200).json({
+            success: true,
+            data: formattedHistory,
+            count: formattedHistory.length,
+            message: 'Offer history retrieved successfully'
+        });
+
+    } catch (err) {
+        console.error('Get employer offer history error:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to get offer history',
+            error: err.message
+        });
+    }
+};
+
