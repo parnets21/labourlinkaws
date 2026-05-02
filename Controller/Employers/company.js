@@ -935,7 +935,11 @@ let obj = {
             _id: application.userId._id,
             fullName: application.userId.fullName,
             email: maskedUserData.email,
-            phone: maskedUserData.phone
+            phone: maskedUserData.phone,
+            location: application.userId.location,
+            profile: application.userId.profile, // Profile picture
+            skills: application.userId.skills || [],
+            education: application.userId.education || []
           };
           
           return {
@@ -1285,7 +1289,11 @@ async getSelectData(req, res) {
             _id: application.userId._id,
             fullName: application.userId.fullName,
             email: maskedUserData.email,
-            phone: maskedUserData.phone
+            phone: maskedUserData.phone,
+            location: application.userId.location,
+            profile: application.userId.profile, // Profile picture
+            skills: application.userId.skills || [],
+            education: application.userId.education || []
           };
           
           return {
@@ -1341,7 +1349,11 @@ async getShortlistingData(req, res) {
             _id: application.userId._id,
             fullName: application.userId.fullName,
             email: maskedUserData.email,
-            phone: maskedUserData.phone
+            phone: maskedUserData.phone,
+            location: application.userId.location,
+            profile: application.userId.profile, // Profile picture
+            skills: application.userId.skills || [],
+            education: application.userId.education || []
           };
           
           return {
@@ -1383,7 +1395,11 @@ async AllAplliedDetals(req, res) {
             _id: application.userId._id,
             fullName: application.userId.fullName,
             email: maskedUserData.email,
-            phone: maskedUserData.phone
+            phone: maskedUserData.phone,
+            location: application.userId.location,
+            profile: application.userId.profile, // Profile picture
+            skills: application.userId.skills || [],
+            education: application.userId.education || []
           };
           
           return {
@@ -1544,7 +1560,11 @@ async getRejectedApplications(req, res) {
             _id: application.userId._id,
             fullName: application.userId.fullName,
             email: maskedUserData.email,
-            phone: maskedUserData.phone
+            phone: maskedUserData.phone,
+            location: application.userId.location,
+            profile: application.userId.profile, // Profile picture
+            skills: application.userId.skills || [],
+            education: application.userId.education || []
           };
           
           return {
