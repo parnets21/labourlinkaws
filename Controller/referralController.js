@@ -1,53 +1,25 @@
-const User = require('../Model/User');
-const Job = require('../Model/Job');
-const JobApplication = require('../Model/JobApplication');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const User = require('../Model/User/user');
+const Referral = require('../Model/User/Referral');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
-exports.createReferral = async (req, res) => {
+// Generate unique referral code
+const generateReferralCode = (userId) => {
+    const hash = crypto.createHash('sha256').update(userId.toString()).digest('hex');
+    return hash.substring(0, 8).toUpperCase();
+};
+
+// Get user's referral code
+exports.getReferralCode = async (req, res) => {
     try {
-        const { email, jobId } = req.body;
-
-        // Check if job exists
-        const job = await Job.findById(jobId);
-        if (!job) {
-            throw new Error('Job not found');
-        }
-
-        // Check if referred email already exists
-        let referredUser = await User.findOne({ email });
-        
-        if (!referredUser) {
-            // Create new user account with temporary password
-            const tempPassword = Math.random().toString(36).slice(-8);
-            referredUser = await User.create({
-                email,
-                password: tempPassword,
-                role: 'employee',
-                isActive: false // Requires activation
-            });
-
-            // Send invitation email with temporary password
-            // Implementation depends on your email service
-        }
-
-        // Add referral to referring user
-        const referringUser = await User.findByIdAndUpdate(
-            req.user._id,
-            {
-                $push: {
-                    referrals: {
-                        referredUser: referredUser._id,
-                        status: 'pending'
-                    }
-                }
-            },
-            { new: true }
-        );
+        const userId = req.user._id;
+        const referralCode = generateReferralCode(userId);
 
         res.status(200).json({
             status: 'success',
             data: {
-                referral: referringUser.referrals[referringUser.referrals.length - 1]
+                referralCode,
+                shareUrl: `https://laborlink.co.in/register?ref=${referralCode}`
             }
         });
     } catch (err) {
@@ -58,58 +30,250 @@ exports.createReferral = async (req, res) => {
     }
 };
 
-exports.processReferralBonus = async (req, res) => {
+// Create referral by sharing code
+exports.createReferralByCode = async (req, res) => {
     try {
-        const { applicationId } = req.params;
-        
-        const application = await JobApplication.findById(applicationId)
-            .populate('applicant')
-            .populate('job');
+        const { referralCode } = req.body;
+        const referredUserId = req.user._id;
 
-        if (!application) {
-            throw new Error('Application not found');
+        // Find referring user by code
+        const users = await User.find({ role: 'employee' });
+        let referringUser = null;
+
+        for (const user of users) {
+            if (generateReferralCode(user._id) === referralCode.toUpperCase()) {
+                referringUser = user;
+                break;
+            }
         }
-
-        // Find referring user
-        const referringUser = await User.findOne({
-            'referrals.referredUser': application.applicant._id
-        });
 
         if (!referringUser) {
-            throw new Error('No referral found for this application');
+            return res.status(404).json({
+                status: 'fail',
+                message: 'Invalid referral code'
+            });
         }
 
-        // Get the specific referral
-        const referral = referringUser.referrals.find(
-            ref => ref.referredUser.toString() === application.applicant._id.toString()
-        );
-
-        if (referral.status === 'hired') {
-            throw new Error('Referral bonus already processed');
+        // Check if user is trying to refer themselves
+        if (referringUser._id.toString() === referredUserId.toString()) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'You cannot refer yourself'
+            });
         }
 
-        // Calculate bonus based on job category/level
-        const bonusAmount = calculateBonusAmount(application.job);
-
-        // Create transfer to referring user's bank account
-        const transfer = await stripe.transfers.create({
-            amount: bonusAmount * 100, // Convert to cents
-            currency: 'inr',
-            destination: referringUser.stripeAccountId, // Assuming user has connected Stripe account
-            description: `Referral bonus for ${application.applicant.email}`
+        // Check if referral already exists
+        const existingReferral = await Referral.findOne({
+            referringUser: referringUser._id,
+            referredUser: referredUserId
         });
+
+        if (existingReferral) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'Referral already exists'
+            });
+        }
+
+        // Create referral record
+        const referral = await Referral.create({
+            referringUser: referringUser._id,
+            referredUser: referredUserId,
+            status: 'pending'
+        });
+
+        // Add to user's referrals array
+        await User.findByIdAndUpdate(referringUser._id, {
+            $push: {
+                referrals: {
+                    referredUser: referredUserId,
+                    status: 'pending',
+                    bonusStatus: 'pending'
+                }
+            }
+        });
+
+        res.status(201).json({
+            status: 'success',
+            data: { referral }
+        });
+    } catch (err) {
+        res.status(400).json({
+            status: 'fail',
+            message: err.message
+        });
+    }
+};
+
+// Get user's referral statistics
+exports.getReferralStats = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const referrals = await Referral.find({ referringUser: userId })
+            .populate('referredUser', 'profile.firstName profile.lastName email')
+            .populate('job', 'title company');
+
+        const stats = {
+            totalReferrals: referrals.length,
+            pendingReferrals: referrals.filter(r => r.status === 'pending').length,
+            hiredReferrals: referrals.filter(r => r.status === 'hired').length,
+            rejectedReferrals: referrals.filter(r => r.status === 'rejected').length,
+            totalEarnings: referrals
+                .filter(r => r.bonusStatus === 'paid')
+                .reduce((sum, r) => sum + (r.bonusAmount || 0), 0),
+            pendingEarnings: referrals
+                .filter(r => r.status === 'hired' && r.bonusStatus === 'unpaid')
+                .reduce((sum, r) => sum + (r.bonusAmount || 5000), 0)
+        };
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                stats,
+                referrals
+            }
+        });
+    } catch (err) {
+        res.status(400).json({
+            status: 'fail',
+            message: err.message
+        });
+    }
+};
+exports.getReferralHistory = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { page = 1, limit = 10 } = req.query;
+
+        const referrals = await Referral.find({ referringUser: userId })
+            .populate('referredUser', 'profile.firstName profile.lastName email profile.avatar')
+            .populate('job', 'title company location')
+            .sort({ createdAt: -1 })
+            .limit(limit * 1)
+            .skip((page - 1) * limit);
+
+        const count = await Referral.countDocuments({ referringUser: userId });
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                referrals,
+                totalPages: Math.ceil(count / limit),
+                currentPage: page,
+                total: count
+            }
+        });
+    } catch (err) {
+        res.status(400).json({
+            status: 'fail',
+            message: err.message
+        });
+    }
+};
+exports.sendReferralInvitation = async (req, res) => {
+    try {
+        const { email, message } = req.body;
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+
+        const referralCode = generateReferralCode(userId);
+        const shareUrl = `https://laborlink.co.in/register?ref=${referralCode}`;
+
+        // Configure email transporter
+        const transporter = nodemailer.createTransporter({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASSWORD
+            }
+        });
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: `${user.profile.firstName} invited you to join LaborLink`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2>You've been invited to join LaborLink!</h2>
+                    <p>${user.profile.firstName} ${user.profile.lastName} thinks you'd be a great fit for LaborLink.</p>
+                    ${message ? `<p><em>"${message}"</em></p>` : ''}
+                    <p>Use the referral code below to sign up:</p>
+                    <div style="background: #f0f0f0; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 2px;">
+                        ${referralCode}
+                    </div>
+                    <p style="text-align: center; margin-top: 20px;">
+                        <a href="${shareUrl}" style="background: #2563EB; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                            Join Now
+                        </a>
+                    </p>
+                </div>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Invitation sent successfully'
+        });
+    } catch (err) {
+        res.status(400).json({
+            status: 'fail',
+            message: err.message
+        });
+    }
+};
+exports.processReferralBonus = async (req, res) => {
+    try {
+        const { referralId } = req.params;
+        const { bonusAmount = 5000 } = req.body;
+
+        const referral = await Referral.findById(referralId)
+            .populate('referringUser')
+            .populate('referredUser');
+
+        if (!referral) {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'Referral not found'
+            });
+        }
+
+        if (referral.bonusStatus === 'paid') {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'Bonus already paid'
+            });
+        }
 
         // Update referral status
         referral.status = 'hired';
         referral.bonusStatus = 'paid';
-        await referringUser.save();
+        referral.bonusAmount = bonusAmount;
+        await referral.save();
+
+        // Update user's referrals array
+        const user = await User.findById(referral.referringUser._id);
+        const userReferral = user.referrals.find(
+            r => r.referredUser.toString() === referral.referredUser._id.toString()
+        );
+
+        if (userReferral) {
+            userReferral.status = 'hired';
+            userReferral.bonusStatus = 'paid';
+            userReferral.bonusDetails = {
+                amount: bonusAmount,
+                currency: 'INR',
+                paidAt: new Date(),
+                transactionId: `TXN${Date.now()}`
+            };
+            await user.save();
+        }
 
         res.status(200).json({
             status: 'success',
-            data: {
-                transfer,
-                referral
-            }
+            data: { referral }
         });
     } catch (err) {
         res.status(400).json({
@@ -118,18 +282,41 @@ exports.processReferralBonus = async (req, res) => {
         });
     }
 };
+exports.validateReferralCode = async (req, res) => {
+    try {
+        const { referralCode } = req.params;
 
-// Helper function to calculate bonus amount based on job details
-const calculateBonusAmount = (job) => {
-    const baseBonusAmount = 5000; // Base amount in INR
-    
-    // Multiply base amount based on job category
-    const categoryMultiplier = {
-        'entry': 1,
-        'mid': 1.5,
-        'senior': 2,
-        'executive': 3
-    };
+        const users = await User.find({ role: 'employee' });
+        let referringUser = null;
 
-    return baseBonusAmount * (categoryMultiplier[job.category] || 1);
+        for (const user of users) {
+            if (generateReferralCode(user._id) === referralCode.toUpperCase()) {
+                referringUser = user;
+                break;
+            }
+        }
+
+        if (!referringUser) {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'Invalid referral code'
+            });
+        }
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                valid: true,
+                referrer: {
+                    name: `${referringUser.profile.firstName} ${referringUser.profile.lastName}`,
+                    avatar: referringUser.profile.avatar
+                }
+            }
+        });
+    } catch (err) {
+        res.status(400).json({
+            status: 'fail',
+            message: err.message
+        });
+    }
 };

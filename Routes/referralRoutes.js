@@ -6,14 +6,27 @@ const router = express.Router();
 
 router.use(authController.protect);
 
-router.post(
-    '/create',
-    authController.restrictTo('employee'),
-    referralController.createReferral
-);
+// Get user's referral code
+router.get('/code', referralController.getReferralCode);
 
+// Validate referral code
+router.get('/validate/:referralCode', referralController.validateReferralCode);
+
+// Create referral by code
+router.post('/apply-code', referralController.createReferralByCode);
+
+// Get referral statistics
+router.get('/stats', referralController.getReferralStats);
+
+// Get referral history
+router.get('/history', referralController.getReferralHistory);
+
+// Send referral invitation via email
+router.post('/invite', referralController.sendReferralInvitation);
+
+// Process referral bonus (admin only)
 router.post(
-    '/process-bonus/:applicationId',
+    '/process-bonus/:referralId',
     authController.restrictTo('admin'),
     referralController.processReferralBonus
 );
