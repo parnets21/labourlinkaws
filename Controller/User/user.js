@@ -1031,12 +1031,19 @@ class user {
         { expiresIn: process.env.JWT_EXPIRES_IN || '90d' }
       );
 
-      return res.status(200).json({
+      console.log('🔑 JWT Token generated:', token ? `Length: ${token.length}` : 'FAILED TO GENERATE');
+      console.log('🔑 JWT_SECRET exists:', !!process.env.JWT_SECRET);
+
+      const responseData = {
         msg: "Successfully login",
         success: updateData,
         token: token,
         userId: updateData._id
-      });
+      };
+
+      console.log('📤 Sending response with keys:', Object.keys(responseData));
+
+      return res.status(200).json(responseData);
     } catch (err) {
       console.error("Login error:", err);
       return res.status(500).json({ message: err.message });
