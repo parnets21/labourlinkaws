@@ -4,17 +4,15 @@ const authController = require('../Controller/authController');
 
 const router = express.Router();
 
-// Public route - no auth required
+// Public routes - no auth required
 router.get('/settings', referralController.getReferralSettings);
+router.get('/validate/:referralCode', referralController.validateReferralCode);
 
 // Protected routes - require authentication
 router.use(authController.protect);
 
 // Get user's referral code
 router.get('/code', referralController.getReferralCode);
-
-// Validate referral code
-router.get('/validate/:referralCode', referralController.validateReferralCode);
 
 // Create referral by code
 router.post('/apply-code', referralController.createReferralByCode);
