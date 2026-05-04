@@ -1,80 +1,184 @@
-// const User = require('../Model/User');
-// const NodeGeocoder = require('node-geocoder');
+const User = require('../Model/User/user');
+const Location = require('../Model/Admin/Location');
 
-// // Initialize geocoder
-// const geocoder = NodeGeocoder({
-//     provider: 'google',
-//     apiKey: process.env.GOOGLE_MAPS_API_KEY
-// });
+// Update employee location
+exports.updateLocation = async (req, res) => {
+    try {
+        const { latitude, longitude, address, type, activity, workMode } = req.body;
+        const userId = req.user._id;
 
-// exports.updateLocation = async (req, res) => {
-//     try {
-//         const { latitude, longitude } = req.body;
+        console.log('📍 Update location request:', { userId, latitude, longitude, address });
 
-//         if (!latitude || !longitude) {
-//             throw new Error('Location coordinates are required');
-//         }
+        if (!latitude || !longitude) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'Location coordinates (latitude, longitude) are required'
+            });
+        }
 
-//         // Get address from coordinates
-//         const geoResult = await geocoder.reverse({ lat: latitude, lon: longitude });
-//         const address = geoResult[0]?.formattedAddress;
+        // Validate coordinates
+        if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'Invalid coordinates'
+            });
+        }
 
-//         // Update user's location
-//         const user = await User.findByIdAndUpdate(
-//             req.user._id,
-//             {
-//                 'profile.location': {
-//                     type: 'Point',
-//                     coordinates: [longitude, latitude],
-//                     address: address
-//                 }
-//             },
-//             { new: true }
-//         );
+        // Create location record
+        const location = await Location.create({
+            user: userId,
+            type: type || 'Remote',
+            location: {
+                type: 'Point',
+                coordinates: [longitude, latitude],
+                address: address || 'Unknown location'
+            },
+            activity: activity || 'work',
+            workMode: workMode || 'remote',
+            status: 'active',
+            tracking: {
+                deviceId: req.headers['user-agent'],
+                ipAddress: req.ip || req.connection.remoteAddress
+            }
+        });
 
-//         res.status(200).json({
-//             status: 'success',
-//             data: {
-//                 location: user.profile.location
-//             }
-//         });
-//     } catch (err) {
-//         res.status(400).json({
-//             status: 'fail',
-//             message: err.message
-//         });
-//     }
-// };
+        console.log('✅ Location updated successfully:', location._id);
 
-// exports.getEmployeeLocation = async (req, res) => {
-//     try {
-//         const user = await User.findById(req.params.userId);
+        res.status(200).json({
+            status: 'success',
+            message: 'Location updated successfully',
+            data: {
+                location: location
+            }
+        });
+    } catch (err) {
+        console.error('❌ Update location error:', err);
+        res.status(400).json({
+            status: 'fail',
+            message: err.message
+        });
+    }
+};
 
-//         if (!user) {
-//             throw new Error('User not found');
-//         }
+// Get employee's current location (for employers/admin)
+exports.getEmployeeLocation = async (req, res) => {
+    try {
+        const { userId } = req.params;
 
-//         // Check if requester has permission (employer or admin)
-//         const hasPermission = 
-//             req.user.role === 'admin' || 
-//             (req.user.role === 'employer' && user.applications.some(app => 
-//                 app.status === 'selected' && app.job.employer.toString() === req.user._id.toString()
-//             ));
+        console.log('🔍 Get employee location request:', { userId, requestedBy: req.user._id });
 
-//         if (!hasPermission) {
-//             throw new Error('You do not have permission to track this employee');
-//         }
+        if (!userId) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'User ID is required'
+            });
+        }
 
-//         res.status(200).json({
-//             status: 'success',
-//             data: {
-//                 location: user.profile.location
-//             }
-//         });
-//     } catch (err) {
-//         res.status(400).json({
-//             status: 'fail',
-//             message: err.message
-//         });
-//     }
-// };
+        // Find the user
+        const user = await User.findById(userId).select('fullName email phone userType');
+
+        if (!user) {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'User not found'
+            });
+        }
+
+        // Get the latest location
+        const latestLocation = await Location.findOne({ user: userId })
+            .sort({ createdAt: -1 })
+            .limit(1);
+
+        if (!latestLocation) {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'No location data available for this employee. The employee needs to enable location tracking in their app.',
+                data: {
+                    user: {
+                        id: user._id,
+                        name: user.fullName,
+                        email: user.email
+                    },
+                    hasLocation: false
+                }
+            });
+        }
+
+        // Check if location is recent (within last 30 minutes)
+        const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+        const isRecent = latestLocation.createdAt > thirtyMinutesAgo;
+
+        console.log('✅ Location found:', {
+            locationId: latestLocation._id,
+            isRecent,
+            lastUpdate: latestLocation.createdAt
+        });
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                user: {
+                    id: user._id,
+                    name: user.fullName,
+                    email: user.email,
+                    phone: user.phone
+                },
+                location: {
+                    latitude: latestLocation.location.coordinates[1],
+                    longitude: latestLocation.location.coordinates[0],
+                    address: latestLocation.location.address,
+                    type: latestLocation.type,
+                    activity: latestLocation.activity,
+                    workMode: latestLocation.workMode,
+                    status: latestLocation.status,
+                    lastUpdated: latestLocation.createdAt,
+                    isRecent: isRecent
+                },
+                hasLocation: true
+            }
+        });
+    } catch (err) {
+        console.error('❌ Get employee location error:', err);
+        res.status(400).json({
+            status: 'fail',
+            message: err.message
+        });
+    }
+};
+
+// Get location history for an employee
+exports.getLocationHistory = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { startDate, endDate, limit = 100 } = req.query;
+
+        console.log('📜 Get location history request:', { userId, startDate, endDate });
+
+        const query = { user: userId };
+
+        if (startDate || endDate) {
+            query.createdAt = {};
+            if (startDate) query.createdAt.$gte = new Date(startDate);
+            if (endDate) query.createdAt.$lte = new Date(endDate);
+        }
+
+        const locations = await Location.find(query)
+            .sort({ createdAt: -1 })
+            .limit(parseInt(limit))
+            .select('-tracking -__v');
+
+        res.status(200).json({
+            status: 'success',
+            results: locations.length,
+            data: {
+                locations
+            }
+        });
+    } catch (err) {
+        console.error('❌ Get location history error:', err);
+        res.status(400).json({
+            status: 'fail',
+            message: err.message
+        });
+    }
+};

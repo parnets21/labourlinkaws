@@ -217,13 +217,18 @@ exports.generateOfferLetter = async (req, res) => {
             startDate: startDate,
             workLocation: workLocation
         };
-        application.applicationStatus = 'selected'; // Update status to selected
+        
+        // ✅ Update BOTH status fields (the app uses 'status' field with capital case)
+        application.status = 'Selected'; // Main status field (capital case)
+        application.applicationStatus = 'selected'; // Secondary status field (lowercase)
+        
         await application.save();
 
         console.log('💾 Saved offer letter to database:');
+        console.log('- Status updated to:', application.status);
+        console.log('- Application Status updated to:', application.applicationStatus);
         console.log('- URL:', pdfUrl);
         console.log('- Uploaded PDF URL:', uploadedPdfUrl);
-        await application.save();
 
         // Send notifications
         try {
@@ -232,22 +237,39 @@ exports.generateOfferLetter = async (req, res) => {
             const candidatePhone = application.userId.phone;
             const offerLink = `https://laborlink.co.in/api/offers/download/${applicationId}`;
 
+            console.log('📧 Sending notifications to:');
+            console.log('- Name:', candidateName);
+            console.log('- Email:', candidateEmail);
+            console.log('- Phone:', candidatePhone);
+
             // Send Email
             if (candidateEmail) {
+                console.log('📧 Sending email notification...');
                 await sent.sendMail(
                     candidateName,
                     candidateEmail,
                     `🎉 Congratulations ${candidateName}!<br><br>Your offer letter for the position of <b>${position}</b> at <b>${companyName}</b> has been generated.<br><br>You can download it here: <a href="${offerLink}">Download Offer Letter</a><br><br>Please review and respond within 7 days.<br><br>Best wishes!<br>Labor Link Team`
                 );
+                console.log('✅ Email sent successfully');
             }
 
             // Send WhatsApp Notification
             if (candidatePhone) {
+                console.log('📱 Sending WhatsApp notification...');
                 const whatsappMsg = `Congratulations ${candidateName}! Your offer letter for ${position} at ${companyName} is ready. View it here: ${offerLink}. Please respond within 7 days.`;
                 await sent.sendSelectedWhatsapp(candidateName, candidatePhone, whatsappMsg);
+                console.log('✅ WhatsApp sent successfully');
+            }
+
+            // Send SMS Notification
+            if (candidatePhone) {
+                console.log('📲 Sending SMS notification...');
+                const smsMsg = `Congratulations ${candidateName}! Your offer letter for ${position} at ${companyName} is ready. Please check your email or WhatsApp for details. - LaborLink`;
+                await sent.sendSelectedSMS(candidatePhone, smsMsg);
+                console.log('✅ SMS sent successfully');
             }
         } catch (notifError) {
-            console.error('Notification error:', notifError);
+            console.error('❌ Notification error:', notifError);
             // Don't fail the whole process if notifications fail
         }
 
