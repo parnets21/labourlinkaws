@@ -125,23 +125,39 @@ exports.createReferralByCode = async (req, res) => {
 // Get user's referral statistics
 exports.getReferralStats = async (req, res) => {
     try {
+        console.log('📊 Get referral stats request');
+        console.log('- User:', req.user?._id);
+        console.log('- Auth header:', req.headers.authorization ? 'Present' : 'Missing');
+
+        if (!req.user || !req.user._id) {
+            console.log('❌ No user found in request');
+            return res.status(401).json({
+                status: 'fail',
+                message: 'Authentication required. Please log in again.'
+            });
+        }
+
         const userId = req.user._id;
+        console.log('🔍 Fetching referrals for user:', userId);
 
         const referrals = await Referral.find({ referringUser: userId })
-            .populate('referredUser', 'profile.firstName profile.lastName email')
+            .populate('referredUser', 'fullName email')
             .populate('job', 'title company');
+
+        console.log(`✅ Found ${referrals.length} referrals`);
 
         const stats = {
             totalReferrals: referrals.length,
             pendingReferrals: referrals.filter(r => r.status === 'pending').length,
             hiredReferrals: referrals.filter(r => r.status === 'hired').length,
             rejectedReferrals: referrals.filter(r => r.status === 'rejected').length,
+            completedReferrals: referrals.filter(r => r.status === 'completed').length,
             totalEarnings: referrals
                 .filter(r => r.bonusStatus === 'paid')
                 .reduce((sum, r) => sum + (r.bonusAmount || 0), 0),
             pendingEarnings: referrals
-                .filter(r => r.status === 'hired' && r.bonusStatus === 'unpaid')
-                .reduce((sum, r) => sum + (r.bonusAmount || 5000), 0)
+                .filter(r => r.bonusStatus === 'approved' || r.bonusStatus === 'unpaid')
+                .reduce((sum, r) => sum + (r.bonusAmount || 0), 0)
         };
 
         res.status(200).json({
@@ -152,6 +168,7 @@ exports.getReferralStats = async (req, res) => {
             }
         });
     } catch (err) {
+        console.error('❌ Get referral stats error:', err);
         res.status(400).json({
             status: 'fail',
             message: err.message
@@ -164,7 +181,7 @@ exports.getReferralHistory = async (req, res) => {
         const { page = 1, limit = 10 } = req.query;
 
         const referrals = await Referral.find({ referringUser: userId })
-            .populate('referredUser', 'profile.firstName profile.lastName email profile.avatar')
+            .populate('referredUser', 'fullName email')
             .populate('job', 'title company location')
             .sort({ createdAt: -1 })
             .limit(limit * 1)
@@ -198,7 +215,7 @@ exports.sendReferralInvitation = async (req, res) => {
         const shareUrl = `https://play.google.com/store/apps/details?id=com.labor_link&referrer=ref%3D${referralCode}`;
 
         // Configure email transporter
-        const transporter = nodemailer.createTransporter({
+        const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
                 user: process.env.EMAIL_USER,
@@ -209,11 +226,11 @@ exports.sendReferralInvitation = async (req, res) => {
         const mailOptions = {
             from: process.env.EMAIL_USER,
             to: email,
-            subject: `${user.profile.firstName} invited you to join LaborLink`,
+            subject: `${user.fullName || 'Someone'} invited you to join LaborLink`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                     <h2>You've been invited to join LaborLink!</h2>
-                    <p>${user.profile.firstName} ${user.profile.lastName} thinks you'd be a great fit for LaborLink.</p>
+                    <p>${user.fullName || 'Someone'} thinks you'd be a great fit for LaborLink.</p>
                     ${message ? `<p><em>"${message}"</em></p>` : ''}
                     <p>Use the referral code below to sign up:</p>
                     <div style="background: #f0f0f0; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 2px;">
@@ -427,8 +444,8 @@ exports.updateReferralSettings = async (req, res) => {
 exports.getAllReferrals = async (req, res) => {
     try {
         const referrals = await Referral.find()
-            .populate('referringUser', 'profile.firstName profile.lastName email')
-            .populate('referredUser', 'profile.firstName profile.lastName email')
+            .populate('referringUser', 'fullName email')
+            .populate('referredUser', 'fullName email')
             .populate('job', 'title company location')
             .sort({ createdAt: -1 });
 
