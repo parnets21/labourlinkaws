@@ -77,24 +77,37 @@ exports.protect = async (req, res, next) => {
             token = req.headers.authorization.split(' ')[1];
         }
 
+        console.log('🔐 Protect middleware - Token received:', token ? 'YES' : 'NO');
+
         if (!token) {
             throw new Error('You are not logged in. Please log in to get access.');
         }
 
-            const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+        console.log('🔐 Verifying token with JWT_SECRET...');
+        const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+        console.log('🔐 Token decoded successfully. User ID:', decoded.id);
+        
         const user = await User.findById(decoded.id);
+        console.log('🔐 User found in database:', user ? 'YES' : 'NO');
 
         if (!user) {
             throw new Error('The user belonging to this token no longer exists.');
         }
 
-        if (!user.isActive) {
-            throw new Error('This user account has been deactivated.');
+        // Check if user is deleted or blocked instead of isActive
+        if (user.isDelete) {
+            throw new Error('This user account has been deleted.');
         }
 
+        if (user.isBlock) {
+            throw new Error('This user account has been blocked.');
+        }
+
+        console.log('🔐 User authenticated successfully:', user._id);
         req.user = user;
         next();
     } catch (err) {
+        console.error('🔐 Protect middleware error:', err.message);
         res.status(401).json({
             status: 'fail',
             message: err.message
