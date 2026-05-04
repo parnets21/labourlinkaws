@@ -58,6 +58,7 @@ const analyticsRoutes = require("./Routes/analyticsRoutes")
 const iapRoutes = require("./Routes/iapRoutes")
 const supportRoutes = require("./Routes/supportRoutes")
 const passwordResetRoutes = require("./Routes/passwordResetRoutes")
+const referralRoutes = require("./Routes/referralRoutes")
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -111,6 +112,8 @@ app.use("/api/user", iapRoutes)
 app.use("/api/support", supportRoutes)
 console.log("🔐 Registering password reset routes at /api/auth");
 app.use("/api/auth", passwordResetRoutes)
+console.log("👥 Registering referral routes at /api/referrals");
+app.use("/api/referrals", referralRoutes)
 
 const employerController = require("./Controller/Employers/employers");
 const employeeController = require("./Controller/User/user");
