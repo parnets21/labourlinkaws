@@ -15,11 +15,18 @@ exports.getReferralCode = async (req, res) => {
         const userId = req.user._id;
         const referralCode = generateReferralCode(userId);
 
+        // For mobile app, you can use:
+        // 1. Play Store link: https://play.google.com/store/apps/details?id=com.labor_link&referrer=ref%3D${referralCode}
+        // 2. Deep link: laborlink://register?ref=${referralCode}
+        // 3. Landing page: https://laborlink.co.in/app-download?ref=${referralCode}
+        
+        const shareUrl = `https://play.google.com/store/apps/details?id=com.labor_link&referrer=ref%3D${referralCode}`;
+
         res.status(200).json({
             status: 'success',
             data: {
                 referralCode,
-                shareUrl: `https://laborlink.co.in/register?ref=${referralCode}`
+                shareUrl
             }
         });
     } catch (err) {
@@ -178,7 +185,7 @@ exports.sendReferralInvitation = async (req, res) => {
         const user = await User.findById(userId);
 
         const referralCode = generateReferralCode(userId);
-        const shareUrl = `https://laborlink.co.in/register?ref=${referralCode}`;
+        const shareUrl = `https://play.google.com/store/apps/details?id=com.labor_link&referrer=ref%3D${referralCode}`;
 
         // Configure email transporter
         const transporter = nodemailer.createTransporter({
