@@ -44,7 +44,7 @@ const userSchema = new Schema(
     jobRole: { type: String },
     companyType: { type: String },
     department: { type: String },
-    workMode: { type: String },
+    // workMode: { type: String }, // REMOVED - Not needed
     
 
     // ✅ Work Experience Section

@@ -1,5 +1,6 @@
 const User = require('../Model/User/user');
 const Referral = require('../Model/User/Referral');
+const ReferralSettings = require('../Model/User/ReferralSettings');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 
@@ -319,6 +320,74 @@ exports.validateReferralCode = async (req, res) => {
                     avatar: referringUser.profile.avatar
                 }
             }
+        });
+    } catch (err) {
+        res.status(400).json({
+            status: 'fail',
+            message: err.message
+        });
+    }
+};
+
+
+// Get referral settings (public - no auth required)
+exports.getReferralSettings = async (req, res) => {
+    try {
+        const settings = await ReferralSettings.getSettings();
+        
+        res.status(200).json({
+            status: 'success',
+            data: {
+                referralBonusAmount: settings.referralBonusAmount,
+                referrerBonusAmount: settings.referrerBonusAmount,
+                currency: settings.currency,
+                isActive: settings.isActive,
+                minimumWithdrawal: settings.minimumWithdrawal,
+                description: settings.description,
+                termsAndConditions: settings.termsAndConditions
+            }
+        });
+    } catch (err) {
+        res.status(400).json({
+            status: 'fail',
+            message: err.message
+        });
+    }
+};
+
+// Update referral settings (admin only)
+exports.updateReferralSettings = async (req, res) => {
+    try {
+        const {
+            referralBonusAmount,
+            referrerBonusAmount,
+            currency,
+            isActive,
+            minimumWithdrawal,
+            description,
+            termsAndConditions
+        } = req.body;
+
+        let settings = await ReferralSettings.findOne();
+        
+        if (!settings) {
+            settings = await ReferralSettings.create(req.body);
+        } else {
+            if (referralBonusAmount !== undefined) settings.referralBonusAmount = referralBonusAmount;
+            if (referrerBonusAmount !== undefined) settings.referrerBonusAmount = referrerBonusAmount;
+            if (currency !== undefined) settings.currency = currency;
+            if (isActive !== undefined) settings.isActive = isActive;
+            if (minimumWithdrawal !== undefined) settings.minimumWithdrawal = minimumWithdrawal;
+            if (description !== undefined) settings.description = description;
+            if (termsAndConditions !== undefined) settings.termsAndConditions = termsAndConditions;
+            
+            await settings.save();
+        }
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Referral settings updated successfully',
+            data: settings
         });
     } catch (err) {
         res.status(400).json({

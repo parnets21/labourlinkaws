@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const adminController=require("../../Controller/Admin/admin")
+const referralController=require("../../Controller/referralController")
 const subadminInterview=require("../../Model/Admin/subadminInterview")
 const multer = require("multer");
 
@@ -30,5 +31,9 @@ router.delete('/deleteslot/:id', adminController.deleteAppointment);
 router.post('/Createfeedback', adminController.createFeedback);
 router.get('/getFeedback', adminController.getAllFeedback);
 router.post('/sendnotification', adminController.sendNotification);
+
+// Referral Settings Management
+router.get('/referral-settings', referralController.getReferralSettings);
+router.put('/referral-settings', referralController.updateReferralSettings);
 
 module.exports = router;
