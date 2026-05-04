@@ -1024,10 +1024,17 @@ class user {
         console.log("FCM token not provided or incomplete:", { fcmToken, deviceId, platform });
       }
 
+      // Generate JWT token
+      const token = jwt.sign(
+        { id: updateData._id },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '90d' }
+      );
+
       return res.status(200).json({
         msg: "Successfully login",
         success: updateData,
-        token: updateData.token,
+        token: token,
         userId: updateData._id
       });
     } catch (err) {
