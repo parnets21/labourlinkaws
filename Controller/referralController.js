@@ -44,8 +44,8 @@ exports.createReferralByCode = async (req, res) => {
         const { referralCode } = req.body;
         const referredUserId = req.user._id;
 
-        // Find referring user by code
-        const users = await User.find({ role: 'employee' });
+        // Find referring user by code (use userType instead of role)
+        const users = await User.find({ userType: 'employee' });
         let referringUser = null;
 
         for (const user of users) {
@@ -295,13 +295,24 @@ exports.validateReferralCode = async (req, res) => {
         const { code } = req.params;
         console.log('🔍 Validating referral code:', code);
 
-        const users = await User.find({ role: 'employee' });
+        // Use userType field (not role)
+        const users = await User.find({ userType: 'employee' });
         console.log(`📊 Found ${users.length} employees to check`);
+        
+        if (users.length === 0) {
+            console.log('⚠️ No employees found in database!');
+        }
         
         let referringUser = null;
 
         for (const user of users) {
             const userCode = generateReferralCode(user._id);
+            
+            // Log first 5 codes for debugging
+            if (users.indexOf(user) < 5) {
+                console.log(`User ${user._id}: ${userCode} (${user.fullName || user.email})`);
+            }
+            
             if (userCode === code.toUpperCase()) {
                 console.log(`✅ Match found! User: ${user.fullName || user.email}, Code: ${userCode}`);
                 referringUser = user;
@@ -310,7 +321,7 @@ exports.validateReferralCode = async (req, res) => {
         }
 
         if (!referringUser) {
-            console.log('❌ No match found for code:', code);
+            console.log(`❌ No match found for code: ${code} (checked ${users.length} users)`);
             return res.status(200).json({
                 status: 'success',
                 data: {
