@@ -150,7 +150,39 @@ const userSchema = new Schema(
       type: String,
       enum: ['employee', 'individual_employer'],
       default: 'employee'
-    }
+    },
+
+    // ✅ Referrals array to track referred users
+    referrals: [{
+      referredUser: {
+        type: Schema.Types.ObjectId,
+        ref: 'user'
+      },
+      status: {
+        type: String,
+        enum: ['pending', 'completed', 'hired', 'rejected'],
+        default: 'pending'
+      },
+      bonusStatus: {
+        type: String,
+        enum: ['pending', 'approved', 'paid', 'unpaid'],
+        default: 'pending'
+      },
+      bonusAmount: {
+        type: Number,
+        default: 0
+      },
+      bonusDetails: {
+        amount: Number,
+        currency: String,
+        paidAt: Date,
+        transactionId: String
+      },
+      createdAt: {
+        type: Date,
+        default: Date.now
+      }
+    }]
 
   },
   { timestamps: true }
