@@ -83,11 +83,18 @@ exports.createReferralByCode = async (req, res) => {
             });
         }
 
-        // Create referral record
+        // Get referral settings for bonus amount
+        const settings = await ReferralSettings.getSettings();
+        const bonusAmount = settings.referrerBonusAmount || 100;
+
+        // Create referral record (registration-based, no job required)
         const referral = await Referral.create({
             referringUser: referringUser._id,
             referredUser: referredUserId,
-            status: 'pending'
+            referralType: 'registration',
+            status: 'completed', // Completed immediately on registration
+            bonusStatus: 'approved', // Auto-approved for registration referrals
+            bonusAmount: bonusAmount
         });
 
         // Add to user's referrals array
@@ -95,14 +102,16 @@ exports.createReferralByCode = async (req, res) => {
             $push: {
                 referrals: {
                     referredUser: referredUserId,
-                    status: 'pending',
-                    bonusStatus: 'pending'
+                    status: 'completed',
+                    bonusStatus: 'approved',
+                    bonusAmount: bonusAmount
                 }
             }
         });
 
         res.status(201).json({
             status: 'success',
+            message: `Referral bonus of ₹${bonusAmount} approved!`,
             data: { referral }
         });
     } catch (err) {

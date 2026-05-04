@@ -852,12 +852,34 @@ class Employers {
         companyId: companyObjectId
       });
 
+      console.log('🔍 Looking for application:', { userId, companyId: companyObjectId });
+
       if (!application) {
+        console.log('❌ Application not found');
         return res.status(404).json({ error: "Application not found. Candidate must apply first." });
       }
+      
+      console.log('✅ Application found:', {
+        _id: application._id,
+        userId: application.userId,
+        companyId: application.companyId,
+        status: application.status,
+        applicationStatus: application.applicationStatus,
+        createdAt: application.createdAt
+      });
+
+      // Log application status for debugging
+      console.log('📋 Application found:', {
+        userId: application.userId,
+        companyId: application.companyId,
+        status: application.status,
+        applicationStatus: application.applicationStatus
+      });
 
       // Only allow scheduling for Shortlisted candidates
       if (application.status !== "Shortlisted") {
+        console.log(`❌ Cannot schedule - Status is "${application.status}", expected "Shortlisted"`);
+        
         if (application.status === "Scheduled") {
           return res.status(400).json({ error: "Interview already scheduled for this candidate" });
         }
@@ -870,8 +892,14 @@ class Employers {
         if (application.status === "Applied") {
           return res.status(400).json({ error: "Please shortlist the candidate before scheduling an interview" });
         }
-        return res.status(400).json({ error: `Cannot schedule interview - Application status is ${application.status}` });
+        return res.status(400).json({ 
+          error: `Cannot schedule interview - Application status is "${application.status}". Please ensure the candidate is shortlisted first.`,
+          currentStatus: application.status,
+          expectedStatus: "Shortlisted"
+        });
       }
+      
+      console.log('✅ Application status verified - proceeding with interview scheduling');
 
       // Check if the interview call already exists
       let existingCall = await callModel.findOne({
