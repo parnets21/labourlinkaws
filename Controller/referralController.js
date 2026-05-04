@@ -293,18 +293,24 @@ exports.processReferralBonus = async (req, res) => {
 exports.validateReferralCode = async (req, res) => {
     try {
         const { code } = req.params;
+        console.log('🔍 Validating referral code:', code);
 
         const users = await User.find({ role: 'employee' });
+        console.log(`📊 Found ${users.length} employees to check`);
+        
         let referringUser = null;
 
         for (const user of users) {
-            if (generateReferralCode(user._id) === code.toUpperCase()) {
+            const userCode = generateReferralCode(user._id);
+            if (userCode === code.toUpperCase()) {
+                console.log(`✅ Match found! User: ${user.fullName || user.email}, Code: ${userCode}`);
                 referringUser = user;
                 break;
             }
         }
 
         if (!referringUser) {
+            console.log('❌ No match found for code:', code);
             return res.status(200).json({
                 status: 'success',
                 data: {
@@ -314,6 +320,7 @@ exports.validateReferralCode = async (req, res) => {
             });
         }
 
+        console.log('✅ Returning valid response for:', referringUser.fullName || referringUser.email);
         res.status(200).json({
             status: 'success',
             data: {
@@ -323,6 +330,7 @@ exports.validateReferralCode = async (req, res) => {
             }
         });
     } catch (err) {
+        console.error('❌ Error in validateReferralCode:', err);
         res.status(400).json({
             status: 'fail',
             message: err.message
