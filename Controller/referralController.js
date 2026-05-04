@@ -338,7 +338,6 @@ exports.getReferralSettings = async (req, res) => {
         res.status(200).json({
             status: 'success',
             data: {
-                referralBonusAmount: settings.referralBonusAmount,
                 referrerBonusAmount: settings.referrerBonusAmount,
                 currency: settings.currency,
                 isActive: settings.isActive,
@@ -359,7 +358,6 @@ exports.getReferralSettings = async (req, res) => {
 exports.updateReferralSettings = async (req, res) => {
     try {
         const {
-            referralBonusAmount,
             referrerBonusAmount,
             currency,
             isActive,
@@ -373,7 +371,6 @@ exports.updateReferralSettings = async (req, res) => {
         if (!settings) {
             settings = await ReferralSettings.create(req.body);
         } else {
-            if (referralBonusAmount !== undefined) settings.referralBonusAmount = referralBonusAmount;
             if (referrerBonusAmount !== undefined) settings.referrerBonusAmount = referrerBonusAmount;
             if (currency !== undefined) settings.currency = currency;
             if (isActive !== undefined) settings.isActive = isActive;
@@ -388,6 +385,27 @@ exports.updateReferralSettings = async (req, res) => {
             status: 'success',
             message: 'Referral settings updated successfully',
             data: settings
+        });
+    } catch (err) {
+        res.status(400).json({
+            status: 'fail',
+            message: err.message
+        });
+    }
+};
+
+// Get all referrals (admin only)
+exports.getAllReferrals = async (req, res) => {
+    try {
+        const referrals = await Referral.find()
+            .populate('referringUser', 'profile.firstName profile.lastName email')
+            .populate('referredUser', 'profile.firstName profile.lastName email')
+            .populate('job', 'title company location')
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            status: 'success',
+            data: referrals
         });
     } catch (err) {
         res.status(400).json({

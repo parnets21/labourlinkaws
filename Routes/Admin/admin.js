@@ -36,4 +36,8 @@ router.post('/sendnotification', adminController.sendNotification);
 router.get('/referral-settings', referralController.getReferralSettings);
 router.put('/referral-settings', referralController.updateReferralSettings);
 
+// Referral Management (Admin)
+router.get('/referrals', referralController.getAllReferrals);
+router.post('/referrals/:referralId/process-bonus', referralController.processReferralBonus);
+
 module.exports = router;

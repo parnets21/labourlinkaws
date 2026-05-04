@@ -1,11 +1,6 @@
 const mongoose = require('mongoose');
 
 const referralSettingsSchema = new mongoose.Schema({
-    referralBonusAmount: {
-        type: Number,
-        default: 100,
-        required: true
-    },
     referrerBonusAmount: {
         type: Number,
         default: 100,
@@ -41,7 +36,6 @@ referralSettingsSchema.statics.getSettings = async function() {
     let settings = await this.findOne();
     if (!settings) {
         settings = await this.create({
-            referralBonusAmount: 100,
             referrerBonusAmount: 100,
             currency: 'INR',
             isActive: true
