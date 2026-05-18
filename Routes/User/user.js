@@ -73,7 +73,10 @@ router.post(
 router.get("/getlistOfaplly", userController.getAllApplyCompanyList);
 
 router.get("/getlistofinterviewscedule", userController.getlistofinterviewscedule);
-router.get("/getAllScheduledInterviews", userController.getlistofinterviewscedule);
+router.get("/getAllScheduledInterviews", (req, res) => {
+  const employerController = require("../../Controller/Employers/employers");
+  return employerController.getAllScheduledInterviews(req, res);
+});
 router.post("/ADDinterviewscedule", userController.scheduleInterview);
 
 router.get("/getlistOOfaplly/:userId", userController.getApplyCompanyList);
