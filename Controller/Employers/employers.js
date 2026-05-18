@@ -876,9 +876,10 @@ class Employers {
         applicationStatus: application.applicationStatus
       });
 
-      // Only allow scheduling for Shortlisted candidates
-      if (application.status !== "Shortlisted") {
-        console.log(`❌ Cannot schedule - Status is "${application.status}", expected "Shortlisted"`);
+      // Allow scheduling for Shortlisted or Applied candidates
+      const allowedStatuses = ["Shortlisted", "Applied"];
+      if (!allowedStatuses.includes(application.status)) {
+        console.log(`❌ Cannot schedule - Status is "${application.status}", expected "Shortlisted" or "Applied"`);
         
         if (application.status === "Scheduled") {
           return res.status(400).json({ error: "Interview already scheduled for this candidate" });
@@ -889,13 +890,10 @@ class Employers {
         if (application.status === "Rejected") {
           return res.status(400).json({ error: "Cannot schedule interview - Application already rejected" });
         }
-        if (application.status === "Applied") {
-          return res.status(400).json({ error: "Please shortlist the candidate before scheduling an interview" });
-        }
         return res.status(400).json({ 
-          error: `Cannot schedule interview - Application status is "${application.status}". Please ensure the candidate is shortlisted first.`,
+          error: `Cannot schedule interview - Application status is "${application.status}".`,
           currentStatus: application.status,
-          expectedStatus: "Shortlisted"
+          expectedStatus: "Shortlisted or Applied"
         });
       }
       
