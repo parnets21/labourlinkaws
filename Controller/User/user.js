@@ -1342,10 +1342,6 @@ class user {
       // Find all interviews where the status is "Scheduled"
       let scheduledInterviews = await Interview.find({}).sort({ dateTime: 1 }).populate("candidate");
 
-      if (scheduledInterviews.length === 0) {
-        return res.status(404).json({ message: "No scheduled interviews found" });
-      }
-
       return res.status(200).json({ success: true, interviews: scheduledInterviews });
     } catch (error) {
       console.log(error);
