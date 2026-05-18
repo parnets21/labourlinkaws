@@ -1168,15 +1168,17 @@ class Employers {
   // Get All Scheduled Interviews
   async getAllScheduledInterviews(req, res) {
     try {
-      const interviews = await callModel.find({ status: "Scheduled" })
+      // Admin view: fetch ALL interviews regardless of status
+      const interviews = await callModel.find({})
         .populate("userId", "name email fullName")
         .populate("companyId", "jobtitle jobProfile")
         .sort({ schedule: -1 }); // Sort by schedule date, latest first (descending)
 
       if (!interviews || interviews.length === 0) {
-        return res.status(404).json({
-          success: false,
-          message: "No scheduled interviews found."
+        return res.status(200).json({
+          success: true,
+          interviews: [],
+          message: "No interviews found."
         });
       }
 
