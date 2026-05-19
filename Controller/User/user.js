@@ -737,6 +737,43 @@ class user {
     }
   }
 
+  async deleteResume(req, res) {
+    try {
+      const { userId } = req.params;
+
+      const existingUser = await userModel.findById(userId);
+      if (!existingUser) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+
+      // Delete file from S3 if it exists
+      if (existingUser.resume && existingUser.resume.startsWith('https://')) {
+        try {
+          await deleteFile(existingUser.resume);
+        } catch (deleteError) {
+          console.warn("Could not delete resume from S3:", deleteError);
+          // Continue even if S3 delete fails
+        }
+      }
+
+      // Clear the resume field on the user
+      const updatedUser = await userModel.findOneAndUpdate(
+        { _id: userId },
+        { $set: { resume: '' } },
+        { new: true }
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Resume deleted successfully",
+        data: updatedUser
+      });
+    } catch (err) {
+      console.error("Error deleting resume:", err);
+      return res.status(500).json({ success: false, message: "Internal Server Error", error: err.message });
+    }
+  }
+
 
 
   async addSkill(req, res) {

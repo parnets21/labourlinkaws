@@ -39,6 +39,7 @@ router.put('/updateProfileImg/:userId', upload.any(), userController.updateProfi
 const { validateSubscription } = require('../../middileware/subscriptionValidationMiddleware');
 router.put('/editUser/:id', validateSubscription('profile_update', { checkUsage: true, usagePeriod: 'monthly' }), userController.editUser);
 router.put('/updateResume/:userId', upload.any(), userController.updateResume);
+router.delete('/deleteUserResume/:userId', userController.deleteResume);
 // Alias route expected by mobile app
 router.put('/updateProfile/:userId', validateSubscription('profile_update', { checkUsage: true, usagePeriod: 'monthly' }), (req, res, next) => {
   // Map params to match editUser signature

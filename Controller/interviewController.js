@@ -94,7 +94,6 @@ exports.scheduleInterview = async (req, res) => {
         });
     }
 };
-
 exports.updateInterviewStatus = async (req, res) => {
     try {
         const application = await JobApplication.findById(req.params.applicationId);
@@ -133,5 +132,3 @@ exports.updateInterviewStatus = async (req, res) => {
         });
     }
 };
-
-
