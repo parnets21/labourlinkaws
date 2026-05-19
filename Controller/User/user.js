@@ -774,6 +774,82 @@ class user {
     }
   }
 
+  async uploadCertificate(req, res) {
+    try {
+      const { userId } = req.params;
+
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ success: false, message: "No file uploaded" });
+      }
+
+      const file = req.files[0];
+      let certUrl;
+
+      try {
+        certUrl = await uploadFile2(file, "user-certificates");
+      } catch (uploadError) {
+        console.error("Error uploading certificate to S3:", uploadError);
+        return res.status(500).json({ success: false, message: "Failed to upload certificate", error: uploadError.message });
+      }
+
+      const updatedUser = await userModel.findOneAndUpdate(
+        { _id: userId },
+        { $push: { certificates: certUrl } },
+        { new: true }
+      );
+
+      if (!updatedUser) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Certificate uploaded successfully",
+        data: updatedUser
+      });
+    } catch (err) {
+      console.error("Error uploading certificate:", err);
+      return res.status(500).json({ success: false, message: "Internal Server Error", error: err.message });
+    }
+  }
+
+  async deleteCertificate(req, res) {
+    try {
+      const { userId } = req.params;
+      const { certUrl } = req.body;
+
+      if (!certUrl) {
+        return res.status(400).json({ success: false, message: "Certificate URL is required" });
+      }
+
+      // Delete from S3
+      try {
+        await deleteFile(certUrl);
+      } catch (deleteError) {
+        console.warn("Could not delete certificate from S3:", deleteError);
+      }
+
+      const updatedUser = await userModel.findOneAndUpdate(
+        { _id: userId },
+        { $pull: { certificates: certUrl } },
+        { new: true }
+      );
+
+      if (!updatedUser) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Certificate deleted successfully",
+        data: updatedUser
+      });
+    } catch (err) {
+      console.error("Error deleting certificate:", err);
+      return res.status(500).json({ success: false, message: "Internal Server Error", error: err.message });
+    }
+  }
+
 
 
   async addSkill(req, res) {

@@ -72,6 +72,7 @@ const userSchema = new Schema(
 
     jobType: { type: String },
     resume: { type: String },
+    certificates: [{ type: String }], // Array of S3 URLs
     address: { type: String },
 
     education:[ {
