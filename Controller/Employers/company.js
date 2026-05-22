@@ -1210,15 +1210,14 @@ async addSelect(req, res) {
     }
     if (data.status === "Selected" || data.status === "selected") {
       console.log("User already selected, returning success");
-      // Also delete any lingering interview record
+      // Update interview record status instead of deleting it
       try {
-        await callModel.deleteOne({ 
-          userId: userId, 
-          companyId: companyObjectId 
-        });
-        console.log('Cleaned up interview record for already selected candidate');
-      } catch (deleteErr) {
-        console.log('Warning: could not delete interview record:', deleteErr?.message || deleteErr);
+        await callModel.findOneAndUpdate(
+          { userId: userId, companyId: companyObjectId },
+          { $set: { status: "Selected" } }
+        );
+      } catch (updateErr) {
+        console.log('Warning: could not update interview record status:', updateErr?.message || updateErr);
       }
       return res.status(200).json({ success: "User already selected" });
     }
@@ -1269,14 +1268,15 @@ async addSelect(req, res) {
     } catch (recErr) {
       console.log('Warning: could not record application_review usage:', recErr?.message || recErr);
     }
+    // Update interview record status to Selected — keep it visible in admin panel
     try {
-      await callModel.deleteOne({ 
-        userId: userId, 
-        companyId: companyObjectId 
-      });
-      console.log('Interview record deleted for selected candidate');
-    } catch (deleteErr) {
-      console.log('Warning: could not delete interview record:', deleteErr?.message || deleteErr);
+      await callModel.findOneAndUpdate(
+        { userId: userId, companyId: companyObjectId },
+        { $set: { status: "Selected" } }
+      );
+      console.log('Interview record status updated to Selected');
+    } catch (updateErr) {
+      console.log('Warning: could not update interview record status:', updateErr?.message || updateErr);
     }
     return res.status(200).json({ success: "Successfully Selected" });
   }
@@ -1552,15 +1552,14 @@ async rejectApply(req, res) {
       // Check if already rejected or selected - prevent duplicate actions
       if (data.status === "Rejected" || data.status === "rejected") {
         console.log("User already rejected, returning success");
-        // Also delete any lingering interview record
+        // Update interview record status instead of deleting it
         try {
-          await callModel.deleteOne({ 
-            userId: userId, 
-            companyId: mongoose.Types.ObjectId(companyId) 
-          });
-          console.log('Cleaned up interview record for already rejected candidate');
-        } catch (deleteErr) {
-          console.log('Warning: could not delete interview record:', deleteErr?.message || deleteErr);
+          await callModel.findOneAndUpdate(
+            { userId: userId, companyId: mongoose.Types.ObjectId(companyId) },
+            { $set: { status: "Rejected" } }
+          );
+        } catch (updateErr) {
+          console.log('Warning: could not update interview record status:', updateErr?.message || updateErr);
         }
         return res.status(200).json({ success: "User already rejected" });
       }
@@ -1595,15 +1594,15 @@ async rejectApply(req, res) {
 
       await applyModel.findOneAndUpdate({ _id: data._id }, { $set: { status: "Rejected" } })
 
-      // Delete the scheduled interview record if it exists
+      // Update interview record status to Rejected — keep it visible in admin panel
       try {
-        await callModel.deleteOne({ 
-          userId: userId, 
-          companyId: mongoose.Types.ObjectId(companyId) 
-        });
-        console.log('Interview record deleted for rejected candidate');
-      } catch (deleteErr) {
-        console.log('Warning: could not delete interview record:', deleteErr?.message || deleteErr);
+        await callModel.findOneAndUpdate(
+          { userId: userId, companyId: mongoose.Types.ObjectId(companyId) },
+          { $set: { status: "Rejected" } }
+        );
+        console.log('Interview record status updated to Rejected');
+      } catch (updateErr) {
+        console.log('Warning: could not update interview record status:', updateErr?.message || updateErr);
       }
 
       // Record application review usage
