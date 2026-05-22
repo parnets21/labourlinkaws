@@ -1129,60 +1129,50 @@ class Employers {
 
       // Get all interview calls for this employer and company
       let interviewCalls = await callModel.find({ employerId, companyId })
-        .populate("userId", "fullName name email") // Only populate needed fields
+        .populate("userId", "fullName name email")
         .sort({ _id: -1 });
 
       if (!interviewCalls.length) {
         return res.status(200).json({ success: true, data: [], message: "No interview calls found" });
       }
 
-     
       const applyModel = require("../../Model/Employers/apply");
-      const filteredInterviews = [];
+      const result = [];
 
       for (const interview of interviewCalls) {
-        // Check the application status for this user and company
+        const interviewData = interview.toObject();
+
+        // Resolve candidate name
+        let candidateName = 'No Name';
+        if (interviewData.userId) {
+          candidateName = interviewData.userId.fullName ||
+                          interviewData.userId.name ||
+                          interviewData.name ||
+                          'No Name';
+        }
+        interviewData.fullName = candidateName;
+        interviewData.name     = candidateName;
+
+        // Attach latest application status so the frontend can show Selected/Rejected badges
+        // but NEVER hide the card — all scheduled interviews stay visible
         const application = await applyModel.findOne({
-          userId: interview.userId?._id || interview.userId,
+          userId:    interview.userId?._id || interview.userId,
           companyId: companyId
         });
+        interviewData.applicationStatus = application?.status || interview.status || 'Scheduled';
 
-        // Only include interviews where the candidate is NOT selected or rejected
-        if (!application || 
-            (application.status !== 'Selected' && 
-             application.status !== 'selected' && 
-             application.status !== 'Rejected' && 
-             application.status !== 'rejected')) {
-          
-          // Create clean interview data with candidate name only
-          const interviewData = interview.toObject();
-          
-          // Ensure we have the candidate name
-          let candidateName = 'No Name';
-          if (interviewData.userId) {
-            candidateName = interviewData.userId.fullName || 
-                          interviewData.userId.name || 
-                          interviewData.name || 
-                          'No Name';
-          }
-          
-          // Set name fields for frontend compatibility
-          interviewData.fullName = candidateName;
-          interviewData.name = candidateName;
-          
-          // Remove sensitive user data, keep only essential info
-          if (interviewData.userId) {
-            interviewData.userId = interviewData.userId._id;
-          }
-          
-          // Remove email and phone for privacy
-          delete interviewData.email;
-          
-          filteredInterviews.push(interviewData);
+        // Keep userId as plain ID
+        if (interviewData.userId && typeof interviewData.userId === 'object') {
+          interviewData.userId = interviewData.userId._id;
         }
+
+        // Remove email for privacy
+        delete interviewData.email;
+
+        result.push(interviewData);
       }
 
-      return res.status(200).json({ success: true, data: filteredInterviews });
+      return res.status(200).json({ success: true, data: result });
 
     } catch (error) {
       console.error("Error fetching interview calls:", error);
