@@ -1183,99 +1183,129 @@ class Employers {
   // Get All Scheduled Interviews
   async getAllScheduledInterviews(req, res) {
     try {
-      // Admin view: fetch ALL interviews regardless of status
-      const interviews = await callModel.find({})
-        .populate("userId", "name email fullName")
-        .populate("companyId", "jobtitle jobProfile")
+      const userModel  = require('../../Model/User/user');
+      const jobModel   = require('../../Model/Employers/company');
+      const applyModel = require('../../Model/Employers/apply');
+
+      // ── Primary source: interviewcall collection ──────────────────────────
+      let interviews = await callModel.find({})
+        .populate("userId", "name email fullName phone")
+        .populate("companyId", "jobtitle jobProfile companyName CompanyName")
         .sort({ schedule: -1 });
 
-      if (!interviews || interviews.length === 0) {
-        return res.status(200).json({
-          success: true,
-          interviews: [],
-          message: "No interviews found."
+      let formattedInterviews = [];
+
+      if (interviews && interviews.length > 0) {
+        // We have interviewcall documents — use them as the source of truth
+        formattedInterviews = await Promise.all(interviews.map(async (interview) => {
+          // Resolve candidate name
+          let candidateName = 'No Name';
+          if (interview.userId && typeof interview.userId === 'object') {
+            candidateName = interview.userId.fullName || interview.userId.name || 'No Name';
+          } else if (interview.userId) {
+            try {
+              const user = await userModel.findById(interview.userId).select('name fullName');
+              if (user) candidateName = user.fullName || user.name || 'No Name';
+            } catch (_) {}
+          }
+
+          // Resolve job position
+          let jobPosition = interview.Position || 'Position not specified';
+          if (interview.companyId && typeof interview.companyId === 'object') {
+            jobPosition = interview.companyId.jobtitle || interview.companyId.jobProfile || jobPosition;
+          } else if (interview.companyId) {
+            try {
+              const job = await jobModel.findById(interview.companyId).select('jobtitle jobProfile');
+              if (job) jobPosition = job.jobtitle || job.jobProfile || jobPosition;
+            } catch (_) {}
+          }
+
+          // Get real status from apply model (interviewcall.status may be stale)
+          let realStatus = interview.status || 'Scheduled';
+          try {
+            const candidateId = interview.userId?._id || interview.userId;
+            const companyId   = interview.companyId?._id || interview.companyId;
+            if (candidateId && companyId) {
+              const application = await applyModel.findOne({ userId: candidateId, companyId });
+              if (application?.status) {
+                const statusMap = {
+                  'selected': 'Selected', 'Selected': 'Selected',
+                  'rejected': 'Rejected', 'Rejected': 'Rejected',
+                  'Scheduled': 'Scheduled', 'scheduled': 'Scheduled',
+                  'Shortlisted': 'Shortlisted', 'shortlisted': 'Shortlisted',
+                  'Applied': 'Scheduled', 'applied': 'Scheduled',
+                };
+                realStatus = statusMap[application.status] || application.status;
+              }
+            }
+          } catch (_) {}
+
+          return {
+            ...interview.toObject(),
+            fullName: candidateName,
+            name:     candidateName,
+            Position: jobPosition,
+            status:   realStatus,
+          };
+        }));
+
+      } else {
+        // ── Fallback: interviewcall collection is empty (old records were deleted) ──
+        // Read directly from the apply model for any application that was ever
+        // Scheduled, Selected, or Rejected so the admin panel still shows data.
+        console.log('⚠️  interviewcalls collection is empty — falling back to apply model');
+
+        const applyStatuses = ['Scheduled', 'Selected', 'selected', 'Rejected', 'rejected'];
+        const applications = await applyModel.find({ status: { $in: applyStatuses } })
+          .populate('userId', 'name fullName email phone')
+          .populate('companyId', 'jobtitle jobProfile companyName CompanyName')
+          .sort({ updatedAt: -1 });
+
+        formattedInterviews = applications.map((app, index) => {
+          const user    = app.userId || {};
+          const company = app.companyId || {};
+
+          const candidateName = user.fullName || user.name || 'No Name';
+          const jobPosition   = company.jobtitle || company.jobProfile || 'Position not specified';
+
+          const statusMap = {
+            'selected': 'Selected', 'Selected': 'Selected',
+            'rejected': 'Rejected', 'Rejected': 'Rejected',
+            'Scheduled': 'Scheduled', 'scheduled': 'Scheduled',
+          };
+          const realStatus = statusMap[app.status] || app.status || 'Scheduled';
+
+          return {
+            _id:             app._id,
+            key:             app._id,
+            userId:          user._id || app.userId,
+            companyId:       company._id || app.companyId,
+            employerId:      app.employerId || '',
+            fullName:        candidateName,
+            name:            candidateName,
+            email:           user.email || '',
+            Position:        jobPosition,
+            position:        jobPosition,
+            platform:        'Not Specified',
+            meetingLink:     '',
+            meetingPassword: '',
+            duration:        '30',
+            interviewNotes:  '',
+            schedule:        app.updatedAt || app.createdAt || new Date(),
+            status:          realStatus,
+            createdAt:       app.createdAt,
+            updatedAt:       app.updatedAt,
+          };
         });
       }
 
-      const userModel = require('../../Model/User/user');
-      const jobModel  = require('../../Model/Employers/company');
-      const applyModel = require('../../Model/Employers/apply');
-
-      // Format the response — pull real status from the apply model
-      const formattedInterviews = await Promise.all(interviews.map(async (interview) => {
-        let candidateName = 'No Name';
-
-        // Resolve candidate name
-        if (interview.userId && typeof interview.userId === 'object') {
-          candidateName = interview.userId.fullName || interview.userId.name || 'No Name';
-        } else if (interview.userId && typeof interview.userId === 'string') {
-          try {
-            const user = await userModel.findById(interview.userId).select('name email fullName');
-            if (user) candidateName = user.fullName || user.name || 'No Name';
-          } catch (err) {
-            console.log('Could not fetch user for userId:', interview.userId);
-          }
-        }
-
-        // Resolve job position
-        let jobPosition = interview.Position || 'Position not specified';
-        if (interview.companyId && typeof interview.companyId === 'object') {
-          jobPosition = interview.companyId.jobtitle || interview.companyId.jobProfile || jobPosition;
-        } else if (interview.companyId && typeof interview.companyId === 'string') {
-          try {
-            const job = await jobModel.findById(interview.companyId).select('jobtitle jobProfile');
-            if (job) jobPosition = job.jobtitle || job.jobProfile || jobPosition;
-          } catch (err) {
-            console.log('Could not fetch job for companyId:', interview.companyId);
-          }
-        }
-
-        // Get the REAL current status from the apply model
-        // The interviewcall.status is always "Scheduled" — the actual outcome
-        // (Selected / Rejected) lives in the apply model
-        let realStatus = interview.status || 'Scheduled';
-        try {
-          const candidateId = interview.userId?._id || interview.userId;
-          const companyId   = interview.companyId?._id || interview.companyId;
-          if (candidateId && companyId) {
-            const application = await applyModel.findOne({
-              userId:    candidateId,
-              companyId: companyId
-            });
-            if (application?.status) {
-              // Map apply model statuses to display statuses
-              const statusMap = {
-                'selected':   'Selected',
-                'Selected':   'Selected',
-                'rejected':   'Rejected',
-                'Rejected':   'Rejected',
-                'Scheduled':  'Scheduled',
-                'scheduled':  'Scheduled',
-                'Shortlisted':'Shortlisted',
-                'shortlisted':'Shortlisted',
-                'Applied':    'Scheduled',
-                'applied':    'Scheduled',
-              };
-              realStatus = statusMap[application.status] || application.status;
-            }
-          }
-        } catch (err) {
-          console.log('Could not fetch application status:', err?.message);
-        }
-
-        return {
-          ...interview.toObject(),
-          fullName: candidateName,
-          name:     candidateName,
-          Position: jobPosition,
-          status:   realStatus,   // ← real status from apply model
-        };
-      }));
-
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         interviews: formattedInterviews,
+        total: formattedInterviews.length,
+        source: interviews.length > 0 ? 'interviewcalls' : 'apply_fallback',
       });
+
     } catch (error) {
       console.error("Error fetching scheduled interviews:", error);
       res.status(500).json({
