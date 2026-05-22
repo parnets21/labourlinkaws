@@ -804,7 +804,8 @@ class Employers {
       const {
         userId, schedule, slotId, status, employerId, feedback,
         Position, name, meetingPassword, meetingLink, email,
-        companyId, platform, interviewNotes, duration
+        companyId, platform, interviewNotes, duration,
+        interviewDate, interviewTime, interviewLocation   // new fields from JobApplications screen
       } = req.body;
 
       console.log("Request body:", req.body);
@@ -831,9 +832,12 @@ class Employers {
         await slot.save();
       } else {
         // Validate required fields when no slotId is provided
-        if (!userId || !schedule || !employerId || !email || !companyId) {
-          return res.status(400).json({ error: "Missing required fields" });
+        // schedule can be derived from interviewDate+interviewTime if not provided directly
+        const hasSchedule = schedule || (interviewDate && interviewTime);
+        if (!userId || !hasSchedule || !employerId || !companyId) {
+          return res.status(400).json({ error: "Missing required fields: userId, schedule (or interviewDate+interviewTime), employerId, companyId" });
         }
+        // email is required — fall back to user's email fetched below if not sent
       }
 
       const companyObjectId = mongoose.Types.ObjectId.isValid(companyId)
@@ -926,24 +930,47 @@ class Employers {
         }
       }
 
+      // Resolve schedule date — support both ISO string and interviewDate+interviewTime
+      let resolvedSchedule = schedule;
+      if (!resolvedSchedule && interviewDate && interviewTime) {
+        // Parse "DD/MM/YYYY" + "HH:MM AM/PM" into a Date
+        try {
+          const [day, month, year] = interviewDate.split('/');
+          resolvedSchedule = new Date(`${year}-${month}-${day} ${interviewTime}`);
+          if (isNaN(resolvedSchedule.getTime())) {
+            resolvedSchedule = new Date(); // fallback to now if parse fails
+          }
+        } catch (e) {
+          resolvedSchedule = new Date();
+        }
+      }
+
+      // Resolve email — use provided email or fall back to user's email
+      const resolvedEmail = email || userData.email || '';
+
       // Subscription validation is now handled by middleware
 
       // Create a new interview call
       let newCall = await callModel.create({
         employerId,
         userId,
-        schedule,
-        status: status || "Scheduled", // Default status
-        name,
-        email,
+        schedule: resolvedSchedule,
+        status: status || "Scheduled",
+        name: name || userData.fullName || userData.name || '',
+        email: resolvedEmail,
         companyId: companyObjectId,
-        platform,
-        meetingPassword,
-        meetingLink,
-        interviewNotes,
-        duration: slotId ? (await Appointment.findById(slotId))?.duration || duration : duration,
+        platform: platform || interviewLocation || "Not Specified",
+        meetingPassword: meetingPassword || "",
+        meetingLink: meetingLink || interviewLocation || "",
+        interviewNotes: interviewNotes || "",
+        duration: slotId
+          ? (await Appointment.findById(slotId))?.duration || duration || "30"
+          : (duration || "30"),
         feedback,
         Position: jobPosition,
+        interviewDate: interviewDate || (resolvedSchedule ? new Date(resolvedSchedule).toLocaleDateString('en-GB') : ''),
+        interviewTime: interviewTime || (resolvedSchedule ? new Date(resolvedSchedule).toLocaleTimeString() : ''),
+        interviewLocation: interviewLocation || meetingLink || "",
       });
 
       if (!newCall) {

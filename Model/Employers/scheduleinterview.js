@@ -4,23 +4,26 @@ const ObjectId = mongoose.Schema.Types.ObjectId;
 
 const callSchema = new Schema(
     {
-      userId: { type: ObjectId, ref: "user", required: true }, // Changed to ObjectId for proper population
+      userId: { type: ObjectId, ref: "user", required: true },
       schedule: { type: Date, required: true },
       status: { type: String, required: true },
       employerId: { type: String, required: true },
-      // name: { type: String, required: true },
-      meetingPassword: { type: String, required: true },
-      meetingLink: { type: String, required: true },
+      name: { type: String },                          
+      meetingPassword: { type: String, default: "" },  
+      meetingLink: { type: String, default: "" },
       email: { type: String, required: true },
-      companyId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: "job" }, // Reference to job model
+      companyId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: "job" },
       platform: { type: String, required: true },
       interviewNotes: { type: String },
       duration: { type: String, required: true },
+      interviewDate: { type: String },                 // human-readable date string (DD/MM/YYYY)
+      interviewTime: { type: String },                 // human-readable time string (HH:MM AM/PM)
+      interviewLocation: { type: String },             // physical location or video link
       feedback: {
-        technicalSkills: String, // e.g., "Strong JS fundamentals"
-        communicationskill: String       // e.g., "Good problem solving but weak in DBs"
+        technicalSkills: String,
+        communicationskill: String
       },
-      Position:{type:String}
+      Position: { type: String }
     }, { timestamps: true });
 
 module.exports = mongoose.model("interviewcall", callSchema);
