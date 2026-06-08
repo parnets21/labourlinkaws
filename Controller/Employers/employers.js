@@ -1261,7 +1261,7 @@ class Employers {
           .populate('companyId', 'jobtitle jobProfile companyName CompanyName')
           .sort({ updatedAt: -1 });
 
-        formattedInterviews = applications.map((app, index) => {
+        formattedInterviews = await Promise.all(applications.map(async (app) => {
           const user    = app.userId || {};
           const company = app.companyId || {};
 
@@ -1275,28 +1275,39 @@ class Employers {
           };
           const realStatus = statusMap[app.status] || app.status || 'Scheduled';
 
+          // Try to find the matching interviewcall for meeting details
+          let callDetails = null;
+          try {
+            callDetails = await callModel.findOne({
+              userId:    user._id || app.userId,
+              companyId: company._id || app.companyId,
+            }).lean();
+          } catch (_) {}
+
           return {
-            _id:             app._id,
-            key:             app._id,
+            _id:             callDetails?._id || app._id,
+            key:             callDetails?._id || app._id,
             userId:          user._id || app.userId,
             companyId:       company._id || app.companyId,
-            employerId:      app.employerId || '',
+            employerId:      callDetails?.employerId || app.employerId || '',
             fullName:        candidateName,
             name:            candidateName,
-            email:           user.email || '',
-            Position:        jobPosition,
-            position:        jobPosition,
-            platform:        'Not Specified',
-            meetingLink:     '',
-            meetingPassword: '',
-            duration:        '30',
-            interviewNotes:  '',
-            schedule:        app.updatedAt || app.createdAt || new Date(),
+            email:           user.email || callDetails?.email || '',
+            Position:        callDetails?.Position || jobPosition,
+            position:        callDetails?.Position || jobPosition,
+            platform:        callDetails?.platform  || 'Not Specified',
+            meetingLink:     callDetails?.meetingLink     || '',
+            meetingPassword: callDetails?.meetingPassword || '',
+            duration:        callDetails?.duration        || '30',
+            interviewNotes:  callDetails?.interviewNotes  || '',
+            interviewDate:   callDetails?.interviewDate   || '',
+            interviewTime:   callDetails?.interviewTime   || '',
+            schedule:        callDetails?.schedule || app.updatedAt || app.createdAt || new Date(),
             status:          realStatus,
             createdAt:       app.createdAt,
             updatedAt:       app.updatedAt,
           };
-        });
+        }));
       }
 
       return res.status(200).json({
