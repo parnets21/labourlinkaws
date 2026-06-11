@@ -1154,12 +1154,19 @@ class Employers {
         interviewData.name     = candidateName;
 
         // Attach latest application status so the frontend can show Selected/Rejected badges
-        // but NEVER hide the card — all scheduled interviews stay visible
+        // Filter out interviews where the candidate has already been Selected or Rejected
         const application = await applyModel.findOne({
           userId:    interview.userId?._id || interview.userId,
           companyId: companyId
         });
         interviewData.applicationStatus = application?.status || interview.status || 'Scheduled';
+
+        // Only include interviews that are still in 'Scheduled' status
+        // Selected/Rejected candidates should appear in their respective tabs
+        if (interviewData.applicationStatus === 'Selected' || interviewData.applicationStatus === 'selected' ||
+            interviewData.applicationStatus === 'Rejected' || interviewData.applicationStatus === 'rejected') {
+          continue;
+        }
 
         // Keep userId as plain ID
         if (interviewData.userId && typeof interviewData.userId === 'object') {
